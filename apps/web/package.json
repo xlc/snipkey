@@ -1,0 +1,21 @@
+{
+	"name": "@snipkey/web",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"@tanstack/react-router": "^1.150.0",
+		"@tanstack/start": "^1.120.20",
+		"react": "^19.2.3",
+		"react-dom": "^19.2.3"
+	},
+	"devDependencies": {
+		"@tanstack/router-plugin": "^1.150.0",
+		"@vitejs/plugin-react": "^5.1.2",
+		"vite": "^7.3.1"
+	}
+}
