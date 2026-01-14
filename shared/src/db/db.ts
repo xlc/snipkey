@@ -1,4 +1,5 @@
-import { Kysely, SqliteAdapter } from "kysely";
+import { Kysely } from "kysely";
+import { D1Dialect } from "kysely-d1";
 import type { Database } from "./database";
 
 export interface Env {
@@ -7,8 +8,7 @@ export interface Env {
 
 export function getDb(env: Env): Kysely<Database> {
 	return new Kysely<Database>({
-		dialect: new SqliteAdapter(),
-		database: env.DB as any,
+		dialect: new D1Dialect({ database: env.DB }),
 	});
 }
 

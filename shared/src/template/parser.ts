@@ -1,8 +1,7 @@
-import type { ParseResult, ParseError, Segment, PlaceholderSegment } from "./types";
+import type { ParseError, ParseResult, PlaceholderSegment, Segment } from "./types";
 
 // Regex to match {{placeholder}} syntax
-const PLACEHOLDER_REGEX =
-	/\{\{(\w+):(text|number|enum(?:\(([^)]+)\))?(?:=([^}]*))?)\}\}/g;
+const PLACEHOLDER_REGEX = /\{\{(\w+):(text|number|enum(?:\(([^)]+)\))?(?:=([^}]*))?)\}\}/g;
 
 export function parseTemplate(body: string): ParseResult {
 	const segments: Segment[] = [];
@@ -10,9 +9,11 @@ export function parseTemplate(body: string): ParseResult {
 	const errors: ParseError[] = [];
 	const seenNames = new Set<string>();
 	let lastIndex = 0;
-	let match;
 
-	while ((match = PLACEHOLDER_REGEX.exec(body)) !== null) {
+	// Reset regex state for new string
+	PLACEHOLDER_REGEX.lastIndex = 0;
+	let match: RegExpExecArray | null = PLACEHOLDER_REGEX.exec(body);
+	while (match !== null) {
 		const [fullMatch, name, typePart, enumOptions, defaultValue] = match;
 		const start = match.index;
 		const end = start + fullMatch.length;
@@ -75,6 +76,7 @@ export function parseTemplate(body: string): ParseResult {
 		}
 
 		lastIndex = end;
+		match = PLACEHOLDER_REGEX.exec(body);
 	}
 
 	// Add remaining text
