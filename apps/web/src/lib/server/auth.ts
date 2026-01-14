@@ -1,4 +1,4 @@
-import { getDb, newId, nowMs } from "@shared/db/db";
+import { type getDb, newId, nowMs } from "@shared/db/db";
 import type { ApiError } from "@shared/types";
 import { err, ok } from "@shared/types";
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simplewebauthn/server";
