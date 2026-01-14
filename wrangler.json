@@ -1,0 +1,17 @@
+{
+	"name": "snipkey",
+	"compatibility_date": "2024-01-01",
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "snipkey-db",
+			"database_id": "local"
+		}
+	],
+	"vars": {
+		"RP_ID": "localhost",
+		"ORIGIN": "http://localhost:5173",
+		"CHALLENGE_TTL_MS": "300000",
+		"SESSION_TTL_MS": "604800000"
+	}
+}

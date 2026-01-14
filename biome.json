@@ -27,8 +27,15 @@
 				"useNodejsImportProtocol": "error"
 			},
 			"suspicious": {
-				"noExplicitAny": "warn"
+				"noExplicitAny": "warn",
+				"noUnknownAtRules": "off"
 			}
+		}
+	},
+	"css": {
+		"parser": {
+			"cssModules": false,
+			"tailwindDirectives": true
 		}
 	},
 	"javascript": {

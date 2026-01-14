@@ -1,13 +1,21 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { Toaster } from "~/components/ui/toaster";
 
 export const Route = createRootRoute({
 	component: () => (
 		<>
-			<div className="p-4">
-				<h1 className="text-2xl font-bold">Snipkey</h1>
+			<div className="min-h-screen bg-background">
+				<header className="border-b">
+					<div className="container mx-auto px-4 py-4">
+						<h1 className="text-2xl font-bold">Snipkey</h1>
+						<p className="text-sm text-muted-foreground">Your private snippet vault</p>
+					</div>
+				</header>
+				<main className="container mx-auto px-4 py-8">
+					<Outlet />
+				</main>
 			</div>
-			<hr />
-			<Outlet />
+			<Toaster />
 		</>
 	),
 });
