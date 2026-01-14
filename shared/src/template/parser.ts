@@ -1,7 +1,8 @@
 import type { ParseError, ParseResult, PlaceholderSegment, Segment } from "./types";
 
 // Regex to match {{placeholder}} syntax
-const PLACEHOLDER_REGEX = /\{\{(\w+):(text|number|enum(?:\(([^)]+)\))?(?:=([^}]*))?)\}\}/g;
+// Matches: {{name:type}} or {{name:type=default}} or {{name:enum(opt1,opt2)=default}}
+const PLACEHOLDER_REGEX = /\{\{(\w+):(text|number|enum\(([^)]+)\))(?:=([^}]*))?\}\}/g;
 
 export function parseTemplate(body: string): ParseResult {
 	const segments: Segment[] = [];
@@ -30,7 +31,7 @@ export function parseTemplate(body: string): ParseResult {
 		let phType: "text" | "number" | "enum";
 		let options: string[] | undefined;
 
-		if (typePart === "enum") {
+		if (typePart.startsWith("enum(")) {
 			if (!enumOptions) {
 				errors.push({
 					message: `Enum placeholder "${name}" must have options, e.g., {{name:enum(opt1,opt2)}}`,
