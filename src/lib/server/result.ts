@@ -5,16 +5,23 @@ import type { ApiError } from '@shared/types'
  */
 export type Result<T> = { data: T } | { error: ApiError }
 
-/**
- * Convert Error instances to plain objects for TanStack Start serialization
- * TypeScript's Error type has `cause: unknown` but TanStack expects `cause: {} | undefined`
- */
-export function serializeError(error: Error): { name: string; message: string; stack?: string; cause?: {} | undefined } {
-	return {
-		name: error.name,
-		message: error.message,
-		stack: error.stack,
-		cause: error.cause as {} | undefined,
-	}
+export type SerializedError = {
+  name: string
+  message: string
+  stack?: string
+  // biome-ignore lint/complexity/noBannedTypes: Type must match TanStack Start framework's error type signature
+  cause?: {} | undefined
 }
 
+/**
+ * Convert Error instances to plain objects for TanStack Start serialization
+ */
+export function serializeError(error: Error): SerializedError {
+  return {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+    // biome-ignore lint/complexity/noBannedTypes: Type must match TanStack Start framework's error type signature
+    cause: error.cause as {} | undefined,
+  }
+}

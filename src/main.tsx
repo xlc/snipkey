@@ -1,11 +1,19 @@
-import { RouterProvider } from '@tanstack/react-router'
-import ReactDOM from 'react-dom/client'
-import { router } from './router'
-import './styles/globals.css'
+import { createRouter } from '@tanstack/react-router'
+import { DefaultCatchBoundary } from './components/DefaultCatchBoundary'
+import { NotFound } from './components/NotFound'
+import { routeTree } from './routeTree.gen'
 
-const rootElement = document.getElementById('app')
+const router = createRouter({
+  routeTree,
+  defaultPreload: 'intent',
+  defaultErrorComponent: DefaultCatchBoundary,
+  defaultNotFoundComponent: () => <NotFound />,
+})
 
-if (rootElement && !rootElement.innerHTML) {
-	const root = ReactDOM.createRoot(rootElement)
-	root.render(<RouterProvider router={router} />)
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router
+  }
 }
+
+export { router }

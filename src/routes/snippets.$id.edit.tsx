@@ -5,62 +5,62 @@ import { SnippetForm } from '~/components/snippets/SnippetForm'
 import { snippetGet, snippetUpdate } from '~/server/snippets'
 
 export const Route = createFileRoute('/snippets/$id/edit')({
-	component: EditSnippet,
+  component: EditSnippet,
 })
 
 function EditSnippet() {
-	const { id } = Route.useParams()
-	const [initialData, setInitialData] = useState<{
-		title: string
-		body: string
-		tags: string[]
-	} | null>(null)
-	const [loading, setLoading] = useState(true)
+  const { id } = Route.useParams()
+  const [initialData, setInitialData] = useState<{
+    title: string
+    body: string
+    tags: string[]
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
 
-	useEffect(() => {
-		async function loadSnippet() {
-			const result = await snippetGet({ data: { id } })
+  useEffect(() => {
+    async function loadSnippet() {
+      const result = await snippetGet({ data: { id } })
 
-			if (result.error) {
-				toast.error(result.error.message)
-				setLoading(false)
-				return
-			}
+      if (result.error) {
+        toast.error(result.error.message)
+        setLoading(false)
+        return
+      }
 
-			setInitialData({
-				title: result.data.title,
-				body: result.data.body,
-				tags: result.data.tags,
-			})
-			setLoading(false)
-		}
+      setInitialData({
+        title: result.data.title,
+        body: result.data.body,
+        tags: result.data.tags,
+      })
+      setLoading(false)
+    }
 
-		loadSnippet()
-	}, [id])
+    loadSnippet()
+  }, [id])
 
-	const handleSubmit = async (data: { title: string; body: string; tags: string[] }) => {
-		const result = await snippetUpdate({ data: { id, ...data } })
+  const handleSubmit = async (data: { title: string; body: string; tags: string[] }) => {
+    const result = await snippetUpdate({ data: { id, ...data } })
 
-		if (result.error) {
-			toast.error(result.error.message)
-			throw result.error // Re-throw to let SnippetForm handle loading state
-		}
+    if (result.error) {
+      toast.error(result.error.message)
+      throw result.error // Re-throw to let SnippetForm handle loading state
+    }
 
-		toast.success('Snippet updated!')
-	}
+    toast.success('Snippet updated!')
+  }
 
-	if (loading || !initialData) {
-		return <div className="text-center py-12 text-muted-foreground">Loading snippet...</div>
-	}
+  if (loading || !initialData) {
+    return <div className="text-center py-12 text-muted-foreground">Loading snippet...</div>
+  }
 
-	return (
-		<SnippetForm
-			mode="edit"
-			id={id}
-			initialTitle={initialData.title}
-			initialBody={initialData.body}
-			initialTags={initialData.tags}
-			onSubmit={handleSubmit}
-		/>
-	)
+  return (
+    <SnippetForm
+      mode="edit"
+      id={id}
+      initialTitle={initialData.title}
+      initialBody={initialData.body}
+      initialTags={initialData.tags}
+      onSubmit={handleSubmit}
+    />
+  )
 }

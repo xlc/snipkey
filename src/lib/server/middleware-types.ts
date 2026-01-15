@@ -3,8 +3,8 @@
  */
 
 export interface MiddlewareContext {
-	user: { id: string } | null
-	sessionId?: string
+  user: { id: string } | null
+  sessionId?: string
 }
 
 /**
@@ -12,6 +12,6 @@ export interface MiddlewareContext {
  * User is guaranteed to be non-null
  */
 export interface AuthenticatedContext {
-	user: { id: string }
-	sessionId: string
+  user: { id: string }
+  sessionId: string
 }

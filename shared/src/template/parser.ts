@@ -5,101 +5,101 @@ import type { ParseError, ParseResult, PlaceholderSegment, Segment } from './typ
 const PLACEHOLDER_REGEX = /\{\{(\w+):(text|number|enum\(([^)]+)\))(?:=([^}]*))?\}\}/g
 
 export function parseTemplate(body: string): ParseResult {
-	const segments: Segment[] = []
-	const placeholders: PlaceholderSegment[] = []
-	const errors: ParseError[] = []
-	const seenNames = new Set<string>()
-	let lastIndex = 0
+  const segments: Segment[] = []
+  const placeholders: PlaceholderSegment[] = []
+  const errors: ParseError[] = []
+  const seenNames = new Set<string>()
+  let lastIndex = 0
 
-	// Reset regex state for new string
-	PLACEHOLDER_REGEX.lastIndex = 0
-	let match: RegExpExecArray | null = PLACEHOLDER_REGEX.exec(body)
-	while (match !== null) {
-		const [fullMatch, name, typePart, enumOptions, defaultValue] = match
-		const start = match.index
-		const end = start + fullMatch.length
+  // Reset regex state for new string
+  PLACEHOLDER_REGEX.lastIndex = 0
+  let match: RegExpExecArray | null = PLACEHOLDER_REGEX.exec(body)
+  while (match !== null) {
+    const [fullMatch, name, typePart, enumOptions, defaultValue] = match
+    const start = match.index
+    const end = start + fullMatch.length
 
-		// Add text before this placeholder
-		if (start > lastIndex) {
-			segments.push({
-				kind: 'text',
-				value: body.slice(lastIndex, start),
-			})
-		}
+    // Add text before this placeholder
+    if (start > lastIndex) {
+      segments.push({
+        kind: 'text',
+        value: body.slice(lastIndex, start),
+      })
+    }
 
-		// Parse the type
-		let phType: 'text' | 'number' | 'enum'
-		let options: string[] | undefined
+    // Parse the type
+    let phType: 'text' | 'number' | 'enum'
+    let options: string[] | undefined
 
-		// Regex groups: fullMatch, name, typePart, enumOptions (optional), defaultValue (optional)
-		// When regex matches, capture groups 1 (name) and 2 (typePart) are always defined
-		// Groups 3 (enumOptions) and 4 (defaultValue) may be undefined
-		if (!name || !typePart) {
-			// Skip invalid matches (shouldn't happen with our regex)
-			lastIndex = end
-			match = PLACEHOLDER_REGEX.exec(body)
-			continue
-		}
+    // Regex groups: fullMatch, name, typePart, enumOptions (optional), defaultValue (optional)
+    // When regex matches, capture groups 1 (name) and 2 (typePart) are always defined
+    // Groups 3 (enumOptions) and 4 (defaultValue) may be undefined
+    if (!name || !typePart) {
+      // Skip invalid matches (shouldn't happen with our regex)
+      lastIndex = end
+      match = PLACEHOLDER_REGEX.exec(body)
+      continue
+    }
 
-		const nameStr = name
-		const typeStr = typePart
+    const nameStr = name
+    const typeStr = typePart
 
-		if (typeStr.startsWith('enum(')) {
-			if (!enumOptions) {
-				errors.push({
-					message: `Enum placeholder "${nameStr}" must have options, e.g., {{name:enum(opt1,opt2)}}`,
-					start,
-					end,
-				})
-				phType = 'text'
-			} else {
-				phType = 'enum'
-				options = enumOptions.split(',').map(s => s.trim())
-				if (options.length === 0) {
-					errors.push({
-						message: `Enum placeholder "${nameStr}" must have at least one option`,
-						start,
-						end,
-					})
-				}
-			}
-		} else if (typeStr === 'number') {
-			phType = 'number'
-		} else {
-			phType = 'text'
-		}
+    if (typeStr.startsWith('enum(')) {
+      if (!enumOptions) {
+        errors.push({
+          message: `Enum placeholder "${nameStr}" must have options, e.g., {{name:enum(opt1,opt2)}}`,
+          start,
+          end,
+        })
+        phType = 'text'
+      } else {
+        phType = 'enum'
+        options = enumOptions.split(',').map(s => s.trim())
+        if (options.length === 0) {
+          errors.push({
+            message: `Enum placeholder "${nameStr}" must have at least one option`,
+            start,
+            end,
+          })
+        }
+      }
+    } else if (typeStr === 'number') {
+      phType = 'number'
+    } else {
+      phType = 'text'
+    }
 
-		// Create placeholder segment
-		const placeholder: PlaceholderSegment = {
-			kind: 'ph',
-			name: nameStr,
-			phType,
-			options,
-			defaultValue: defaultValue && defaultValue.length > 0 ? defaultValue : undefined,
-			raw: fullMatch,
-			start,
-			end,
-		}
+    // Create placeholder segment
+    const placeholder: PlaceholderSegment = {
+      kind: 'ph',
+      name: nameStr,
+      phType,
+      options,
+      defaultValue: defaultValue && defaultValue.length > 0 ? defaultValue : undefined,
+      raw: fullMatch,
+      start,
+      end,
+    }
 
-		segments.push(placeholder)
+    segments.push(placeholder)
 
-		// Track unique placeholders (first appearance wins)
-		if (!seenNames.has(nameStr)) {
-			seenNames.add(nameStr)
-			placeholders.push(placeholder)
-		}
+    // Track unique placeholders (first appearance wins)
+    if (!seenNames.has(nameStr)) {
+      seenNames.add(nameStr)
+      placeholders.push(placeholder)
+    }
 
-		lastIndex = end
-		match = PLACEHOLDER_REGEX.exec(body)
-	}
+    lastIndex = end
+    match = PLACEHOLDER_REGEX.exec(body)
+  }
 
-	// Add remaining text
-	if (lastIndex < body.length) {
-		segments.push({
-			kind: 'text',
-			value: body.slice(lastIndex),
-		})
-	}
+  // Add remaining text
+  if (lastIndex < body.length) {
+    segments.push({
+      kind: 'text',
+      value: body.slice(lastIndex),
+    })
+  }
 
-	return { segments, placeholders, errors }
+  return { segments, placeholders, errors }
 }

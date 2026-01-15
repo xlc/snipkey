@@ -13,17 +13,20 @@ import type { AuthenticatedContext, MiddlewareContext } from './middleware-types
  * - Referrer-Policy: Controls referrer information leakage
  * - Permissions-Policy: Restricts browser features
  */
-export const securityMiddleware = createMiddleware().server(async ({ request, next }) => {
-	const result = await next()
+export const securityMiddleware = createMiddleware().server(async ({ next }) => {
+  const result = await next()
 
-	// Add security headers
-	result.response.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none';")
-	result.response.headers.set('X-Frame-Options', 'DENY')
-	result.response.headers.set('X-Content-Type-Options', 'nosniff')
-	result.response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-	result.response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+  // Add security headers
+  result.response.headers.set(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none';",
+  )
+  result.response.headers.set('X-Frame-Options', 'DENY')
+  result.response.headers.set('X-Content-Type-Options', 'nosniff')
+  result.response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  result.response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
 
-	return result
+  return result
 })
 
 /**
@@ -38,17 +41,17 @@ export const securityMiddleware = createMiddleware().server(async ({ request, ne
  * Use this for endpoints where authentication is optional
  */
 export const authMiddleware = createMiddleware().server(async ({ request, next }) => {
-	const db = getDbFromEnv()
-	const sessionId = getSessionId(request.headers)
-	const userId = sessionId ? await auth.validateSession(db, sessionId) : null
+  const db = getDbFromEnv()
+  const sessionId = getSessionId(request.headers)
+  const userId = sessionId ? await auth.validateSession(db, sessionId) : null
 
-	// Always use the same return structure to avoid type inference issues
-	return next({
-		context: {
-			user: userId ? { id: userId } : null,
-			sessionId: sessionId ?? undefined,
-		} satisfies MiddlewareContext,
-	})
+  // Always use the same return structure to avoid type inference issues
+  return next({
+    context: {
+      user: userId ? { id: userId } : null,
+      sessionId: sessionId ?? undefined,
+    } satisfies MiddlewareContext,
+  })
 })
 
 /**
@@ -56,22 +59,22 @@ export const authMiddleware = createMiddleware().server(async ({ request, next }
  * Use this for endpoints that must have a valid user
  */
 export const requireAuthMiddleware = createMiddleware().server(async ({ request, next }) => {
-	const db = getDbFromEnv()
-	const sessionId = getSessionId(request.headers)
+  const db = getDbFromEnv()
+  const sessionId = getSessionId(request.headers)
 
-	if (!sessionId) {
-		throw new Error('AUTH_REQUIRED: No session cookie found')
-	}
+  if (!sessionId) {
+    throw new Error('AUTH_REQUIRED: No session cookie found')
+  }
 
-	const userId = await auth.validateSession(db, sessionId)
-	if (!userId) {
-		throw new Error('AUTH_REQUIRED: Invalid or expired session')
-	}
+  const userId = await auth.validateSession(db, sessionId)
+  if (!userId) {
+    throw new Error('AUTH_REQUIRED: Invalid or expired session')
+  }
 
-	return next({
-		context: {
-			user: { id: userId },
-			sessionId,
-		} satisfies AuthenticatedContext,
-	})
+  return next({
+    context: {
+      user: { id: userId },
+      sessionId,
+    } satisfies AuthenticatedContext,
+  })
 })

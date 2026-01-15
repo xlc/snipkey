@@ -39,7 +39,7 @@
 		"noUnusedParameters": false,
 		"noPropertyAccessFromIndexSignature": false
 	},
-	"include": ["src", "shared"],
+	"include": ["src", "shared", "vite-env.d.ts"],
 	"exclude": [
 		"node_modules",
 		"dist",

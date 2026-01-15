@@ -6,14 +6,14 @@ const SESSION_COOKIE_NAME = 'session'
  * The actual session cookie will be HttpOnly and set by the server.
  */
 export function getSessionCookie(): string | undefined {
-	const cookies = document.cookie.split(';')
-	for (const cookie of cookies) {
-		const [name, value] = cookie.trim().split('=')
-		if (name === SESSION_COOKIE_NAME) {
-			return value
-		}
-	}
-	return undefined
+  const cookies = document.cookie.split(';')
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split('=')
+    if (name === SESSION_COOKIE_NAME) {
+      return value
+    }
+  }
+  return undefined
 }
 
 /**
@@ -22,9 +22,9 @@ export function getSessionCookie(): string | undefined {
  * This function is kept for backwards compatibility but does nothing.
  */
 export function setSessionCookie(_value: string): void {
-	// No-op: Server sets HttpOnly session cookie via Set-Cookie header
-	// Client-side JavaScript cannot set HttpOnly cookies
-	console.warn('setSessionCookie is deprecated. Session cookies are now set server-side.')
+  // No-op: Server sets HttpOnly session cookie via Set-Cookie header
+  // Client-side JavaScript cannot set HttpOnly cookies
+  console.warn('setSessionCookie is deprecated. Session cookies are now set server-side.')
 }
 
 /**
@@ -33,6 +33,6 @@ export function setSessionCookie(_value: string): void {
  * This function is kept for backwards compatibility but does nothing.
  */
 export function clearSessionCookie(): void {
-	// No-op: Server clears cookie via Set-Cookie header with Max-Age=0
-	console.warn('clearSessionCookie is deprecated. Use the authLogout server function instead.')
+  // No-op: Server clears cookie via Set-Cookie header with Max-Age=0
+  console.warn('clearSessionCookie is deprecated. Use the authLogout server function instead.')
 }

@@ -1,11 +1,14 @@
 {
+	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "snipkey",
-	"compatibility_date": "2024-01-01",
+	"compatibility_date": "2025-09-24",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "@tanstack/react-start/server-entry",
 	"d1_databases": [
 		{
 			"binding": "DB",
 			"database_name": "snipkey-db",
-			"database_id": "local"
+			"database_id": "41cc3aff-b176-4d84-9168-d09baded8675"
 		}
 	],
 	"vars": {
