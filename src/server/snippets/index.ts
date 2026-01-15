@@ -3,7 +3,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { getDbFromEnv, getServerFnContext } from '~/lib/server/context'
 import { requireAuthMiddleware } from '~/lib/server/middleware'
-import type { SerializedError } from '~/lib/server/result'
+import { serializeApiError } from '~/lib/server/result'
 import * as snippets from '~/lib/server/snippets'
 
 // List snippets
@@ -18,7 +18,7 @@ export const snippetsList = createServerFn({ method: 'GET' })
 
     if (!result.ok) {
       return {
-        error: result.error as SerializedError,
+        error: serializeApiError(result.error),
       }
     }
 
@@ -37,7 +37,7 @@ export const snippetGet = createServerFn({ method: 'GET' })
 
     if (!result.ok) {
       return {
-        error: result.error as SerializedError | { code: string; message: string },
+        error: serializeApiError(result.error),
       }
     }
 
@@ -56,7 +56,7 @@ export const snippetCreate = createServerFn({ method: 'POST' })
 
     if (!result.ok) {
       return {
-        error: result.error as SerializedError,
+        error: serializeApiError(result.error),
       }
     }
 
@@ -78,7 +78,7 @@ export const snippetUpdate = createServerFn({ method: 'POST' })
 
     if (!result.ok) {
       return {
-        error: result.error as SerializedError | { code: string; message: string },
+        error: serializeApiError(result.error),
       }
     }
 
@@ -97,7 +97,7 @@ export const snippetDelete = createServerFn({ method: 'POST' })
 
     if (!result.ok) {
       return {
-        error: result.error as SerializedError | { code: string; message: string },
+        error: serializeApiError(result.error),
       }
     }
 

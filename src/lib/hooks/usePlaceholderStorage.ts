@@ -10,6 +10,7 @@ export function usePlaceholderStorage(snippetId: string, initialValues: Record<s
         try {
           return JSON.parse(stored)
         } catch {
+          // Invalid JSON in localStorage - fall back to initial values
           return initialValues
         }
       }

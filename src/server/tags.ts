@@ -24,12 +24,17 @@ export const tagsList = createServerFn({ method: 'GET' })
       const tagCounts = new Map<string, number>()
       for (const snippet of result) {
         try {
-          const tags = JSON.parse(snippet.tags_json) as string[]
+          const tags = JSON.parse(snippet.tags_json)
+          // Validate that tags is an array of strings
+          if (!Array.isArray(tags)) continue
+
           for (const tag of tags) {
-            tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1)
+            if (typeof tag === 'string') {
+              tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1)
+            }
           }
         } catch {
-          // Skip invalid JSON
+          // Skip snippets with invalid tag JSON - data corruption should not prevent returning valid tags
         }
       }
 
@@ -40,7 +45,8 @@ export const tagsList = createServerFn({ method: 'GET' })
             .sort((a, b) => b.count - a.count),
         },
       }
-    } catch {
+    } catch (_error) {
+      // Database or unexpected error - return generic error to avoid leaking implementation details
       return {
         error: {
           code: 'INTERNAL',

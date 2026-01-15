@@ -85,7 +85,7 @@ export function SnippetForm({
           })
         }
       } catch {
-        // Invalid draft, ignore
+        // Invalid draft data in localStorage - continue with empty form
       }
     }
   }, [mode, id, enableAutoSave, initialTitle, initialBody, initialTags])
@@ -116,7 +116,7 @@ export function SnippetForm({
           })
           setLastSaved(new Date())
         } catch {
-          // Error already shown by toast
+          // Error already handled and displayed via toast notification in onSubmit
         } finally {
           setSaving(false)
         }

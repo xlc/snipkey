@@ -92,6 +92,7 @@ function SnippetDetail() {
       await navigator.clipboard.writeText(rendered)
       toast.success('Rendered output copied to clipboard!')
     } catch {
+      // Clipboard API failed (user denied permission or browser doesn't support it)
       toast.error('Failed to copy to clipboard')
     }
   }
@@ -103,6 +104,7 @@ function SnippetDetail() {
       await navigator.clipboard.writeText(snippet.body)
       toast.success('Raw template copied to clipboard!')
     } catch {
+      // Clipboard API failed (user denied permission or browser doesn't support it)
       toast.error('Failed to copy to clipboard')
     }
   }
@@ -114,6 +116,7 @@ function SnippetDetail() {
       await navigator.clipboard.writeText(rendered || snippet.body)
       toast.success('Unrendered template copied to clipboard!')
     } catch {
+      // Clipboard API failed (user denied permission or browser doesn't support it)
       toast.error('Failed to copy to clipboard')
     }
   }
@@ -183,6 +186,7 @@ function SnippetDetail() {
       // We'll need to implement a restore endpoint or use the create endpoint
       toast.info('Undo feature coming soon - snippet data preserved in session storage')
     } catch {
+      // Invalid JSON in sessionStorage - corrupted data
       toast.error('Failed to undo deletion')
     }
   }

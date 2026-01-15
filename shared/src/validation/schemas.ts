@@ -42,6 +42,8 @@ export const snippetListInput = z.object({
 export const authRegisterStartInput = z.object({})
 
 export const authRegisterFinishInput = z.object({
+  // WebAuthn attestation response is validated by SimpleWebAuthn library
+  // We use z.any() here because the library handles validation internally
   attestation: z.any(),
   challengeId: z.string().uuid('Invalid challenge ID'),
 })
@@ -49,6 +51,8 @@ export const authRegisterFinishInput = z.object({
 export const authLoginStartInput = z.object({})
 
 export const authLoginFinishInput = z.object({
+  // WebAuthn assertion response is validated by SimpleWebAuthn library
+  // We use z.any() here because the library handles validation internally
   assertion: z.any(),
   challengeId: z.string().uuid('Invalid challenge ID'),
 })

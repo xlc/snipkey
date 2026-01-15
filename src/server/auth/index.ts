@@ -4,7 +4,7 @@ import { z } from 'zod'
 import * as auth from '~/lib/server/auth'
 import { createClearedSessionCookie, createSessionCookie, getDbFromEnv, getServerFnContext } from '~/lib/server/context'
 import { authMiddleware, envMiddleware } from '~/lib/server/middleware'
-import type { SerializedError } from '~/lib/server/result'
+import { serializeApiError } from '~/lib/server/result'
 
 // Register Start
 export const authRegisterStart = createServerFn({ method: 'GET' })
@@ -16,7 +16,7 @@ export const authRegisterStart = createServerFn({ method: 'GET' })
 
     if (!result.ok) {
       return {
-        error: result.error as SerializedError,
+        error: serializeApiError(result.error),
       }
     }
 
@@ -28,6 +28,7 @@ export const authRegisterFinish = createServerFn({ method: 'POST' })
   .middleware([envMiddleware])
   .inputValidator(
     z.object({
+      // Cast to proper WebAuthn type - validation happens in SimpleWebAuthn
       attestation: z.any() as z.ZodType<RegistrationResponseJSON>,
       challengeId: z.string(),
     }),
@@ -65,7 +66,7 @@ export const authLoginStart = createServerFn({ method: 'GET' })
 
     if (!result.ok) {
       return {
-        error: result.error as SerializedError,
+        error: serializeApiError(result.error),
       }
     }
 
@@ -77,6 +78,7 @@ export const authLoginFinish = createServerFn({ method: 'POST' })
   .middleware([envMiddleware])
   .inputValidator(
     z.object({
+      // Cast to proper WebAuthn type - validation happens in SimpleWebAuthn
       assertion: z.any() as z.ZodType<AuthenticationResponseJSON>,
       challengeId: z.string(),
     }),
