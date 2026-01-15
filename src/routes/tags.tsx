@@ -2,6 +2,16 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { Edit2, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '~/components/ui/alert-dialog'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -17,9 +27,10 @@ function TagsPage() {
   const [loading, setLoading] = useState(true)
   const [editingTag, setEditingTag] = useState<string | null>(null)
   const [newTagName, setNewTagName] = useState('')
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [tagToDelete, setTagToDelete] = useState<string | null>(null)
 
   const loadTags = useCallback(async () => {
-    setLoading(true)
     setLoading(true)
     const result = await snippetsList({
       data: {
@@ -89,7 +100,12 @@ function TagsPage() {
   }
 
   async function handleDeleteTag(tag: string) {
-    if (!confirm(`Delete tag "${tag}"? This will remove it from all snippets.`)) return
+    setTagToDelete(tag)
+    setShowDeleteDialog(true)
+  }
+
+  async function confirmDeleteTag() {
+    if (!tagToDelete) return
 
     // Get all snippets with this tag
     const result = await snippetsList({
@@ -100,12 +116,15 @@ function TagsPage() {
 
     if (result.error) {
       toast.error(result.error.message)
+      setShowDeleteDialog(false)
       return
     }
 
     // Update each snippet to remove the tag
     // Note: This requires implementing bulk update or individual updates
     toast.info('Tag deletion requires backend updates - coming soon')
+    setShowDeleteDialog(false)
+    setTagToDelete(null)
   }
 
   if (loading) {
@@ -198,6 +217,24 @@ function TagsPage() {
           Back to Snippets
         </Button>
       </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete tag?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{tagToDelete}"? This will remove it from all snippets.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteTag} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

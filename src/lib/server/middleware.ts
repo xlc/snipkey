@@ -1,4 +1,4 @@
-import { createMiddleware } from '@tanstack/start-client-core'
+import { createMiddleware } from '@tanstack/react-start'
 import * as auth from './auth'
 import { getDbFromEnv, getSessionId } from './context'
 import type { AuthenticatedContext, MiddlewareContext } from './middleware-types'

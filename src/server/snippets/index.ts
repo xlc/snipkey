@@ -1,5 +1,5 @@
 import { snippetCreateInput, snippetListInput, snippetUpdateInput } from '@shared/validation'
-import { createServerFn } from '@tanstack/start-client-core'
+import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { getDbFromEnv } from '~/lib/server/context'
 import { requireAuthMiddleware } from '~/lib/server/middleware'

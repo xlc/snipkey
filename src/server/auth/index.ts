@@ -1,5 +1,5 @@
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/browser'
-import { createServerFn } from '@tanstack/start-client-core'
+import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import * as auth from '~/lib/server/auth'
 import { createClearedSessionCookie, createSessionCookie, getDbFromEnv, getServerFnContext } from '~/lib/server/context'
