@@ -32,12 +32,9 @@ export const snippetSchema = z.object({
 
 export const snippetCreateInput = snippetSchema
 
-export const snippetUpdateInput = snippetSchema
-	.partial()
-	.required({ id: true })
-	.extend({
-		id: z.string().uuid('Invalid snippet ID'),
-	})
+export const snippetUpdateInput = snippetSchema.partial().extend({
+	id: z.string().uuid('Invalid snippet ID'),
+})
 
 export const snippetListInput = z.object({
 	query: z.string().max(LIMITS.MAX_SEARCH_QUERY_LENGTH).optional(),

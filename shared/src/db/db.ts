@@ -3,7 +3,8 @@ import { D1Dialect } from 'kysely-d1'
 import type { Database } from './database'
 
 export interface Env {
-	DB: D1Database
+	// biome-ignore lint/suspicious/noExplicitAny: D1Database is a global type in Cloudflare Workers
+	DB: any
 }
 
 export function getDb(env: Env): Kysely<Database> {

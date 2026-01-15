@@ -31,10 +31,23 @@ export function parseTemplate(body: string): ParseResult {
 		let phType: 'text' | 'number' | 'enum'
 		let options: string[] | undefined
 
-		if (typePart.startsWith('enum(')) {
+		// Regex groups: fullMatch, name, typePart, enumOptions (optional), defaultValue (optional)
+		// When regex matches, capture groups 1 (name) and 2 (typePart) are always defined
+		// Groups 3 (enumOptions) and 4 (defaultValue) may be undefined
+		if (!name || !typePart) {
+			// Skip invalid matches (shouldn't happen with our regex)
+			lastIndex = end
+			match = PLACEHOLDER_REGEX.exec(body)
+			continue
+		}
+
+		const nameStr = name
+		const typeStr = typePart
+
+		if (typeStr.startsWith('enum(')) {
 			if (!enumOptions) {
 				errors.push({
-					message: `Enum placeholder "${name}" must have options, e.g., {{name:enum(opt1,opt2)}}`,
+					message: `Enum placeholder "${nameStr}" must have options, e.g., {{name:enum(opt1,opt2)}}`,
 					start,
 					end,
 				})
@@ -44,13 +57,13 @@ export function parseTemplate(body: string): ParseResult {
 				options = enumOptions.split(',').map(s => s.trim())
 				if (options.length === 0) {
 					errors.push({
-						message: `Enum placeholder "${name}" must have at least one option`,
+						message: `Enum placeholder "${nameStr}" must have at least one option`,
 						start,
 						end,
 					})
 				}
 			}
-		} else if (typePart === 'number') {
+		} else if (typeStr === 'number') {
 			phType = 'number'
 		} else {
 			phType = 'text'
@@ -59,10 +72,10 @@ export function parseTemplate(body: string): ParseResult {
 		// Create placeholder segment
 		const placeholder: PlaceholderSegment = {
 			kind: 'ph',
-			name,
+			name: nameStr,
 			phType,
 			options,
-			defaultValue: defaultValue ?? undefined,
+			defaultValue: defaultValue && defaultValue.length > 0 ? defaultValue : undefined,
 			raw: fullMatch,
 			start,
 			end,
@@ -71,8 +84,8 @@ export function parseTemplate(body: string): ParseResult {
 		segments.push(placeholder)
 
 		// Track unique placeholders (first appearance wins)
-		if (!seenNames.has(name)) {
-			seenNames.add(name)
+		if (!seenNames.has(nameStr)) {
+			seenNames.add(nameStr)
 			placeholders.push(placeholder)
 		}
 

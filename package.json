@@ -9,7 +9,8 @@
 		"typecheck": "tsc --noEmit",
 		"lint": "biome lint .",
 		"format": "biome format . --write",
-		"check": "biome check . --write && tsc --noEmit"
+		"check": "biome check . --write && tsc --noEmit",
+		"generate": "wrangler types --env-interface CloudflareEnv --include-runtime=false && wrangler types --include-env=false worker-runtime.d.ts"
 	},
 	"dependencies": {
 		"@radix-ui/react-dialog": "^1.1.15",

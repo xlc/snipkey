@@ -7,7 +7,12 @@
 		"moduleDetection": "force",
 		"jsx": "react-jsx",
 		"allowJs": true,
-		"types": ["@tanstack/react-router"],
+		"types": [
+			"@tanstack/react-router",
+			"./worker-configuration.d.ts",
+			"./worker-runtime.d.ts",
+			"bun-types"
+		],
 
 		// Bundler mode
 		"moduleResolution": "bundler",

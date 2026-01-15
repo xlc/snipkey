@@ -7,16 +7,17 @@
 		"defaultBranch": "main"
 	},
 	"files": {
-		"ignoreUnknown": false
+		"ignoreUnknown": false,
+		"includes": [
+			"**",
+			"!**/node_modules",
+			"!**/dist",
+			"!**/.wrangler",
+			"!worker-runtime.d.ts",
+			"!worker-configuration.d.ts",
+			"!src/routeTree.gen.ts"
+		]
 	},
-	"overrides": [
-		{
-			"includes": ["src/routeTree.gen.ts"],
-			"linter": {
-				"enabled": false
-			}
-		}
-	],
 	"formatter": {
 		"enabled": true,
 		"formatWithErrors": false,

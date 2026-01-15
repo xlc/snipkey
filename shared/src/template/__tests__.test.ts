@@ -6,9 +6,9 @@ describe('template parser', () => {
 		const result = parseTemplate('Hello {{name:text=World}}!')
 		expect(result.segments).toHaveLength(2)
 		expect(result.placeholders).toHaveLength(1)
-		expect(result.placeholders[0].name).toBe('name')
-		expect(result.placeholders[0].phType).toBe('text')
-		expect(result.placeholders[0].defaultValue).toBe('World')
+		expect(result.placeholders[0]?.name).toBe('name')
+		expect(result.placeholders[0]?.phType).toBe('text')
+		expect(result.placeholders[0]?.defaultValue).toBe('World')
 		expect(result.errors).toHaveLength(0)
 	})
 
@@ -16,19 +16,19 @@ describe('template parser', () => {
 		const result = parseTemplate('Age: {{age:number=30}}')
 		expect(result.segments).toHaveLength(2)
 		expect(result.placeholders).toHaveLength(1)
-		expect(result.placeholders[0].name).toBe('age')
-		expect(result.placeholders[0].phType).toBe('number')
-		expect(result.placeholders[0].defaultValue).toBe('30')
+		expect(result.placeholders[0]?.name).toBe('age')
+		expect(result.placeholders[0]?.phType).toBe('number')
+		expect(result.placeholders[0]?.defaultValue).toBe('30')
 	})
 
 	test('parses enum placeholder', () => {
 		const result = parseTemplate('Tone: {{tone:enum(formal,casual)=casual}}')
 		expect(result.segments).toHaveLength(2)
 		expect(result.placeholders).toHaveLength(1)
-		expect(result.placeholders[0].name).toBe('tone')
-		expect(result.placeholders[0].phType).toBe('enum')
-		expect(result.placeholders[0].options).toEqual(['formal', 'casual'])
-		expect(result.placeholders[0].defaultValue).toBe('casual')
+		expect(result.placeholders[0]?.name).toBe('tone')
+		expect(result.placeholders[0]?.phType).toBe('enum')
+		expect(result.placeholders[0]?.options).toEqual(['formal', 'casual'])
+		expect(result.placeholders[0]?.defaultValue).toBe('casual')
 	})
 
 	test('parses multiple placeholders', () => {
@@ -40,7 +40,7 @@ describe('template parser', () => {
 
 	test('handles placeholder without default', () => {
 		const result = parseTemplate('Value: {{value:text}}')
-		expect(result.placeholders[0].defaultValue).toBeUndefined()
+		expect(result.placeholders[0]?.defaultValue).toBeUndefined()
 	})
 
 	test('handles empty template', () => {
@@ -52,7 +52,7 @@ describe('template parser', () => {
 	test('handles template with only text', () => {
 		const result = parseTemplate('Just plain text')
 		expect(result.segments).toHaveLength(1)
-		expect(result.segments[0].kind).toBe('text')
+		expect(result.segments[0]?.kind).toBe('text')
 		expect(result.placeholders).toHaveLength(0)
 	})
 })
@@ -83,7 +83,7 @@ describe('template renderer', () => {
 		const result = renderTemplate(parsed.segments, { age: 'invalid' })
 		expect(result.rendered).toBe('Age: invalid')
 		expect(result.errors).toHaveLength(1)
-		expect(result.errors?.[0].placeholder).toBe('age')
+		expect(result.errors?.[0]?.placeholder).toBe('age')
 	})
 
 	test('renders enum with valid value', () => {
@@ -98,7 +98,7 @@ describe('template renderer', () => {
 		const result = renderTemplate(parsed.segments, { tone: 'slang' })
 		expect(result.rendered).toBe('Tone: slang')
 		expect(result.errors).toHaveLength(1)
-		expect(result.errors?.[0].placeholder).toBe('tone')
+		expect(result.errors?.[0]?.placeholder).toBe('tone')
 	})
 
 	test('renders complex template', () => {
