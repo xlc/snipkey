@@ -24,6 +24,7 @@ function SnippetDetail() {
 	const [rendered, setRendered] = useState("");
 	const [renderErrors, setRenderErrors] = useState(false);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Only load on mount
 	useEffect(() => {
 		loadSnippet();
 	}, [id]);

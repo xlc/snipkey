@@ -83,7 +83,7 @@ describe("template renderer", () => {
 		const result = renderTemplate(parsed.segments, { age: "invalid" });
 		expect(result.rendered).toBe("Age: invalid");
 		expect(result.errors).toHaveLength(1);
-		expect(result.errors![0].placeholder).toBe("age");
+		expect(result.errors?.[0].placeholder).toBe("age");
 	});
 
 	test("renders enum with valid value", () => {
@@ -98,7 +98,7 @@ describe("template renderer", () => {
 		const result = renderTemplate(parsed.segments, { tone: "slang" });
 		expect(result.rendered).toBe("Tone: slang");
 		expect(result.errors).toHaveLength(1);
-		expect(result.errors![0].placeholder).toBe("tone");
+		expect(result.errors?.[0].placeholder).toBe("tone");
 	});
 
 	test("renders complex template", () => {
