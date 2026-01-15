@@ -2,6 +2,7 @@ import type { ApiError } from "@shared/types";
 import type { SnippetCreateInput, SnippetListInput, SnippetUpdateInput } from "@shared/validation";
 import { createServerFn } from "@tanstack/start";
 import { getDbFromEnv } from "~/lib/server/context";
+import { requireAuthMiddleware } from "~/lib/server/middleware";
 import * as snippets from "~/lib/server/snippets";
 
 type Result<T> = { data: T } | { error: ApiError };
@@ -13,59 +14,50 @@ function toResult<T>(result: { ok: boolean; data?: T; error?: ApiError }): Resul
 	return { error: result.error as ApiError };
 }
 
-/**
- * SECURITY WARNING: MOCK_USER_ID is a placeholder for development.
- *
- * All snippet operations currently use a hardcoded user ID, which means:
- * - User isolation is NOT enforced (all users see the same snippets)
- * - Authentication is BYPASSED completely
- * - This is ONLY acceptable for local development
- *
- * PRODUCTION FIX REQUIRED:
- * TanStack Start server functions don't easily expose request context yet.
- * To fix this, we need to:
- * 1. Wait for TanStack Start to expose request context in server functions, OR
- * 2. Implement a middleware pattern that extracts session from cookies, OR
- * 3. Move to a framework with better request context support
- *
- * See: apps/web/src/lib/server/auth-user.ts for the intended implementation
- */
-const MOCK_USER_ID = "mock-user-id";
-
 // List snippets
-export const snippetsList = createServerFn("GET", async (input: SnippetListInput) => {
+export const snippetsList = createServerFn("GET", async (input: SnippetListInput, ctx: any) => {
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 	const db = getDbFromEnv();
-	const result = await snippets.snippetsList(db, MOCK_USER_ID, input);
+	const userId = ctx.context.user.id;
+	const result = await snippets.snippetsList(db, userId, input);
 	return toResult(result);
-});
+}).middleware([requireAuthMiddleware]);
 
 // Get single snippet
-export const snippetGet = createServerFn("GET", async ({ id }: { id: string }) => {
+export const snippetGet = createServerFn("GET", async ({ id }: { id: string }, ctx: any) => {
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 	const db = getDbFromEnv();
-	const result = await snippets.snippetGet(db, MOCK_USER_ID, id);
+	const userId = ctx.context.user.id;
+	const result = await snippets.snippetGet(db, userId, id);
 	return toResult(result);
-});
+}).middleware([requireAuthMiddleware]);
 
 // Create snippet
-export const snippetCreate = createServerFn("POST", async (input: SnippetCreateInput) => {
+export const snippetCreate = createServerFn("POST", async (input: SnippetCreateInput, ctx: any) => {
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 	const db = getDbFromEnv();
-	const result = await snippets.snippetCreate(db, MOCK_USER_ID, input);
+	const userId = ctx.context.user.id;
+	const result = await snippets.snippetCreate(db, userId, input);
 	return toResult(result);
-});
+}).middleware([requireAuthMiddleware]);
 
 // Update snippet
 export const snippetUpdate = createServerFn(
 	"POST",
-	async ({ id, ...input }: { id: string } & SnippetUpdateInput) => {
+	async ({ id, ...input }: { id: string } & SnippetUpdateInput, ctx: any) => {
+		// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 		const db = getDbFromEnv();
-		const result = await snippets.snippetUpdate(db, MOCK_USER_ID, id, input);
+		const userId = ctx.context.user.id;
+		const result = await snippets.snippetUpdate(db, userId, id, input);
 		return toResult(result);
 	},
-);
+).middleware([requireAuthMiddleware]);
 
 // Delete snippet
-export const snippetDelete = createServerFn("POST", async ({ id }: { id: string }) => {
+export const snippetDelete = createServerFn("POST", async ({ id }: { id: string }, ctx: any) => {
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 	const db = getDbFromEnv();
-	const result = await snippets.snippetDelete(db, MOCK_USER_ID, id);
+	const userId = ctx.context.user.id;
+	const result = await snippets.snippetDelete(db, userId, id);
 	return toResult(result);
-});
+}).middleware([requireAuthMiddleware]);

@@ -3,6 +3,7 @@ import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simp
 import { createServerFn } from "@tanstack/start";
 import * as auth from "~/lib/server/auth";
 import { getDbFromEnv } from "~/lib/server/context";
+import { authMiddleware } from "~/lib/server/middleware";
 
 type Result<T> = { data: T } | { error: ApiError };
 
@@ -32,7 +33,23 @@ export const authRegisterFinish = createServerFn(
 	}) => {
 		const db = getDbFromEnv();
 		const result = await auth.authRegisterFinish(db, attestation, challengeId);
-		return toResult(result);
+
+		if (!result.ok) {
+			return new Response(JSON.stringify({ error: result.error }), {
+				status: 400,
+				headers: { "Content-Type": "application/json" },
+			});
+		}
+
+		const sessionId = result.data.sessionId;
+
+		return new Response(JSON.stringify(result.data), {
+			status: 200,
+			headers: {
+				"Content-Type": "application/json",
+				"Set-Cookie": `session=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${7 * 24 * 60 * 60}`,
+			},
+		});
 	},
 );
 
@@ -55,29 +72,63 @@ export const authLoginFinish = createServerFn(
 	}) => {
 		const db = getDbFromEnv();
 		const result = await auth.authLoginFinish(db, assertion, challengeId);
-		return toResult(result);
+
+		if (!result.ok) {
+			return new Response(JSON.stringify({ error: result.error }), {
+				status: 400,
+				headers: { "Content-Type": "application/json" },
+			});
+		}
+
+		const sessionId = result.data.sessionId;
+
+		return new Response(JSON.stringify(result.data), {
+			status: 200,
+			headers: {
+				"Content-Type": "application/json",
+				"Set-Cookie": `session=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${7 * 24 * 60 * 60}`,
+			},
+		});
 	},
 );
 
 // Logout
-export const authLogout = createServerFn({ method: "POST" }, async () => {
+export const authLogout = createServerFn({ method: "POST" }, async (_: undefined, ctx: any) => {
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 	const db = getDbFromEnv();
-	// TODO: Get session ID from request
-	const sessionId = ""; // Placeholder
-	const result = await auth.authLogout(db, sessionId);
-	return toResult(result);
-});
 
-// Get current user
-export const authMe = createServerFn({ method: "GET" }, async () => {
-	const db = getDbFromEnv();
-	// TODO: Get session ID from request
-	const sessionId = ""; // Placeholder
-	const user = await auth.getUserFromSession(db, sessionId);
+	// Extract session ID from request headers
+	const sessionId = extractSessionId(ctx.request.headers);
 
-	if (!user) {
-		return { error: { code: "AUTH_REQUIRED" as const, message: "No valid session" } };
+	// Revoke session if it exists
+	if (sessionId && ctx.context.user) {
+		await auth.authLogout(db, sessionId);
 	}
 
-	return { data: { userId: user.userId } };
-});
+	return new Response(JSON.stringify({ success: true }), {
+		status: 200,
+		headers: {
+			"Content-Type": "application/json",
+			"Set-Cookie": "session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0",
+		},
+	});
+}).middleware([authMiddleware]);
+
+// Helper to extract session ID from headers
+function extractSessionId(headers: Headers): string | undefined {
+	const cookies = headers.get("cookie") ?? "";
+	const sessionMatch = cookies.match(/session=([^;]+)/);
+	return sessionMatch?.[1];
+}
+
+// Get current user
+export const authMe = createServerFn({ method: "GET" }, async (_: undefined, ctx: any) => {
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
+	// If not authenticated, return null user
+	if (!ctx.context.user) {
+		return { data: { user: null } };
+	}
+
+	// Return authenticated user info
+	return { data: { userId: ctx.context.user.id } };
+}).middleware([authMiddleware]);
