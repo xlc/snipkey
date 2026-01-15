@@ -9,6 +9,7 @@ import {
 	getSessionId,
 } from "~/lib/server/context";
 import { authMiddleware } from "~/lib/server/middleware";
+import type { ServerFnContext } from "~/lib/server/types";
 
 type Result<T> = { data: T } | { error: ApiError };
 
@@ -98,33 +99,39 @@ export const authLoginFinish = createServerFn(
 );
 
 // Logout
-export const authLogout = createServerFn({ method: "POST" }, async (_: undefined, ctx: any) => {
-	const db = getDbFromEnv();
+export const authLogout = createServerFn(
+	{ method: "POST" },
+	async (_: undefined, ctx: ServerFnContext) => {
+		const db = getDbFromEnv();
 
-	// Extract session ID from request headers
-	const sessionId = getSessionId(ctx.request.headers);
+		// Extract session ID from request headers
+		const sessionId = getSessionId(ctx.request.headers);
 
-	// Revoke session if it exists
-	if (sessionId && ctx.context.user) {
-		await auth.authLogout(db, sessionId);
-	}
+		// Revoke session if it exists
+		if (sessionId && ctx.context.user) {
+			await auth.authLogout(db, sessionId);
+		}
 
-	return new Response(JSON.stringify({ success: true }), {
-		status: 200,
-		headers: {
-			"Content-Type": "application/json",
-			"Set-Cookie": createClearedSessionCookie(),
-		},
-	});
-}).middleware([authMiddleware]);
+		return new Response(JSON.stringify({ success: true }), {
+			status: 200,
+			headers: {
+				"Content-Type": "application/json",
+				"Set-Cookie": createClearedSessionCookie(),
+			},
+		});
+	},
+).middleware([authMiddleware]);
 
 // Get current user
-export const authMe = createServerFn({ method: "GET" }, async (_: undefined, ctx: any) => {
-	// If not authenticated, return null user
-	if (!ctx.context.user) {
-		return { data: { user: null } };
-	}
+export const authMe = createServerFn(
+	{ method: "GET" },
+	async (_: undefined, ctx: ServerFnContext) => {
+		// If not authenticated, return null user
+		if (!ctx.context.user) {
+			return { data: { user: null } };
+		}
 
-	// Return authenticated user info
-	return { data: { userId: ctx.context.user.id } };
-}).middleware([authMiddleware]);
+		// Return authenticated user info
+		return { data: { userId: ctx.context.user.id } };
+	},
+).middleware([authMiddleware]);
