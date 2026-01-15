@@ -1,12 +1,21 @@
 import { z } from "zod";
+import { LIMITS } from "./limits";
 
 export const snippetSchema = z.object({
 	title: z
 		.string()
 		.min(1, "Title is required")
-		.max(200, "Title must be less than 200 characters")
+		.max(
+			LIMITS.MAX_SNIPPET_TITLE_LENGTH,
+			`Title must be less than ${LIMITS.MAX_SNIPPET_TITLE_LENGTH} characters`,
+		)
 		.transform((val) => val.trim()),
-	body: z.string().max(50000, "Body must be less than 50000 characters"),
+	body: z
+		.string()
+		.max(
+			LIMITS.MAX_SNIPPET_BODY_LENGTH,
+			`Body must be less than ${LIMITS.MAX_SNIPPET_BODY_LENGTH} characters`,
+		),
 	tags: z
 		.array(z.string())
 		.transform((tags) =>
@@ -15,7 +24,10 @@ export const snippetSchema = z.object({
 				.filter((tag) => tag.length > 0)
 				.filter((tag, i, arr) => arr.indexOf(tag) === i),
 		)
-		.refine((tags) => tags.length <= 10, "Maximum 10 tags allowed"),
+		.refine(
+			(tags) => tags.length <= LIMITS.MAX_TAGS_PER_SNIPPET,
+			`Maximum ${LIMITS.MAX_TAGS_PER_SNIPPET} tags allowed`,
+		),
 });
 
 export const snippetCreateInput = snippetSchema;
@@ -28,9 +40,9 @@ export const snippetUpdateInput = snippetSchema
 	});
 
 export const snippetListInput = z.object({
-	query: z.string().max(200).optional(),
-	tag: z.string().max(50).optional(),
-	limit: z.number().int().positive().max(100).default(20),
+	query: z.string().max(LIMITS.MAX_SEARCH_QUERY_LENGTH).optional(),
+	tag: z.string().max(LIMITS.MAX_TAG_LENGTH).optional(),
+	limit: z.number().int().positive().max(LIMITS.MAX_SNIPPETS_PER_PAGE).default(20),
 	cursor: z
 		.object({
 			updatedAt: z.number(),

@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { useDebounce } from "~/lib/hooks/useDebounce";
 import { snippetsList } from "~/server/snippets";
 
 export const Route = createFileRoute("/")({
@@ -21,16 +23,19 @@ function Index() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
+	// Debounce search input to reduce API calls
+	const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
 	async function loadSnippets() {
 		setLoading(true);
 		const result = await snippetsList({
 			limit: 20,
-			query: searchQuery || undefined,
+			query: debouncedSearchQuery || undefined,
 			tag: selectedTag || undefined,
 		});
 
 		if (result.error) {
-			console.error("Failed to load snippets:", result.error);
+			toast.error("Failed to load snippets");
 			setLoading(false);
 			return;
 		}
@@ -39,15 +44,10 @@ function Index() {
 		setLoading(false);
 	}
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: Only load on mount
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Re-load when search or tag changes
 	useEffect(() => {
 		loadSnippets();
-	}, []);
-
-	function handleSearch(e: React.FormEvent<HTMLFormElement>) {
-		e.preventDefault();
-		loadSnippets();
-	}
+	}, [debouncedSearchQuery, selectedTag]);
 
 	return (
 		<div className="space-y-8">
@@ -62,17 +62,14 @@ function Index() {
 			</div>
 
 			<div className="space-y-4">
-				<form onSubmit={handleSearch} className="flex gap-2">
+				<div className="flex gap-2">
 					<Input
 						placeholder="Search snippets..."
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
 						className="max-w-sm"
 					/>
-					<Button type="submit" variant="outline">
-						Search
-					</Button>
-				</form>
+				</div>
 
 				{selectedTag && (
 					<div className="flex items-center gap-2">

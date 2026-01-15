@@ -123,7 +123,8 @@ export function PlaceholderEditor({ placeholders, values, onChange }: Placeholde
 
 	if (isDesktop) {
 		return (
-			<div className="flex gap-2 flex-wrap">
+			<fieldset className="flex gap-2 flex-wrap border-0 p-0 m-0">
+				<legend className="sr-only">Placeholder values</legend>
 				{placeholders.map((placeholder) => (
 					<Popover
 						key={placeholder.name}
@@ -137,7 +138,12 @@ export function PlaceholderEditor({ placeholders, values, onChange }: Placeholde
 						}}
 					>
 						<PopoverTrigger asChild>
-							<Badge variant="secondary" className="cursor-pointer hover:bg-accent">
+							<Badge
+								variant="secondary"
+								className="cursor-pointer hover:bg-accent"
+								aria-label={`Edit ${placeholder.name} placeholder`}
+								aria-haspopup="dialog"
+							>
 								{placeholder.name}
 								{values[placeholder.name] && " ✓"}
 							</Badge>
@@ -147,12 +153,13 @@ export function PlaceholderEditor({ placeholders, values, onChange }: Placeholde
 						</PopoverContent>
 					</Popover>
 				))}
-			</div>
+			</fieldset>
 		);
 	}
 
 	return (
-		<div className="flex gap-2 flex-wrap">
+		<fieldset className="flex gap-2 flex-wrap border-0 p-0 m-0">
+			<legend className="sr-only">Placeholder values</legend>
 			{placeholders.map((placeholder) => (
 				<Sheet
 					key={placeholder.name}
@@ -166,7 +173,12 @@ export function PlaceholderEditor({ placeholders, values, onChange }: Placeholde
 					}}
 				>
 					<SheetTrigger asChild>
-						<Badge variant="secondary" className="cursor-pointer hover:bg-accent">
+						<Badge
+							variant="secondary"
+							className="cursor-pointer hover:bg-accent"
+							aria-label={`Edit ${placeholder.name} placeholder`}
+							aria-haspopup="dialog"
+						>
 							{placeholder.name}
 							{values[placeholder.name] && " ✓"}
 						</Badge>
@@ -182,6 +194,6 @@ export function PlaceholderEditor({ placeholders, values, onChange }: Placeholde
 					</SheetContent>
 				</Sheet>
 			))}
-		</div>
+		</fieldset>
 	);
 }

@@ -1,4 +1,5 @@
 import { parseTemplate } from "@shared/template";
+import { LIMITS } from "@shared/validation/limits";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -45,6 +46,13 @@ function NewSnippet() {
 
 		if (!body.trim()) {
 			toast.error("Body is required");
+			return;
+		}
+
+		// Validate placeholder count
+		const parseResult = parseTemplate(body);
+		if (parseResult.placeholders.length > LIMITS.MAX_PLACEHOLDERS_PER_SNIPPET) {
+			toast.error(`Maximum ${LIMITS.MAX_PLACEHOLDERS_PER_SNIPPET} placeholders allowed`);
 			return;
 		}
 
