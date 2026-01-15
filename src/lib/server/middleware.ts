@@ -4,6 +4,29 @@ import { getDbFromEnv, getSessionId } from './context'
 import type { MiddlewareContext } from './middleware-types'
 
 /**
+ * Security middleware that adds security headers to all responses
+ *
+ * This middleware adds:
+ * - Content-Security-Policy: Restricts resource sources
+ * - X-Frame-Options: Prevents clickjacking
+ * - X-Content-Type-Options: Prevents MIME sniffing
+ * - Referrer-Policy: Controls referrer information leakage
+ * - Permissions-Policy: Restricts browser features
+ */
+export const securityMiddleware = createMiddleware().server(async ({ request }) => {
+	const response = await request.next()
+
+	// Add security headers
+	response.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none';")
+	response.headers.set('X-Frame-Options', 'DENY')
+	response.headers.set('X-Content-Type-Options', 'nosniff')
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+	response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+
+	return response
+})
+
+/**
  * Authentication middleware for TanStack Start server functions
  *
  * This middleware:

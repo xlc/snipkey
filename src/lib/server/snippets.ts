@@ -16,16 +16,18 @@ export async function snippetsList(
 		.orderBy('id', 'desc')
 		.limit(input.limit)
 
-	// Apply search filter
+	// Apply search filter (escape SQL wildcards to prevent injection)
 	if (input.query) {
+		const escapedQuery = input.query.replace(/[%_\\]/g, '\\$&')
 		query = query.where(eb =>
-			eb.or([eb('title', 'like', `%${input.query}%`), eb('body', 'like', `%${input.query}%`)]),
+			eb.or([eb('title', 'like', `%${escapedQuery}%`), eb('body', 'like', `%${escapedQuery}%`)]),
 		)
 	}
 
-	// Apply tag filter
+	// Apply tag filter (escape quotes and backslashes to prevent injection)
 	if (input.tag) {
-		query = query.where('tags', 'like', `%"${input.tag}"%`)
+		const escapedTag = input.tag.replace(/["\\]/g, '\\$&')
+		query = query.where('tags', 'like', `%"${escapedTag}"%`)
 	}
 
 	// Apply cursor pagination

@@ -1,5 +1,5 @@
 import type { ApiError } from '@shared/types'
-import type { SnippetCreateInput, SnippetListInput, SnippetUpdateInput } from '@shared/validation'
+import { snippetCreateInput, snippetListInput, snippetUpdateInput } from '@shared/validation'
 import { createServerFn } from '@tanstack/start'
 import { getDbFromEnv } from '~/lib/server/context'
 import { requireAuthMiddleware } from '~/lib/server/middleware'
@@ -16,15 +16,15 @@ function toResult<T>(result: { ok: boolean; data?: T; error?: ApiError }): Resul
 }
 
 // List snippets
-export const snippetsList = createServerFn(
-	'GET',
-	async (input: SnippetListInput, ctx: ServerFnContext) => {
-		const db = getDbFromEnv()
-		const userId = ctx.context.user.id
-		const result = await snippets.snippetsList(db, userId, input)
-		return toResult(result)
-	},
-).middleware([requireAuthMiddleware])
+export const snippetsList = createServerFn('GET', async (input: unknown, ctx: ServerFnContext) => {
+	// Validate input
+	const validated = snippetListInput.parse(input)
+
+	const db = getDbFromEnv()
+	const userId = ctx.context.user.id
+	const result = await snippets.snippetsList(db, userId, validated)
+	return toResult(result)
+}).middleware([requireAuthMiddleware])
 
 // Get single snippet
 export const snippetGet = createServerFn(
@@ -40,10 +40,13 @@ export const snippetGet = createServerFn(
 // Create snippet
 export const snippetCreate = createServerFn(
 	'POST',
-	async (input: SnippetCreateInput, ctx: ServerFnContext) => {
+	async (input: unknown, ctx: ServerFnContext) => {
+		// Validate input
+		const validated = snippetCreateInput.parse(input)
+
 		const db = getDbFromEnv()
 		const userId = ctx.context.user.id
-		const result = await snippets.snippetCreate(db, userId, input)
+		const result = await snippets.snippetCreate(db, userId, validated)
 		return toResult(result)
 	},
 ).middleware([requireAuthMiddleware])
@@ -51,10 +54,14 @@ export const snippetCreate = createServerFn(
 // Update snippet
 export const snippetUpdate = createServerFn(
 	'POST',
-	async ({ id, ...input }: { id: string } & SnippetUpdateInput, ctx: ServerFnContext) => {
+	async (input: unknown, ctx: ServerFnContext) => {
+		// Validate input
+		const validated = snippetUpdateInput.parse(input)
+		const { id, ...data } = validated
+
 		const db = getDbFromEnv()
 		const userId = ctx.context.user.id
-		const result = await snippets.snippetUpdate(db, userId, id, input)
+		const result = await snippets.snippetUpdate(db, userId, id, data)
 		return toResult(result)
 	},
 ).middleware([requireAuthMiddleware])
