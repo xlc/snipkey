@@ -2,7 +2,12 @@ import type { ApiError } from "@shared/types";
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simplewebauthn/browser";
 import { createServerFn } from "@tanstack/start";
 import * as auth from "~/lib/server/auth";
-import { getDbFromEnv } from "~/lib/server/context";
+import {
+	createClearedSessionCookie,
+	createSessionCookie,
+	getDbFromEnv,
+	getSessionId,
+} from "~/lib/server/context";
 import { authMiddleware } from "~/lib/server/middleware";
 
 type Result<T> = { data: T } | { error: ApiError };
@@ -47,7 +52,7 @@ export const authRegisterFinish = createServerFn(
 			status: 200,
 			headers: {
 				"Content-Type": "application/json",
-				"Set-Cookie": `session=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${sessionTTLSeconds}`,
+				"Set-Cookie": createSessionCookie(sessionId, sessionTTLSeconds),
 			},
 		});
 	},
@@ -86,7 +91,7 @@ export const authLoginFinish = createServerFn(
 			status: 200,
 			headers: {
 				"Content-Type": "application/json",
-				"Set-Cookie": `session=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${sessionTTLSeconds}`,
+				"Set-Cookie": createSessionCookie(sessionId, sessionTTLSeconds),
 			},
 		});
 	},
@@ -94,11 +99,11 @@ export const authLoginFinish = createServerFn(
 
 // Logout
 export const authLogout = createServerFn({ method: "POST" }, async (_: undefined, ctx: any) => {
-	// biome-ignore lint/suspicious/noExplicitAny
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 	const db = getDbFromEnv();
 
 	// Extract session ID from request headers
-	const sessionId = extractSessionId(ctx.request.headers);
+	const sessionId = getSessionId(ctx.request.headers);
 
 	// Revoke session if it exists
 	if (sessionId && ctx.context.user) {
@@ -109,22 +114,14 @@ export const authLogout = createServerFn({ method: "POST" }, async (_: undefined
 		status: 200,
 		headers: {
 			"Content-Type": "application/json",
-			"Set-Cookie": "session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0",
+			"Set-Cookie": createClearedSessionCookie(),
 		},
 	});
 }).middleware([authMiddleware]);
 
-// Helper to extract session ID from headers
-function extractSessionId(headers: Headers): string | undefined {
-	const cookies = headers.get("cookie") ?? "";
-	// Use stricter regex to avoid matching substrings of other cookies
-	const sessionMatch = cookies.match(/(?:^|; )session=([^;]+)/);
-	return sessionMatch?.[1];
-}
-
 // Get current user
 export const authMe = createServerFn({ method: "GET" }, async (_: undefined, ctx: any) => {
-	// biome-ignore lint/suspicious/noExplicitAny
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 	// If not authenticated, return null user
 	if (!ctx.context.user) {
 		return { data: { user: null } };

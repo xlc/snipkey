@@ -16,7 +16,7 @@ function toResult<T>(result: { ok: boolean; data?: T; error?: ApiError }): Resul
 
 // List snippets
 export const snippetsList = createServerFn("GET", async (input: SnippetListInput, ctx: any) => {
-	// biome-ignore lint/suspicious/noExplicitAny
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 	const db = getDbFromEnv();
 	const userId = ctx.context.user.id;
 	const result = await snippets.snippetsList(db, userId, input);
@@ -25,7 +25,7 @@ export const snippetsList = createServerFn("GET", async (input: SnippetListInput
 
 // Get single snippet
 export const snippetGet = createServerFn("GET", async ({ id }: { id: string }, ctx: any) => {
-	// biome-ignore lint/suspicious/noExplicitAny
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 	const db = getDbFromEnv();
 	const userId = ctx.context.user.id;
 	const result = await snippets.snippetGet(db, userId, id);
@@ -34,7 +34,7 @@ export const snippetGet = createServerFn("GET", async ({ id }: { id: string }, c
 
 // Create snippet
 export const snippetCreate = createServerFn("POST", async (input: SnippetCreateInput, ctx: any) => {
-	// biome-ignore lint/suspicious/noExplicitAny
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 	const db = getDbFromEnv();
 	const userId = ctx.context.user.id;
 	const result = await snippets.snippetCreate(db, userId, input);
@@ -45,7 +45,7 @@ export const snippetCreate = createServerFn("POST", async (input: SnippetCreateI
 export const snippetUpdate = createServerFn(
 	"POST",
 	async ({ id, ...input }: { id: string } & SnippetUpdateInput, ctx: any) => {
-		// biome-ignore lint/suspicious/noExplicitAny
+		// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 		const db = getDbFromEnv();
 		const userId = ctx.context.user.id;
 		const result = await snippets.snippetUpdate(db, userId, id, input);
@@ -55,7 +55,7 @@ export const snippetUpdate = createServerFn(
 
 // Delete snippet
 export const snippetDelete = createServerFn("POST", async ({ id }: { id: string }, ctx: any) => {
-	// biome-ignore lint/suspicious/noExplicitAny
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 	const db = getDbFromEnv();
 	const userId = ctx.context.user.id;
 	const result = await snippets.snippetDelete(db, userId, id);

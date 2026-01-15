@@ -1,6 +1,6 @@
 import { createMiddleware } from "@tanstack/start";
 import * as auth from "./auth";
-import { getDbFromEnv } from "./context";
+import { getDbFromEnv, getSessionId } from "./context";
 import type { MiddlewareContext } from "./middleware-types";
 
 /**
@@ -18,7 +18,7 @@ export const authMiddleware = createMiddleware().server(async ({ request }) => {
 	const db = getDbFromEnv();
 
 	// Extract session ID from cookies
-	const sessionId = extractSessionId(request.headers);
+	const sessionId = getSessionId(request.headers);
 	if (!sessionId) {
 		// Not logged in - pass without user context
 		return request.next({
@@ -53,7 +53,7 @@ export const authMiddleware = createMiddleware().server(async ({ request }) => {
  */
 export const requireAuthMiddleware = createMiddleware().server(async ({ request }) => {
 	const db = getDbFromEnv();
-	const sessionId = extractSessionId(request.headers);
+	const sessionId = getSessionId(request.headers);
 
 	if (!sessionId) {
 		throw new Error("AUTH_REQUIRED: No session cookie found");
@@ -70,13 +70,3 @@ export const requireAuthMiddleware = createMiddleware().server(async ({ request 
 		} satisfies MiddlewareContext,
 	});
 });
-
-/**
- * Extract session ID from request headers
- */
-function extractSessionId(headers: Headers): string | undefined {
-	const cookies = headers.get("cookie") ?? "";
-	// Use stricter regex to avoid matching substrings of other cookies
-	const sessionMatch = cookies.match(/(?:^|; )session=([^;]+)/);
-	return sessionMatch?.[1];
-}
