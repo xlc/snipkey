@@ -99,7 +99,6 @@ export const authLoginFinish = createServerFn(
 
 // Logout
 export const authLogout = createServerFn({ method: "POST" }, async (_: undefined, ctx: any) => {
-	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 	const db = getDbFromEnv();
 
 	// Extract session ID from request headers
@@ -121,7 +120,6 @@ export const authLogout = createServerFn({ method: "POST" }, async (_: undefined
 
 // Get current user
 export const authMe = createServerFn({ method: "GET" }, async (_: undefined, ctx: any) => {
-	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
 	// If not authenticated, return null user
 	if (!ctx.context.user) {
 		return { data: { user: null } };
