@@ -101,8 +101,8 @@ export const authLogout = createServerFn({ method: 'POST' })
 	.handler(async ctx => {
 		const db = getDbFromEnv()
 
-		// Extract session ID from request headers
-		const sessionId = getSessionId((ctx as any).request.headers)
+		// Get session ID from context (set by middleware)
+		const sessionId = (ctx as any).context.sessionId
 
 		// Revoke session if it exists
 		if (sessionId && (ctx as any).context.user) {
