@@ -1,19 +1,10 @@
-import type { ApiError } from '@shared/types'
 import { snippetCreateInput, snippetListInput, snippetUpdateInput } from '@shared/validation'
 import { createServerFn } from '@tanstack/start'
 import { getDbFromEnv } from '~/lib/server/context'
 import { requireAuthMiddleware } from '~/lib/server/middleware'
 import * as snippets from '~/lib/server/snippets'
+import { toResult } from '~/lib/server/result'
 import type { ServerFnContext } from '~/lib/server/types'
-
-type Result<T> = { data: T } | { error: ApiError }
-
-function toResult<T>(result: { ok: boolean; data?: T; error?: ApiError }): Result<T> {
-	if (result.ok && result.data !== undefined) {
-		return { data: result.data }
-	}
-	return { error: result.error as ApiError }
-}
 
 // List snippets
 export const snippetsList = createServerFn('GET', async (input: unknown, ctx: ServerFnContext) => {

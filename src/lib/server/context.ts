@@ -24,10 +24,10 @@ export function getSessionId(headers: Headers): string | undefined {
 
 // Create session cookie header
 export function createSessionCookie(sessionId: string, maxAge: number): string {
-	return `session=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`
+	return `session=${sessionId}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAge}`
 }
 
 // Create cleared session cookie header
 export function createClearedSessionCookie(): string {
-	return `session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
+	return `session=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`
 }

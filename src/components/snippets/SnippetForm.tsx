@@ -1,7 +1,7 @@
 import { parseTemplate } from '@shared/template'
 import { LIMITS } from '@shared/validation/limits'
 import { useRouter } from '@tanstack/react-router'
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
@@ -17,7 +17,7 @@ export interface SnippetFormProps {
 	onSubmit: (data: { title: string; body: string; tags: string[] }) => Promise<void>
 }
 
-export function SnippetForm({
+export const SnippetForm = memo(function SnippetForm({
 	mode,
 	id,
 	initialTitle = '',
@@ -222,4 +222,4 @@ export function SnippetForm({
 			</form>
 		</div>
 	)
-}
+})

@@ -1,5 +1,5 @@
-import type { Placeholder } from '@shared/template'
-import { useEffect, useState } from 'react'
+import type { PlaceholderSegment } from '@shared/template'
+import { useEffect, memo, useState } from 'react'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -16,12 +16,16 @@ import { Textarea } from '~/components/ui/textarea'
 import { useMediaQuery } from '~/lib/hooks/useMediaQuery'
 
 interface PlaceholderEditorProps {
-	placeholders: Placeholder[]
+	placeholders: PlaceholderSegment[]
 	values: Record<string, string>
 	onChange: (values: Record<string, string>) => void
 }
 
-export function PlaceholderEditor({ placeholders, values, onChange }: PlaceholderEditorProps) {
+export const PlaceholderEditor = memo(function PlaceholderEditor({
+	placeholders,
+	values,
+	onChange,
+}: PlaceholderEditorProps) {
 	const isDesktop = useMediaQuery('(min-width: 768px)')
 	const [openPlaceholder, setOpenPlaceholder] = useState<string | null>(null)
 	const [tempValue, setTempValue] = useState('')
@@ -196,4 +200,4 @@ export function PlaceholderEditor({ placeholders, values, onChange }: Placeholde
 			))}
 		</fieldset>
 	)
-}
+})

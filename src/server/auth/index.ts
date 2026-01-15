@@ -1,4 +1,3 @@
-import type { ApiError } from '@shared/types'
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/browser'
 import { createServerFn } from '@tanstack/start'
 import * as auth from '~/lib/server/auth'
@@ -9,16 +8,8 @@ import {
 	getSessionId,
 } from '~/lib/server/context'
 import { authMiddleware } from '~/lib/server/middleware'
+import { toResult } from '~/lib/server/result'
 import type { ServerFnContext } from '~/lib/server/types'
-
-type Result<T> = { data: T } | { error: ApiError }
-
-function toResult<T>(result: { ok: boolean; data?: T; error?: ApiError }): Result<T> {
-	if (result.ok && result.data !== undefined) {
-		return { data: result.data }
-	}
-	return { error: result.error as ApiError }
-}
 
 // Register Start
 export const authRegisterStart = createServerFn({ method: 'GET' }, async () => {
