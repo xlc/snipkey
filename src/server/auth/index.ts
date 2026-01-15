@@ -9,7 +9,7 @@ import {
 	getSessionId,
 } from '~/lib/server/context'
 import { authMiddleware } from '~/lib/server/middleware'
-import type { ServerFnContext } from '~/lib/server/types'
+import type { AuthenticatedServerFnContext, ServerFnContext } from '~/lib/server/types'
 
 // Register Start
 export const authRegisterStart = createServerFn({ method: 'GET' }).handler(async () => {
@@ -98,7 +98,7 @@ export const authLoginFinish = createServerFn({ method: 'POST' })
 // Logout
 export const authLogout = createServerFn({ method: 'POST' })
 	.middleware([authMiddleware])
-	.handler(async (ctx) => {
+	.handler(async ctx => {
 		const db = getDbFromEnv()
 
 		// Extract session ID from request headers
@@ -121,7 +121,7 @@ export const authLogout = createServerFn({ method: 'POST' })
 // Get current user
 export const authMe = createServerFn({ method: 'GET' })
 	.middleware([authMiddleware])
-	.handler(async (ctx) => {
+	.handler(async ctx => {
 		// If not authenticated, return null user
 		if (!(ctx as any).context.user) {
 			return { data: { user: null } }

@@ -1,7 +1,7 @@
 import { createMiddleware } from '@tanstack/start-client-core'
 import * as auth from './auth'
 import { getDbFromEnv, getSessionId } from './context'
-import type { MiddlewareContext } from './middleware-types'
+import type { AuthenticatedContext, MiddlewareContext } from './middleware-types'
 
 /**
  * Security middleware that adds security headers to all responses
@@ -70,6 +70,6 @@ export const requireAuthMiddleware = createMiddleware().server(async ({ request,
 	return next({
 		context: {
 			user: { id: userId },
-		} satisfies MiddlewareContext,
+		} satisfies AuthenticatedContext,
 	})
 })

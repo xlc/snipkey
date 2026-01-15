@@ -10,9 +10,9 @@ import type { ServerFnContext } from '~/lib/server/types'
 export const snippetsList = createServerFn({ method: 'GET' })
 	.middleware([requireAuthMiddleware])
 	.inputValidator(snippetListInput)
-	.handler(async ({ data, context }: { data: any; context: ServerFnContext['context'] }) => {
+	.handler(async ({ data, context }) => {
 		const db = getDbFromEnv()
-		const userId = (context.user as { id: string }).id
+		const userId = context.user.id
 		const result = await snippets.snippetsList(db, userId, data)
 
 		if (!result.ok) {
@@ -26,9 +26,9 @@ export const snippetsList = createServerFn({ method: 'GET' })
 export const snippetGet = createServerFn({ method: 'GET' })
 	.middleware([requireAuthMiddleware])
 	.inputValidator(z.object({ id: z.string().uuid() }))
-	.handler(async ({ data: { id }, context }: { data: { id: string }; context: ServerFnContext['context'] }) => {
+	.handler(async ({ data: { id }, context }) => {
 		const db = getDbFromEnv()
-		const userId = (context.user as { id: string }).id
+		const userId = context.user.id
 		const result = await snippets.snippetGet(db, userId, id)
 
 		if (!result.ok) {
@@ -42,9 +42,9 @@ export const snippetGet = createServerFn({ method: 'GET' })
 export const snippetCreate = createServerFn({ method: 'POST' })
 	.middleware([requireAuthMiddleware])
 	.inputValidator(snippetCreateInput)
-	.handler(async ({ data, context }: { data: any; context: ServerFnContext['context'] }) => {
+	.handler(async ({ data, context }) => {
 		const db = getDbFromEnv()
-		const userId = (context.user as { id: string }).id
+		const userId = context.user.id
 		const result = await snippets.snippetCreate(db, userId, data)
 
 		if (!result.ok) {
@@ -58,12 +58,12 @@ export const snippetCreate = createServerFn({ method: 'POST' })
 export const snippetUpdate = createServerFn({ method: 'POST' })
 	.middleware([requireAuthMiddleware])
 	.inputValidator(snippetUpdateInput)
-	.handler(async ({ data, context }: { data: any; context: ServerFnContext['context'] }) => {
+	.handler(async ({ data, context }) => {
 		const { id } = data
 		const validated = data
 
 		const db = getDbFromEnv()
-		const userId = (context.user as { id: string }).id
+		const userId = context.user.id
 		const result = await snippets.snippetUpdate(db, userId, id, validated)
 
 		if (!result.ok) {
@@ -77,9 +77,9 @@ export const snippetUpdate = createServerFn({ method: 'POST' })
 export const snippetDelete = createServerFn({ method: 'POST' })
 	.middleware([requireAuthMiddleware])
 	.inputValidator(z.object({ id: z.string().uuid() }))
-	.handler(async ({ data: { id }, context }: { data: { id: string }; context: ServerFnContext['context'] }) => {
+	.handler(async ({ data: { id }, context }) => {
 		const db = getDbFromEnv()
-		const userId = (context.user as { id: string }).id
+		const userId = context.user.id
 		const result = await snippets.snippetDelete(db, userId, id)
 
 		if (!result.ok) {

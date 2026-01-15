@@ -41,7 +41,7 @@ export async function snippetsList(
 		)
 	}
 
-	const items = await query.selectAll()
+	const items = await query.selectAll().execute()
 
 	// Generate next cursor if we have more items
 	let nextCursor:
@@ -50,10 +50,8 @@ export async function snippetsList(
 				id: string
 		  }
 		| undefined
-	// @ts-ignore - Kysely type inference issue with array methods
-	const itemsArray = items as any[]
-	if (itemsArray.length === input.limit) {
-		const lastItem = itemsArray[itemsArray.length - 1]!
+	if (items.length === input.limit) {
+		const lastItem = items[items.length - 1]!
 		nextCursor = {
 			updatedAt: lastItem.updated_at,
 			id: lastItem.id,
@@ -61,8 +59,7 @@ export async function snippetsList(
 	}
 
 	return ok({
-		// @ts-ignore - Kysely type inference issue with array methods
-		items: items.map((item: any) => ({
+		items: items.map(item => ({
 			...item,
 			tags: parseJsonArray(item.tags),
 		})),

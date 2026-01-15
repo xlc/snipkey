@@ -1,4 +1,4 @@
-import type { MiddlewareContext } from './middleware-types'
+import type { AuthenticatedContext, MiddlewareContext } from './middleware-types'
 
 /**
  * Server function context with user authentication data
@@ -6,4 +6,12 @@ import type { MiddlewareContext } from './middleware-types'
 export interface ServerFnContext {
 	request: Request
 	context: MiddlewareContext
+}
+
+/**
+ * Server function context for authenticated endpoints
+ */
+export interface AuthenticatedServerFnContext {
+	request: Request
+	context: AuthenticatedContext
 }
