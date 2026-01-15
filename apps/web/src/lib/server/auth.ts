@@ -126,14 +126,8 @@ export async function authRegisterStart(db: ReturnType<typeof getDb>) {
 		})
 		.execute();
 
-	// Create user row
-	await db
-		.insertInto("users")
-		.values({
-			id: userId,
-			created_at: nowMs(),
-		})
-		.execute();
+	// Note: User will be created in authRegisterFinish after successful verification
+	// This prevents database pollution from incomplete registrations
 
 	return ok({ options, challengeId });
 }
@@ -200,6 +194,16 @@ export async function authRegisterFinish(
 			transports: JSON.stringify(credential.transports ?? []),
 			created_at: nowMs(),
 		})
+		.execute();
+
+	// Create user row (only after successful verification)
+	await db
+		.insertInto("users")
+		.values({
+			id: challenge.user_id,
+			created_at: nowMs(),
+		})
+		.onConflict((db) => db.doNothing())
 		.execute();
 
 	// Delete challenge

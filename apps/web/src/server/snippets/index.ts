@@ -13,7 +13,23 @@ function toResult<T>(result: { ok: boolean; data?: T; error?: ApiError }): Resul
 	return { error: result.error as ApiError };
 }
 
-// TODO: Get user ID from session
+/**
+ * SECURITY WARNING: MOCK_USER_ID is a placeholder for development.
+ *
+ * All snippet operations currently use a hardcoded user ID, which means:
+ * - User isolation is NOT enforced (all users see the same snippets)
+ * - Authentication is BYPASSED completely
+ * - This is ONLY acceptable for local development
+ *
+ * PRODUCTION FIX REQUIRED:
+ * TanStack Start server functions don't easily expose request context yet.
+ * To fix this, we need to:
+ * 1. Wait for TanStack Start to expose request context in server functions, OR
+ * 2. Implement a middleware pattern that extracts session from cookies, OR
+ * 3. Move to a framework with better request context support
+ *
+ * See: apps/web/src/lib/server/auth-user.ts for the intended implementation
+ */
 const MOCK_USER_ID = "mock-user-id";
 
 // List snippets

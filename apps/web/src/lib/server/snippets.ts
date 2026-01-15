@@ -121,14 +121,22 @@ export async function snippetUpdate(
 ) {
 	const now = nowMs();
 
+	// Build update object dynamically, only including defined fields
+	const updateData: Record<string, unknown> = { updated_at: now };
+
+	if (input.title !== undefined) {
+		updateData.title = input.title;
+	}
+	if (input.body !== undefined) {
+		updateData.body = input.body;
+	}
+	if (input.tags !== undefined) {
+		updateData.tags = stringifyJsonArray(input.tags);
+	}
+
 	const result = await db
 		.updateTable("snippets")
-		.set({
-			title: input.title,
-			body: input.body,
-			tags: stringifyJsonArray(input.tags),
-			updated_at: now,
-		})
+		.set(updateData)
 		.where("id", "=", id)
 		.where("user_id", "=", userId)
 		.executeTakeFirst();
