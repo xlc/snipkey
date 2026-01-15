@@ -46,6 +46,7 @@ export const authMiddleware = createMiddleware().server(async ({ request, next }
 	return next({
 		context: {
 			user: userId ? { id: userId } : null,
+			sessionId: sessionId ?? undefined,
 		} satisfies MiddlewareContext,
 	})
 })
@@ -70,6 +71,7 @@ export const requireAuthMiddleware = createMiddleware().server(async ({ request,
 	return next({
 		context: {
 			user: { id: userId },
+			sessionId,
 		} satisfies AuthenticatedContext,
 	})
 })

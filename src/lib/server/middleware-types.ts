@@ -4,6 +4,7 @@
 
 export interface MiddlewareContext {
 	user: { id: string } | null
+	sessionId?: string
 }
 
 /**
@@ -12,4 +13,5 @@ export interface MiddlewareContext {
  */
 export interface AuthenticatedContext {
 	user: { id: string }
+	sessionId: string
 }
