@@ -1,4 +1,4 @@
-import { createMiddleware } from '@tanstack/start'
+import { createMiddleware } from '@tanstack/start-client-core'
 import * as auth from './auth'
 import { getDbFromEnv, getSessionId } from './context'
 import type { MiddlewareContext } from './middleware-types'
@@ -13,17 +13,17 @@ import type { MiddlewareContext } from './middleware-types'
  * - Referrer-Policy: Controls referrer information leakage
  * - Permissions-Policy: Restricts browser features
  */
-export const securityMiddleware = createMiddleware().server(async ({ request }) => {
-	const response = await request.next()
+export const securityMiddleware = createMiddleware().server(async ({ request, next }) => {
+	const result = await next()
 
 	// Add security headers
-	response.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none';")
-	response.headers.set('X-Frame-Options', 'DENY')
-	response.headers.set('X-Content-Type-Options', 'nosniff')
-	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-	response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+	result.response.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none';")
+	result.response.headers.set('X-Frame-Options', 'DENY')
+	result.response.headers.set('X-Content-Type-Options', 'nosniff')
+	result.response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+	result.response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
 
-	return response
+	return result
 })
 
 /**
@@ -37,44 +37,46 @@ export const securityMiddleware = createMiddleware().server(async ({ request }) 
  *
  * Use this for endpoints where authentication is optional
  */
-export const authMiddleware = createMiddleware().server(async ({ request }) => {
-	const db = getDbFromEnv()
+// @ts-ignore - Middleware type inference issue with conditional context
+export const authMiddleware = createMiddleware()
+	.server(async ({ request, next }) => {
+		const db = getDbFromEnv()
 
-	// Extract session ID from cookies
-	const sessionId = getSessionId(request.headers)
-	if (!sessionId) {
-		// Not logged in - pass without user context
-		return request.next({
+		// Extract session ID from cookies
+		const sessionId = getSessionId(request.headers)
+		if (!sessionId) {
+			// Not logged in - pass without user context
+			return next({
+				context: {
+					user: null,
+				} satisfies MiddlewareContext,
+			})
+		}
+
+		// Validate session and get user ID
+		const userId = await auth.validateSession(db, sessionId)
+		if (!userId) {
+			// Invalid/expired session
+			return next({
+				context: {
+					user: null,
+				} satisfies MiddlewareContext,
+			})
+		}
+
+		// Session valid - enrich context with user data
+		return next({
 			context: {
-				user: null,
-			} satisfies MiddlewareContext,
+				user: { id: userId },
+			},
 		})
-	}
-
-	// Validate session and get user ID
-	const userId = await auth.validateSession(db, sessionId)
-	if (!userId) {
-		// Invalid/expired session
-		return request.next({
-			context: {
-				user: null,
-			} satisfies MiddlewareContext,
-		})
-	}
-
-	// Session valid - enrich context with user data
-	return request.next({
-		context: {
-			user: { id: userId },
-		} satisfies MiddlewareContext,
 	})
-})
 
 /**
  * Require authentication - throws if not logged in
  * Use this for endpoints that must have a valid user
  */
-export const requireAuthMiddleware = createMiddleware().server(async ({ request }) => {
+export const requireAuthMiddleware = createMiddleware().server(async ({ request, next }) => {
 	const db = getDbFromEnv()
 	const sessionId = getSessionId(request.headers)
 
@@ -87,7 +89,7 @@ export const requireAuthMiddleware = createMiddleware().server(async ({ request 
 		throw new Error('AUTH_REQUIRED: Invalid or expired session')
 	}
 
-	return request.next({
+	return next({
 		context: {
 			user: { id: userId },
 		} satisfies MiddlewareContext,

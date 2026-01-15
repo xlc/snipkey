@@ -29,18 +29,20 @@ function Index() {
 	async function loadSnippets() {
 		setLoading(true)
 		const result = await snippetsList({
-			limit: 20,
-			query: debouncedSearchQuery || undefined,
-			tag: selectedTag || undefined,
+			data: {
+				limit: 20,
+				query: debouncedSearchQuery || undefined,
+				tag: selectedTag || undefined,
+			},
 		})
 
-		if (result.error) {
+		if ('error' in result) {
 			toast.error('Failed to load snippets')
 			setLoading(false)
 			return
 		}
 
-		setSnippets(result.data.items)
+		setSnippets((result.data as any).items)
 		setLoading(false)
 	}
 
@@ -90,7 +92,7 @@ function Index() {
 			) : snippets && snippets.length > 0 ? (
 				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 					{snippets.map(snippet => (
-						<Link key={snippet.id} to={`/snippets/${snippet.id}`} className="block group">
+						<Link key={snippet.id} to="/snippets/$id" params={{ id: snippet.id }} className="block group">
 							<div className="p-4 border rounded-lg hover:border-primary transition-colors">
 								<h3 className="font-semibold group-hover:text-primary transition-colors">
 									{snippet.title}

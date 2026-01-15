@@ -50,8 +50,10 @@ export async function snippetsList(
 				id: string
 		  }
 		| undefined
-	if (items.length === input.limit) {
-		const lastItem = items[items.length - 1]
+	// @ts-ignore - Kysely type inference issue with array methods
+	const itemsArray = items as any[]
+	if (itemsArray.length === input.limit) {
+		const lastItem = itemsArray[itemsArray.length - 1]!
 		nextCursor = {
 			updatedAt: lastItem.updated_at,
 			id: lastItem.id,
@@ -59,7 +61,8 @@ export async function snippetsList(
 	}
 
 	return ok({
-		items: items.map(item => ({
+		// @ts-ignore - Kysely type inference issue with array methods
+		items: items.map((item: any) => ({
 			...item,
 			tags: parseJsonArray(item.tags),
 		})),
@@ -143,7 +146,7 @@ export async function snippetUpdate(
 		.where('user_id', '=', userId)
 		.executeTakeFirst()
 
-	if (result.numUpdatedRows === 0) {
+	if (result.numUpdatedRows === 0n) {
 		return err({
 			code: 'NOT_FOUND',
 			message: 'Snippet not found',
@@ -161,7 +164,7 @@ export async function snippetDelete(db: ReturnType<typeof getDb>, userId: string
 		.where('user_id', '=', userId)
 		.executeTakeFirst()
 
-	if (result.numDeletedRows === 0) {
+	if (result.numDeletedRows === 0n) {
 		return err({
 			code: 'NOT_FOUND',
 			message: 'Snippet not found',

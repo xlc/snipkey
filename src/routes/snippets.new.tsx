@@ -9,9 +9,9 @@ export const Route = createFileRoute('/snippets/new')({
 
 function NewSnippet() {
 	const handleSubmit = async (data: { title: string; body: string; tags: string[] }) => {
-		const result = await snippetCreate(data)
+		const result = await snippetCreate({ data })
 
-		if (result.error) {
+		if ('error' in result) {
 			toast.error(result.error.message)
 			throw result.error // Re-throw to let SnippetForm handle loading state
 		}

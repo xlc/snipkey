@@ -211,8 +211,8 @@ export function SnippetForm({
 						variant="outline"
 						onClick={() =>
 							mode === 'create'
-								? router.push({ to: '/' })
-								: router.push({ to: `/snippets/${id}` })
+								? router.navigate({ to: '/' })
+								: router.navigate({ to: '/snippets/$id', params: { id: id! } })
 						}
 						disabled={loading}
 					>

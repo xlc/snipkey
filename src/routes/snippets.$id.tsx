@@ -35,16 +35,16 @@ function SnippetDetail() {
 
 	async function loadSnippet() {
 		setLoading(true)
-		const result = await snippetGet({ id })
+		const result = await snippetGet({ data: { id } })
 
-		if (result.error) {
+		if ('error' in result) {
 			toast.error(result.error.message)
-			router.push({ to: '/' })
+			router.navigate({ to: '/' })
 			setLoading(false)
 			return
 		}
 
-		setSnippet(result.data)
+		setSnippet(result.data as any)
 		setLoading(false)
 	}
 
@@ -80,14 +80,14 @@ function SnippetDetail() {
 		if (!snippet) return
 		if (!confirm('Are you sure you want to delete this snippet?')) return
 
-		const result = await snippetDelete({ id })
-		if (result.error) {
+		const result = await snippetDelete({ data: { id } })
+		if ('error' in result) {
 			toast.error(result.error.message)
 			return
 		}
 
 		toast.success('Snippet deleted')
-		router.push({ to: '/' })
+		router.navigate({ to: '/' })
 	}
 
 	if (loading) {

@@ -24,30 +24,44 @@ function Login() {
 		try {
 			// Start registration
 			const startResult = await authRegisterStart()
-			if (startResult.error) {
+			if ('error' in startResult) {
 				toast.error(startResult.error.message)
 				return
 			}
 
-			const { options, challengeId } = startResult.data
+			const { options, challengeId } = (startResult.data as any).data
 
 			// Trigger browser authenticator
 			const attestation = await startRegistration(options)
 
 			// Finish registration
 			const finishResult = await authRegisterFinish({
-				attestation,
-				challengeId,
+				data: {
+					attestation,
+					challengeId,
+				},
 			})
 
-			if (finishResult.error) {
-				toast.error(finishResult.error.message)
+			// Handle Response object
+			if (finishResult instanceof Response) {
+				if (!finishResult.ok) {
+					toast.error('Registration failed')
+					return
+				}
+				toast.success('Registration successful!')
+				router.navigate({ to: '/' })
+				return
+			}
+
+			// Type assertion for Result type
+			const result = finishResult as any
+			if ('error' in result) {
+				toast.error(result.error.message)
 				return
 			}
 
 			toast.success('Registration successful!')
-			// Redirect to home
-			router.push({ to: '/' })
+			router.navigate({ to: '/' })
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : 'Registration failed')
 		} finally {
@@ -60,30 +74,44 @@ function Login() {
 		try {
 			// Start login
 			const startResult = await authLoginStart()
-			if (startResult.error) {
+			if ('error' in startResult) {
 				toast.error(startResult.error.message)
 				return
 			}
 
-			const { options, challengeId } = startResult.data
+			const { options, challengeId } = (startResult.data as any).data
 
 			// Trigger browser authenticator
 			const assertion = await startAuthentication(options)
 
 			// Finish login
 			const finishResult = await authLoginFinish({
-				assertion,
-				challengeId,
+				data: {
+					assertion,
+					challengeId,
+				},
 			})
 
-			if (finishResult.error) {
-				toast.error(finishResult.error.message)
+			// Handle Response object
+			if (finishResult instanceof Response) {
+				if (!finishResult.ok) {
+					toast.error('Login failed')
+					return
+				}
+				toast.success('Login successful!')
+				router.navigate({ to: '/' })
+				return
+			}
+
+			// Type assertion for Result type
+			const result = finishResult as any
+			if ('error' in result) {
+				toast.error(result.error.message)
 				return
 			}
 
 			toast.success('Login successful!')
-			// Redirect to home
-			router.push({ to: '/' })
+			router.navigate({ to: '/' })
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : 'Login failed')
 		} finally {

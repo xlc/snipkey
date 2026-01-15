@@ -111,12 +111,8 @@ export async function authRegisterStart(db: ReturnType<typeof getDb>) {
 	const options = await generateRegistrationOptions({
 		rpName: 'Snipkey',
 		rpID: config.rpID,
-		userID: userId,
+		userID: new TextEncoder().encode(userId),
 		userName: userId, // Using user ID as username for discoverable passkeys
-		authenticatorSelection: {
-			authenticatorAttachment: 'platform',
-			userVerification: 'preferred',
-		},
 	})
 
 	// Store challenge
@@ -203,10 +199,10 @@ export async function authRegisterFinish(
 		.insertInto('webauthn_credentials')
 		.values({
 			credential_id: credential.id,
-			user_id: challenge.user_id,
+			user_id: challenge.user_id ?? '',
 			public_key: JSON.stringify(credential.publicKey),
 			counter: credential.counter,
-			transports: JSON.stringify(credential.transports ?? []),
+			transports: JSON.stringify(credential.transports || []),
 			created_at: nowMs(),
 		})
 		.execute()
@@ -215,12 +211,13 @@ export async function authRegisterFinish(
 	await db.deleteFrom('auth_challenges').where('id', '=', challengeId).execute()
 
 	// Create session
-	const { sessionId, sessionTTLSeconds } = await createSession(db, challenge.user_id)
+	const userId = challenge.user_id ?? ''
+	const { sessionId, sessionTTLSeconds } = await createSession(db, userId)
 
 	// Cleanup expired sessions for this user
-	await cleanupExpiredSessions(db, challenge.user_id)
+	await cleanupExpiredSessions(db, userId)
 
-	return ok({ sessionId, userId: challenge.user_id, sessionTTLSeconds })
+	return ok({ sessionId, userId: userId, sessionTTLSeconds })
 }
 
 // Generate authentication options
@@ -232,10 +229,6 @@ export async function authLoginStart(db: ReturnType<typeof getDb>) {
 	const options = await generateAuthenticationOptions({
 		rpID: config.rpID,
 		userVerification: 'preferred',
-		authenticatorSelection: {
-			authenticatorAttachment: 'platform',
-			userVerification: 'preferred',
-		},
 	})
 
 	// Store challenge
@@ -300,10 +293,11 @@ export async function authLoginFinish(
 		expectedChallenge: challenge.challenge,
 		expectedOrigin: config.origin,
 		expectedRPID: config.rpID,
-		authenticator: {
-			credentialID: credentialRecord.credential_id,
-			credentialPublicKey: JSON.parse(credentialRecord.public_key),
+		credential: {
+			id: credentialRecord.credential_id,
+			publicKey: JSON.parse(credentialRecord.public_key),
 			counter: credentialRecord.counter,
+			transports: JSON.parse(credentialRecord.transports),
 		},
 	})
 

@@ -13,8 +13,11 @@ export type Result<T> = { data: T } | { error: ApiError }
  * @returns Result type with either data or error
  */
 export function toResult<T>(result: ReturnType<typeof ok> | ReturnType<typeof err>): Result<T> {
-	if (result.ok && result.data !== undefined) {
-		return { data: result.data as T }
+	if (result.ok) {
+		if (result.data !== undefined) {
+			return { data: result.data as T }
+		}
+		return { error: { code: 'UNEXPECTED_ERROR', message: 'Data is undefined' } as unknown as ApiError }
 	}
-	return { error: result.error as ApiError }
+	return { error: result.error as unknown as ApiError }
 }
