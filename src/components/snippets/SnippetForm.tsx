@@ -1,12 +1,13 @@
 import { parseTemplate } from '@shared/template'
 import { LIMITS } from '@shared/validation/limits'
 import { useRouter } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
+import { Save, Eye, EyeOff } from 'lucide-react'
 
 export interface SnippetFormProps {
 	mode: 'create' | 'edit'
@@ -15,6 +16,7 @@ export interface SnippetFormProps {
 	initialBody?: string
 	initialTags?: string[]
 	onSubmit: (data: { title: string; body: string; tags: string[] }) => Promise<void>
+	enableAutoSave?: boolean
 }
 
 export function SnippetForm({
@@ -24,6 +26,7 @@ export function SnippetForm({
 	initialBody = '',
 	initialTags = [],
 	onSubmit,
+	enableAutoSave = true,
 }: SnippetFormProps) {
 	const router = useRouter()
 	const [title, setTitle] = useState(initialTitle)
@@ -31,9 +34,121 @@ export function SnippetForm({
 	const [tagInput, setTagInput] = useState('')
 	const [tags, setTags] = useState<string[]>(initialTags)
 	const [loading, setLoading] = useState(false)
+	const [saving, setSaving] = useState(false)
+	const [lastSaved, setLastSaved] = useState<Date | null>(null)
+	const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+	const formStateRef = useRef({ title, body, tags })
 
 	// Real-time parsing
 	const parseResult = parseTemplate(body)
+
+	// Save draft to localStorage
+	useEffect(() => {
+		if (!enableAutoSave) return
+
+		const draftKey = mode === 'edit' ? `draft-edit-${id}` : 'draft-new'
+		const formState = { title, body, tags }
+
+		// Save to localStorage whenever form changes
+		localStorage.setItem(draftKey, JSON.stringify(formState))
+
+		// Update ref for auto-save comparison
+		formStateRef.current = formState
+	}, [title, body, tags, mode, id, enableAutoSave])
+
+	// Load draft on mount
+	useEffect(() => {
+		if (!enableAutoSave) return
+
+		const draftKey = mode === 'edit' ? `draft-edit-${id}` : 'draft-new'
+		const draftJson = localStorage.getItem(draftKey)
+
+		if (draftJson) {
+			try {
+				const draft = JSON.parse(draftJson)
+				// Only restore if it's different from initial values
+				if (
+					draft.title !== initialTitle ||
+					draft.body !== initialBody ||
+					JSON.stringify(draft.tags) !== JSON.stringify(initialTags)
+				) {
+					setTitle(draft.title || '')
+					setBody(draft.body || '')
+					setTags(draft.tags || [])
+					toast.info('Draft restored from local storage', {
+						duration: 3000,
+						action: {
+							label: 'Clear',
+							onClick: () => {
+								localStorage.removeItem(draftKey)
+								setTitle(initialTitle)
+								setBody(initialBody)
+								setTags(initialTags)
+							},
+						},
+					})
+				}
+			} catch {
+				// Invalid draft, ignore
+			}
+		}
+	}, [mode, id, enableAutoSave])
+
+	// Auto-save to server after 2 seconds of inactivity (edit mode only)
+	useEffect(() => {
+		if (!enableAutoSave || mode !== 'edit' || loading) return
+
+		// Clear existing timeout
+		if (autoSaveTimeoutRef.current) {
+			clearTimeout(autoSaveTimeoutRef.current)
+		}
+
+		// Set new timeout
+		autoSaveTimeoutRef.current = setTimeout(async () => {
+			// Only save if something changed and form is valid
+			if (
+				title.trim() &&
+				body.trim() &&
+				(title !== initialTitle || body !== initialBody || JSON.stringify(tags) !== JSON.stringify(initialTags))
+			) {
+				setSaving(true)
+				try {
+					await onSubmit({
+						title: title.trim(),
+						body,
+						tags,
+					})
+					setLastSaved(new Date())
+				} catch {
+					// Error already shown by toast
+				} finally {
+					setSaving(false)
+				}
+			}
+		}, 2000)
+
+		return () => {
+			if (autoSaveTimeoutRef.current) {
+				clearTimeout(autoSaveTimeoutRef.current)
+			}
+		}
+	}, [title, body, tags, enableAutoSave, mode, loading, onSubmit, initialTitle, initialBody, initialTags])
+
+	// Clear draft on successful submit
+	useEffect(() => {
+		if (loading) return // Don't clear while loading
+
+		const draftKey = mode === 'edit' ? `draft-edit-${id}` : 'draft-new'
+
+		// Clear draft if form matches initial values (successful save)
+		if (
+			title === initialTitle &&
+			body === initialBody &&
+			JSON.stringify(tags) === JSON.stringify(initialTags)
+		) {
+			localStorage.removeItem(draftKey)
+		}
+	}, [title, body, tags, initialTitle, initialBody, initialTags, mode, id, loading])
 
 	function handleAddTag() {
 		const trimmed = tagInput.trim().toLowerCase()
@@ -82,14 +197,33 @@ export function SnippetForm({
 	return (
 		<div className="max-w-3xl mx-auto space-y-8">
 			<div>
-				<h2 className="text-3xl font-bold tracking-tight">
-					{mode === 'create' ? 'New Snippet' : 'Edit Snippet'}
-				</h2>
-				<p className="text-muted-foreground mt-2">
-					{mode === 'create'
-						? 'Create a new snippet with placeholders for dynamic values'
-						: 'Update your snippet with placeholders'}
-				</p>
+				<div className="flex items-start justify-between">
+					<div>
+						<h2 className="text-3xl font-bold tracking-tight">
+							{mode === 'create' ? 'New Snippet' : 'Edit Snippet'}
+						</h2>
+						<p className="text-muted-foreground mt-2">
+							{mode === 'create'
+								? 'Create a new snippet with placeholders for dynamic values'
+								: 'Update your snippet with placeholders'}
+						</p>
+					</div>
+					{enableAutoSave && mode === 'edit' && (
+						<div className="text-xs text-muted-foreground flex items-center gap-1">
+							{saving ? (
+								<>
+									<Save className="h-3 w-3 animate-pulse" />
+									Saving...
+								</>
+							) : lastSaved ? (
+								<>
+									<Save className="h-3 w-3" />
+									Saved {lastSaved.toLocaleTimeString()}
+								</>
+							) : null}
+						</div>
+					)}
+				</div>
 			</div>
 
 			<form onSubmit={handleSubmit} className="space-y-6">

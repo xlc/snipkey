@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TagsRouteImport } from './routes/tags'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SnippetsNewRouteImport } from './routes/snippets.new'
 import { Route as SnippetsIdRouteImport } from './routes/snippets.$id'
 import { Route as SnippetsIdEditRouteImport } from './routes/snippets.$id.edit'
 
+const TagsRoute = TagsRouteImport.update({
+  id: '/tags',
+  path: '/tags',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -44,6 +50,7 @@ const SnippetsIdEditRoute = SnippetsIdEditRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/tags': typeof TagsRoute
   '/snippets/$id': typeof SnippetsIdRouteWithChildren
   '/snippets/new': typeof SnippetsNewRoute
   '/snippets/$id/edit': typeof SnippetsIdEditRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/tags': typeof TagsRoute
   '/snippets/$id': typeof SnippetsIdRouteWithChildren
   '/snippets/new': typeof SnippetsNewRoute
   '/snippets/$id/edit': typeof SnippetsIdEditRoute
@@ -59,6 +67,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/tags': typeof TagsRoute
   '/snippets/$id': typeof SnippetsIdRouteWithChildren
   '/snippets/new': typeof SnippetsNewRoute
   '/snippets/$id/edit': typeof SnippetsIdEditRoute
@@ -68,15 +77,23 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/tags'
     | '/snippets/$id'
     | '/snippets/new'
     | '/snippets/$id/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/snippets/$id' | '/snippets/new' | '/snippets/$id/edit'
+  to:
+    | '/'
+    | '/login'
+    | '/tags'
+    | '/snippets/$id'
+    | '/snippets/new'
+    | '/snippets/$id/edit'
   id:
     | '__root__'
     | '/'
     | '/login'
+    | '/tags'
     | '/snippets/$id'
     | '/snippets/new'
     | '/snippets/$id/edit'
@@ -85,12 +102,20 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  TagsRoute: typeof TagsRoute
   SnippetsIdRoute: typeof SnippetsIdRouteWithChildren
   SnippetsNewRoute: typeof SnippetsNewRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tags': {
+      id: '/tags'
+      path: '/tags'
+      fullPath: '/tags'
+      preLoaderRoute: typeof TagsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -144,6 +169,7 @@ const SnippetsIdRouteWithChildren = SnippetsIdRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  TagsRoute: TagsRoute,
   SnippetsIdRoute: SnippetsIdRouteWithChildren,
   SnippetsNewRoute: SnippetsNewRoute,
 }
