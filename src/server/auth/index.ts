@@ -6,10 +6,9 @@ import {
 	createClearedSessionCookie,
 	createSessionCookie,
 	getDbFromEnv,
-	getSessionId,
+	getServerFnContext,
 } from '~/lib/server/context'
 import { authMiddleware } from '~/lib/server/middleware'
-import type { AuthenticatedServerFnContext, ServerFnContext } from '~/lib/server/types'
 
 // Register Start
 export const authRegisterStart = createServerFn({ method: 'GET' }).handler(async () => {
@@ -100,13 +99,11 @@ export const authLogout = createServerFn({ method: 'POST' })
 	.middleware([authMiddleware])
 	.handler(async ctx => {
 		const db = getDbFromEnv()
-
-		// Get session ID from context (set by middleware)
-		const sessionId = (ctx as any).context.sessionId
+		const context = getServerFnContext(ctx)
 
 		// Revoke session if it exists
-		if (sessionId && (ctx as any).context.user) {
-			await auth.authLogout(db, sessionId)
+		if (context.sessionId && context.user) {
+			await auth.authLogout(db, context.sessionId)
 		}
 
 		return new Response(JSON.stringify({ success: true }), {
@@ -122,11 +119,13 @@ export const authLogout = createServerFn({ method: 'POST' })
 export const authMe = createServerFn({ method: 'GET' })
 	.middleware([authMiddleware])
 	.handler(async ctx => {
+		const context = getServerFnContext(ctx)
+
 		// If not authenticated, return null user
-		if (!(ctx as any).context.user) {
+		if (!context.user) {
 			return { data: { user: null } }
 		}
 
 		// Return authenticated user info
-		return { data: { userId: (ctx as any).context.user.id } }
+		return { data: { userId: context.user.id } }
 	})

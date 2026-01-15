@@ -128,18 +128,6 @@ export async function authRegisterStart(db: ReturnType<typeof getDb>) {
 		})
 		.execute()
 
-	// Create user row (required by FK constraints)
-	// Note: This may create users for incomplete registrations.
-	// A background cleanup job could remove orphaned users.
-	await db
-		.insertInto('users')
-		.values({
-			id: userId,
-			created_at: nowMs(),
-		})
-		.onConflict(db => db.doNothing())
-		.execute()
-
 	return ok({ options, challengeId })
 }
 
@@ -207,11 +195,21 @@ export async function authRegisterFinish(
 		})
 		.execute()
 
+	// Create user row only after successful verification
+	const userId = challenge.user_id ?? ''
+	await db
+		.insertInto('users')
+		.values({
+			id: userId,
+			created_at: nowMs(),
+		})
+		.onConflict(db => db.doNothing())
+		.execute()
+
 	// Delete challenge
 	await db.deleteFrom('auth_challenges').where('id', '=', challengeId).execute()
 
 	// Create session
-	const userId = challenge.user_id ?? ''
 	const { sessionId, sessionTTLSeconds } = await createSession(db, userId)
 
 	// Cleanup expired sessions for this user

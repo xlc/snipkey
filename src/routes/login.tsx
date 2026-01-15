@@ -42,7 +42,7 @@ function Login() {
 				},
 			})
 
-			// Handle Response object
+			// Handle Response object (authRegisterFinish returns Response)
 			if (finishResult instanceof Response) {
 				if (!finishResult.ok) {
 					toast.error('Registration failed')
@@ -53,13 +53,7 @@ function Login() {
 				return
 			}
 
-			// Type assertion for Result type
-			const result = finishResult as any
-			if ('error' in result) {
-				toast.error(result.error.message)
-				return
-			}
-
+			// This shouldn't happen since authRegisterFinish always returns Response
 			toast.success('Registration successful!')
 			router.navigate({ to: '/' })
 		} catch (error) {
@@ -92,7 +86,7 @@ function Login() {
 				},
 			})
 
-			// Handle Response object
+			// Handle Response object (authLoginFinish returns Response)
 			if (finishResult instanceof Response) {
 				if (!finishResult.ok) {
 					toast.error('Login failed')
@@ -103,13 +97,7 @@ function Login() {
 				return
 			}
 
-			// Type assertion for Result type
-			const result = finishResult as any
-			if ('error' in result) {
-				toast.error(result.error.message)
-				return
-			}
-
+			// This shouldn't happen since authLoginFinish always returns Response
 			toast.success('Login successful!')
 			router.navigate({ to: '/' })
 		} catch (error) {

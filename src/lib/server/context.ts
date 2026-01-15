@@ -1,5 +1,6 @@
 import type { Env } from '@shared/db/db'
 import { getDb } from '@shared/db/db'
+import type { MiddlewareContext } from './middleware-types'
 
 // Global env will be set by the Cloudflare Workers adapter
 declare global {
@@ -30,4 +31,12 @@ export function createSessionCookie(sessionId: string, maxAge: number): string {
 // Create cleared session cookie header
 export function createClearedSessionCookie(): string {
 	return `session=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`
+}
+
+/**
+ * Helper to extract middleware context from TanStack Start server function context
+ * This avoids using 'as any' casts by providing a type-safe way to access the context
+ */
+export function getServerFnContext(ctx: { context?: MiddlewareContext }): MiddlewareContext {
+	return ctx.context ?? { user: null, sessionId: undefined }
 }
