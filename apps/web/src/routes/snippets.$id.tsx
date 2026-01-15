@@ -2,8 +2,10 @@ import { parseTemplate, renderTemplate } from "@shared/template";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { PlaceholderEditor } from "~/components/PlaceholderEditor";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { usePlaceholderStorage } from "~/lib/hooks/usePlaceholderStorage";
 import { snippetDelete, snippetGet } from "~/server/snippets";
 
 export const Route = createFileRoute("/snippets/$id")({
@@ -20,9 +22,11 @@ function SnippetDetail() {
 		tags: string[];
 	} | null>(null);
 	const [loading, setLoading] = useState(true);
-	const [placeholderValues, setPlaceholderValues] = useState<Record<string, string>>({});
 	const [rendered, setRendered] = useState("");
 	const [renderErrors, setRenderErrors] = useState(false);
+
+	// Load placeholder values from localStorage
+	const [placeholderValues, setPlaceholderValues] = usePlaceholderStorage(id, {});
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: Only load on mount
 	useEffect(() => {
@@ -125,24 +129,12 @@ function SnippetDetail() {
 			{parseResult.placeholders.length > 0 && (
 				<div className="space-y-4 p-4 bg-muted rounded-lg">
 					<h2 className="text-sm font-medium">Placeholder Values</h2>
-					<div className="grid gap-4 md:grid-cols-2">
-						{parseResult.placeholders.map((ph) => (
-							<div key={ph.name} className="space-y-2">
-								<label className="text-sm font-medium" htmlFor={`ph-${ph.name}`}>
-									{ph.name} ({ph.phType})
-									{ph.defaultValue !== undefined && ` = "${ph.defaultValue}"`}
-								</label>
-								<Input
-									id={`ph-${ph.name}`}
-									placeholder={ph.defaultValue ?? ""}
-									value={placeholderValues[ph.name] ?? ""}
-									onChange={(e) =>
-										setPlaceholderValues({ ...placeholderValues, [ph.name]: e.target.value })
-									}
-								/>
-							</div>
-						))}
-					</div>
+					<p className="text-xs text-muted-foreground">Tap a placeholder to edit its value</p>
+					<PlaceholderEditor
+						placeholders={parseResult.placeholders}
+						values={placeholderValues}
+						onChange={setPlaceholderValues}
+					/>
 				</div>
 			)}
 
