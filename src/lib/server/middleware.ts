@@ -37,40 +37,42 @@ export const securityMiddleware = createMiddleware().server(async ({ request, ne
  *
  * Use this for endpoints where authentication is optional
  */
-// @ts-ignore - Middleware type inference issue with conditional context
 export const authMiddleware = createMiddleware()
-	.server(async ({ request, next }) => {
-		const db = getDbFromEnv()
+	.server(
+		// @ts-expect-error - Middleware type inference issue with conditional context type
+		async ({ request, next }) => {
+			const db = getDbFromEnv()
 
-		// Extract session ID from cookies
-		const sessionId = getSessionId(request.headers)
-		if (!sessionId) {
-			// Not logged in - pass without user context
+			// Extract session ID from cookies
+			const sessionId = getSessionId(request.headers)
+			if (!sessionId) {
+				// Not logged in - pass without user context
+				return next({
+					context: {
+						user: null,
+					} satisfies MiddlewareContext,
+				})
+			}
+
+			// Validate session and get user ID
+			const userId = await auth.validateSession(db, sessionId)
+			if (!userId) {
+				// Invalid/expired session
+				return next({
+					context: {
+						user: null,
+					} satisfies MiddlewareContext,
+				})
+			}
+
+			// Session valid - enrich context with user data
 			return next({
 				context: {
-					user: null,
+					user: { id: userId },
 				} satisfies MiddlewareContext,
 			})
-		}
-
-		// Validate session and get user ID
-		const userId = await auth.validateSession(db, sessionId)
-		if (!userId) {
-			// Invalid/expired session
-			return next({
-				context: {
-					user: null,
-				} satisfies MiddlewareContext,
-			})
-		}
-
-		// Session valid - enrich context with user data
-		return next({
-			context: {
-				user: { id: userId },
-			},
-		})
-	})
+		},
+	)
 
 /**
  * Require authentication - throws if not logged in
