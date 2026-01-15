@@ -10,7 +10,10 @@
 		"lint": "biome lint .",
 		"format": "biome format . --write",
 		"check": "biome check . --write --unsafe && tsc --noEmit",
-		"generate": "wrangler types --env-interface CloudflareEnv --include-runtime=false && wrangler types --include-env=false worker-runtime.d.ts"
+		"generate": "wrangler types --env-interface CloudflareEnv --include-runtime=false && wrangler types --include-env=false worker-runtime.d.ts",
+		"db:migrate": "wrangler d1 migrations apply snipkey-db",
+		"db:migration:create": "wrangler d1 migrations create snipkey-db",
+		"db:migration:list": "wrangler d1 migrations list snipkey-db"
 	},
 	"dependencies": {
 		"@radix-ui/react-alert-dialog": "^1.1.15",
