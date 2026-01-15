@@ -1,6 +1,6 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { PlaceholderEditor } from '~/components/PlaceholderEditor'
 import { Badge } from '~/components/ui/badge'
@@ -90,17 +90,16 @@ function SnippetDetail() {
 		router.push({ to: '/' })
 	}
 
-	// Memoize template parsing to avoid redundant parsing on every render
-	// Must be called before early returns to follow React hooks rules
-	const parseResult = useMemo(() => (snippet ? parseTemplate(snippet.body) : null), [snippet])
-
 	if (loading) {
 		return <div className="text-center py-12 text-muted-foreground">Loading snippet...</div>
 	}
 
-	if (!snippet || !parseResult) {
+	if (!snippet) {
 		return <div className="text-center py-12 text-muted-foreground">Snippet not found</div>
 	}
+
+	// React Compiler automatically memoizes this
+	const parseResult = snippet ? parseTemplate(snippet.body) : null
 
 	return (
 		<div className="max-w-4xl mx-auto space-y-8">
@@ -128,7 +127,7 @@ function SnippetDetail() {
 			</div>
 
 			{/* Placeholder values */}
-			{parseResult.placeholders.length > 0 && (
+			{parseResult && parseResult.placeholders.length > 0 && (
 				<div className="space-y-4 p-4 bg-muted rounded-lg">
 					<h2 className="text-sm font-medium">Placeholder Values</h2>
 					<p className="text-xs text-muted-foreground">Tap a placeholder to edit its value</p>

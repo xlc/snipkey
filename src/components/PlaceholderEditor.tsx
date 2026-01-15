@@ -1,5 +1,5 @@
 import type { PlaceholderSegment } from '@shared/template'
-import { useEffect, memo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -21,7 +21,7 @@ interface PlaceholderEditorProps {
 	onChange: (values: Record<string, string>) => void
 }
 
-export const PlaceholderEditor = memo(function PlaceholderEditor({
+export function PlaceholderEditor({
 	placeholders,
 	values,
 	onChange,
@@ -200,4 +200,4 @@ export const PlaceholderEditor = memo(function PlaceholderEditor({
 			))}
 		</fieldset>
 	)
-})
+}

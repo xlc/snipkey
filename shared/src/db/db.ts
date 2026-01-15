@@ -5,6 +5,10 @@ import type { Database } from './database'
 export interface Env {
 	// biome-ignore lint/suspicious/noExplicitAny: D1Database is a global type in Cloudflare Workers
 	DB: any
+	RP_ID: string
+	ORIGIN: string
+	CHALLENGE_TTL_MS?: string
+	SESSION_TTL_MS?: string
 }
 
 export function getDb(env: Env): Kysely<Database> {

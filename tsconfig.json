@@ -23,9 +23,8 @@
 		// Path aliases
 		"baseUrl": ".",
 		"paths": {
-			"@/*": ["./apps/web/src/*"],
-			"~/db": ["./shared/src/db"],
-			"~/template": ["./shared/src/template"]
+			"~/*": ["./src/*"],
+			"@shared/*": ["./shared/src/*"]
 		},
 
 		// Best practices
@@ -40,6 +39,14 @@
 		"noUnusedParameters": false,
 		"noPropertyAccessFromIndexSignature": false
 	},
-	"include": ["apps", "shared"],
-	"exclude": ["node_modules", "dist", "build"]
+	"include": ["src", "shared"],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"build",
+		".wrangler",
+		"src/routeTree.gen.ts",
+		"worker-configuration.d.ts",
+		"worker-runtime.d.ts"
+	]
 }
