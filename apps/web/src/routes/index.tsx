@@ -1,79 +1,134 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { snippetsList } from "~/server/snippets";
 
 export const Route = createFileRoute("/")({
 	component: Index,
 });
 
 function Index() {
+	const [snippets, setSnippets] = useState<Array<{
+		id: string;
+		title: string;
+		body: string;
+		tags: string[];
+		updated_at: number;
+	}> | null>(null);
+	const [loading, setLoading] = useState(true);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+	async function loadSnippets() {
+		setLoading(true);
+		const result = await snippetsList({
+			limit: 20,
+			query: searchQuery || undefined,
+			tag: selectedTag || undefined,
+		});
+
+		if (result.error) {
+			console.error("Failed to load snippets:", result.error);
+			setLoading(false);
+			return;
+		}
+
+		setSnippets(result.data.items);
+		setLoading(false);
+	}
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Only load on mount
+	useEffect(() => {
+		loadSnippets();
+	}, []);
+
+	function handleSearch(e: React.FormEvent<HTMLFormElement>) {
+		e.preventDefault();
+		loadSnippets();
+	}
+
 	return (
 		<div className="space-y-8">
-			<div>
-				<h2 className="text-3xl font-bold tracking-tight">Welcome to Snipkey</h2>
-				<p className="text-muted-foreground mt-2">
-					Your private snippet vault with placeholders and inline editing
-				</p>
+			<div className="flex items-center justify-between">
+				<div>
+					<h2 className="text-3xl font-bold tracking-tight">My Snippets</h2>
+					<p className="text-muted-foreground mt-2">Your private snippet vault with placeholders</p>
+				</div>
+				<Button asChild>
+					<Link to="/snippets/new">New Snippet</Link>
+				</Button>
 			</div>
 
-			<div className="grid gap-6 md:grid-cols-2">
-				<div className="space-y-4">
-					<h3 className="text-xl font-semibold">UI Components Test</h3>
-					<div className="space-y-3">
-						<div className="flex gap-2 flex-wrap">
-							<Button variant="default">Default Button</Button>
-							<Button variant="secondary">Secondary</Button>
-							<Button variant="outline">Outline</Button>
-							<Button variant="ghost">Ghost</Button>
-							<Button variant="destructive">Destructive</Button>
-							<Button variant="link">Link</Button>
-						</div>
+			<div className="space-y-4">
+				<form onSubmit={handleSearch} className="flex gap-2">
+					<Input
+						placeholder="Search snippets..."
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+						className="max-w-sm"
+					/>
+					<Button type="submit" variant="outline">
+						Search
+					</Button>
+				</form>
 
-						<Input placeholder="Enter text..." />
-
-						<div className="flex gap-2 flex-wrap">
-							<Badge>Default</Badge>
-							<Badge variant="secondary">Secondary</Badge>
-							<Badge variant="outline">Outline</Badge>
-							<Badge variant="destructive">Destructive</Badge>
-						</div>
-
-						<Button onClick={() => toast.success("Toast notification working!")}>Test Toast</Button>
+				{selectedTag && (
+					<div className="flex items-center gap-2">
+						<span className="text-sm text-muted-foreground">Filter:</span>
+						<Badge
+							variant="secondary"
+							className="cursor-pointer"
+							onClick={() => setSelectedTag(null)}
+						>
+							{selectedTag} ×
+						</Badge>
 					</div>
-				</div>
-
-				<div className="space-y-4">
-					<h3 className="text-xl font-semibold">Features</h3>
-					<ul className="space-y-2 text-sm text-muted-foreground">
-						<li className="flex items-center gap-2">
-							<span className="h-2 w-2 rounded-full bg-primary" />
-							Passkey authentication
-						</li>
-						<li className="flex items-center gap-2">
-							<span className="h-2 w-2 rounded-full bg-primary" />
-							Private snippet vault
-						</li>
-						<li className="flex items-center gap-2">
-							<span className="h-2 w-2 rounded-full bg-primary" />
-							Placeholder system (text, number, enum)
-						</li>
-						<li className="flex items-center gap-2">
-							<span className="h-2 w-2 rounded-full bg-primary" />
-							Inline placeholder editing
-						</li>
-						<li className="flex items-center gap-2">
-							<span className="h-2 w-2 rounded-full bg-primary" />
-							Mobile-first design
-						</li>
-						<li className="flex items-center gap-2">
-							<span className="h-2 w-2 rounded-full bg-primary" />
-							One-tap copy rendered output
-						</li>
-					</ul>
-				</div>
+				)}
 			</div>
+
+			{loading ? (
+				<div className="text-center py-12 text-muted-foreground">Loading snippets...</div>
+			) : snippets && snippets.length > 0 ? (
+				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+					{snippets.map((snippet) => (
+						<Link key={snippet.id} to={`/snippets/${snippet.id}`} className="block group">
+							<div className="p-4 border rounded-lg hover:border-primary transition-colors">
+								<h3 className="font-semibold group-hover:text-primary transition-colors">
+									{snippet.title}
+								</h3>
+								<p className="text-sm text-muted-foreground mt-2 line-clamp-3">
+									{snippet.body.slice(0, 150)}
+									{snippet.body.length > 150 && "..."}
+								</p>
+								{snippet.tags.length > 0 && (
+									<div className="flex gap-2 mt-3 flex-wrap">
+										{snippet.tags.map((tag) => (
+											<Badge key={tag} variant="outline" className="text-xs">
+												{tag}
+											</Badge>
+										))}
+									</div>
+								)}
+							</div>
+						</Link>
+					))}
+				</div>
+			) : (
+				<div className="text-center py-12">
+					<p className="text-muted-foreground mb-4">
+						{searchQuery || selectedTag
+							? "No snippets found matching your criteria"
+							: "No snippets yet. Create your first snippet to get started!"}
+					</p>
+					{!searchQuery && !selectedTag && (
+						<Button asChild>
+							<Link to="/snippets/new">Create Snippet</Link>
+						</Button>
+					)}
+				</div>
+			)}
 		</div>
 	);
 }
