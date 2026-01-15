@@ -21,17 +21,16 @@ function EditSnippet() {
 		async function loadSnippet() {
 			const result = await snippetGet({ data: { id } })
 
-			if ('error' in result) {
+			if (result.error) {
 				toast.error(result.error.message)
 				setLoading(false)
 				return
 			}
 
-			const data = result.data as any
 			setInitialData({
-				title: data.title,
-				body: data.body,
-				tags: data.tags,
+				title: result.data.title,
+				body: result.data.body,
+				tags: result.data.tags,
 			})
 			setLoading(false)
 		}
@@ -42,7 +41,7 @@ function EditSnippet() {
 	const handleSubmit = async (data: { title: string; body: string; tags: string[] }) => {
 		const result = await snippetUpdate({ data: { id, ...data } })
 
-		if ('error' in result) {
+		if (result.error) {
 			toast.error(result.error.message)
 			throw result.error // Re-throw to let SnippetForm handle loading state
 		}

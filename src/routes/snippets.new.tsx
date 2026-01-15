@@ -11,7 +11,7 @@ function NewSnippet() {
 	const handleSubmit = async (data: { title: string; body: string; tags: string[] }) => {
 		const result = await snippetCreate({ data })
 
-		if ('error' in result) {
+		if (result.error) {
 			toast.error(result.error.message)
 			throw result.error // Re-throw to let SnippetForm handle loading state
 		}

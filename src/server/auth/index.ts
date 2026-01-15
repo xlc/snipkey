@@ -9,17 +9,19 @@ import {
 	getSessionId,
 } from '~/lib/server/context'
 import { authMiddleware } from '~/lib/server/middleware'
-import { toResult } from '~/lib/server/result'
 import type { ServerFnContext } from '~/lib/server/types'
 
 // Register Start
-export const authRegisterStart = createServerFn({ method: 'GET' })
-	// @ts-ignore - API signature change
-	.handler(async () => {
-		const db = getDbFromEnv()
-		const result = await auth.authRegisterStart(db)
-		return toResult(result)
-	})
+export const authRegisterStart = createServerFn({ method: 'GET' }).handler(async () => {
+	const db = getDbFromEnv()
+	const result = await auth.authRegisterStart(db)
+
+	if (!result.ok) {
+		return { error: result.error as { name: string; message: string; stack?: string; cause?: {} | undefined } }
+	}
+
+	return { data: result.data }
+})
 
 // Register Finish
 export const authRegisterFinish = createServerFn({ method: 'POST' })
@@ -29,7 +31,6 @@ export const authRegisterFinish = createServerFn({ method: 'POST' })
 			challengeId: z.string(),
 		}),
 	)
-	// @ts-ignore - API signature change
 	.handler(async ({ data: { attestation, challengeId } }) => {
 		const db = getDbFromEnv()
 		const result = await auth.authRegisterFinish(db, attestation, challengeId)
@@ -53,13 +54,16 @@ export const authRegisterFinish = createServerFn({ method: 'POST' })
 	})
 
 // Login Start
-export const authLoginStart = createServerFn({ method: 'GET' })
-	// @ts-ignore - API signature change
-	.handler(async () => {
-		const db = getDbFromEnv()
-		const result = await auth.authLoginStart(db)
-		return toResult(result)
-	})
+export const authLoginStart = createServerFn({ method: 'GET' }).handler(async () => {
+	const db = getDbFromEnv()
+	const result = await auth.authLoginStart(db)
+
+	if (!result.ok) {
+		return { error: result.error as { name: string; message: string; stack?: string; cause?: {} | undefined } }
+	}
+
+	return { data: result.data }
+})
 
 // Login Finish
 export const authLoginFinish = createServerFn({ method: 'POST' })
@@ -69,7 +73,6 @@ export const authLoginFinish = createServerFn({ method: 'POST' })
 			challengeId: z.string(),
 		}),
 	)
-	// @ts-ignore - API signature change
 	.handler(async ({ data: { assertion, challengeId } }) => {
 		const db = getDbFromEnv()
 		const result = await auth.authLoginFinish(db, assertion, challengeId)
@@ -95,15 +98,14 @@ export const authLoginFinish = createServerFn({ method: 'POST' })
 // Logout
 export const authLogout = createServerFn({ method: 'POST' })
 	.middleware([authMiddleware])
-	// @ts-ignore - API signature change
-	.handler(async (_ctx: ServerFnContext) => {
+	.handler(async (ctx) => {
 		const db = getDbFromEnv()
 
 		// Extract session ID from request headers
-		const sessionId = getSessionId(_ctx.request.headers)
+		const sessionId = getSessionId((ctx as any).request.headers)
 
 		// Revoke session if it exists
-		if (sessionId && _ctx.context.user) {
+		if (sessionId && (ctx as any).context.user) {
 			await auth.authLogout(db, sessionId)
 		}
 
@@ -119,13 +121,12 @@ export const authLogout = createServerFn({ method: 'POST' })
 // Get current user
 export const authMe = createServerFn({ method: 'GET' })
 	.middleware([authMiddleware])
-	// @ts-ignore - API signature change
-	.handler(async (_ctx: ServerFnContext) => {
+	.handler(async (ctx) => {
 		// If not authenticated, return null user
-		if (!_ctx.context.user) {
+		if (!(ctx as any).context.user) {
 			return { data: { user: null } }
 		}
 
 		// Return authenticated user info
-		return { data: { userId: _ctx.context.user.id } }
+		return { data: { userId: (ctx as any).context.user.id } }
 	})

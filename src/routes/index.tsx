@@ -36,13 +36,13 @@ function Index() {
 			},
 		})
 
-		if ('error' in result) {
+		if (result.error) {
 			toast.error('Failed to load snippets')
 			setLoading(false)
 			return
 		}
 
-		setSnippets((result.data as any).items)
+		setSnippets(result.data.items)
 		setLoading(false)
 	}
 

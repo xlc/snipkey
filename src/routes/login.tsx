@@ -24,15 +24,15 @@ function Login() {
 		try {
 			// Start registration
 			const startResult = await authRegisterStart()
-			if ('error' in startResult) {
+			if (startResult.error) {
 				toast.error(startResult.error.message)
 				return
 			}
 
-			const { options, challengeId } = (startResult.data as any).data
+			const { options, challengeId } = startResult.data
 
 			// Trigger browser authenticator
-			const attestation = await startRegistration(options)
+			const attestation = await startRegistration({ optionsJSON: options })
 
 			// Finish registration
 			const finishResult = await authRegisterFinish({
@@ -74,15 +74,15 @@ function Login() {
 		try {
 			// Start login
 			const startResult = await authLoginStart()
-			if ('error' in startResult) {
+			if (startResult.error) {
 				toast.error(startResult.error.message)
 				return
 			}
 
-			const { options, challengeId } = (startResult.data as any).data
+			const { options, challengeId } = startResult.data
 
 			// Trigger browser authenticator
-			const assertion = await startAuthentication(options)
+			const assertion = await startAuthentication({ optionsJSON: options })
 
 			// Finish login
 			const finishResult = await authLoginFinish({

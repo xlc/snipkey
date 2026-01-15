@@ -37,14 +37,14 @@ function SnippetDetail() {
 		setLoading(true)
 		const result = await snippetGet({ data: { id } })
 
-		if ('error' in result) {
+		if (result.error) {
 			toast.error(result.error.message)
 			router.navigate({ to: '/' })
 			setLoading(false)
 			return
 		}
 
-		setSnippet(result.data as any)
+		setSnippet(result.data)
 		setLoading(false)
 	}
 
@@ -81,7 +81,7 @@ function SnippetDetail() {
 		if (!confirm('Are you sure you want to delete this snippet?')) return
 
 		const result = await snippetDelete({ data: { id } })
-		if ('error' in result) {
+		if (result.error) {
 			toast.error(result.error.message)
 			return
 		}
