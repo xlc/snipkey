@@ -17,7 +17,8 @@ export function getDbFromEnv() {
 // Get session ID from request headers
 export function getSessionId(headers: Headers): string | undefined {
 	const cookies = headers.get("cookie") ?? "";
-	const sessionMatch = cookies.match(/session=([^;]+)/);
+	// Use stricter regex to avoid matching substrings of other cookies
+	const sessionMatch = cookies.match(/(?:^|; )session=([^;]+)/);
 	return sessionMatch?.[1];
 }
 

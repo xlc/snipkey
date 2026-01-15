@@ -41,13 +41,13 @@ export const authRegisterFinish = createServerFn(
 			});
 		}
 
-		const sessionId = result.data.sessionId;
+		const { sessionId, sessionTTLSeconds } = result.data;
 
 		return new Response(JSON.stringify(result.data), {
 			status: 200,
 			headers: {
 				"Content-Type": "application/json",
-				"Set-Cookie": `session=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${7 * 24 * 60 * 60}`,
+				"Set-Cookie": `session=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${sessionTTLSeconds}`,
 			},
 		});
 	},
@@ -80,13 +80,13 @@ export const authLoginFinish = createServerFn(
 			});
 		}
 
-		const sessionId = result.data.sessionId;
+		const { sessionId, sessionTTLSeconds } = result.data;
 
 		return new Response(JSON.stringify(result.data), {
 			status: 200,
 			headers: {
 				"Content-Type": "application/json",
-				"Set-Cookie": `session=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${7 * 24 * 60 * 60}`,
+				"Set-Cookie": `session=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${sessionTTLSeconds}`,
 			},
 		});
 	},
@@ -94,7 +94,7 @@ export const authLoginFinish = createServerFn(
 
 // Logout
 export const authLogout = createServerFn({ method: "POST" }, async (_: undefined, ctx: any) => {
-	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
+	// biome-ignore lint/suspicious/noExplicitAny
 	const db = getDbFromEnv();
 
 	// Extract session ID from request headers
@@ -117,13 +117,14 @@ export const authLogout = createServerFn({ method: "POST" }, async (_: undefined
 // Helper to extract session ID from headers
 function extractSessionId(headers: Headers): string | undefined {
 	const cookies = headers.get("cookie") ?? "";
-	const sessionMatch = cookies.match(/session=([^;]+)/);
+	// Use stricter regex to avoid matching substrings of other cookies
+	const sessionMatch = cookies.match(/(?:^|; )session=([^;]+)/);
 	return sessionMatch?.[1];
 }
 
 // Get current user
 export const authMe = createServerFn({ method: "GET" }, async (_: undefined, ctx: any) => {
-	// biome-ignore lint/suspicious/noExplicitAny: TanStack Start context type not exported
+	// biome-ignore lint/suspicious/noExplicitAny
 	// If not authenticated, return null user
 	if (!ctx.context.user) {
 		return { data: { user: null } };

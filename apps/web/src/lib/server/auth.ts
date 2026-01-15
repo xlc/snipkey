@@ -18,10 +18,16 @@ export interface AuthConfig {
 }
 
 function getConfig(): AuthConfig {
-	// These will be available in Workers via env.vars
+	// Read from Workers environment
+	if (!globalThis.env) {
+		throw new Error("Workers environment not available");
+	}
+
+	const env = globalThis.env;
+
 	return {
-		rpID: "localhost", // Will be configurable via env
-		origin: "http://localhost:5173", // Will be configurable via env
+		rpID: env.RP_ID ?? "localhost",
+		origin: env.ORIGIN ?? "http://localhost:5173",
 		challengeTTLMs: 5 * 60 * 1000, // 5 minutes
 		sessionTTLMs: 7 * 24 * 60 * 60 * 1000, // 7 days
 	};
@@ -47,7 +53,7 @@ async function cleanupExpiredSessions(db: ReturnType<typeof getDb>, userId: stri
 export async function createSession(
 	db: ReturnType<typeof getDb>,
 	userId: string,
-): Promise<{ sessionId: string; expiresAt: number }> {
+): Promise<{ sessionId: string; expiresAt: number; sessionTTLSeconds: number }> {
 	const config = getConfig();
 	const sessionId = newId();
 	const now = nowMs();
@@ -63,7 +69,7 @@ export async function createSession(
 		})
 		.execute();
 
-	return { sessionId, expiresAt };
+	return { sessionId, expiresAt, sessionTTLSeconds: Math.floor(config.sessionTTLMs / 1000) };
 }
 
 // Validate session and return user ID
@@ -209,12 +215,12 @@ export async function authRegisterFinish(
 	await db.deleteFrom("auth_challenges").where("id", "=", challengeId).execute();
 
 	// Create session
-	const { sessionId } = await createSession(db, challenge.user_id);
+	const { sessionId, sessionTTLSeconds } = await createSession(db, challenge.user_id);
 
 	// Cleanup expired sessions for this user
 	await cleanupExpiredSessions(db, challenge.user_id);
 
-	return ok({ sessionId, userId: challenge.user_id });
+	return ok({ sessionId, userId: challenge.user_id, sessionTTLSeconds });
 }
 
 // Generate authentication options
@@ -323,12 +329,12 @@ export async function authLoginFinish(
 	await db.deleteFrom("auth_challenges").where("id", "=", challengeId).execute();
 
 	// Create session
-	const { sessionId } = await createSession(db, credentialRecord.user_id);
+	const { sessionId, sessionTTLSeconds } = await createSession(db, credentialRecord.user_id);
 
 	// Cleanup expired sessions for this user
 	await cleanupExpiredSessions(db, credentialRecord.user_id);
 
-	return ok({ sessionId, userId: credentialRecord.user_id });
+	return ok({ sessionId, userId: credentialRecord.user_id, sessionTTLSeconds });
 }
 
 // Logout - revoke session
