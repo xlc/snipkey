@@ -1,6 +1,8 @@
+import { env } from 'cloudflare:workers'
+import { getDb } from '@shared/db/db'
 import { createMiddleware } from '@tanstack/react-start'
 import * as auth from './auth'
-import { getDbFromEnv, getSessionId } from './context'
+import { getSessionId } from './context'
 import type { AuthenticatedContext, MiddlewareContext } from './middleware-types'
 
 /**
@@ -33,21 +35,23 @@ export const securityMiddleware = createMiddleware().server(async ({ next }) => 
  * Authentication middleware for TanStack Start server functions
  *
  * This middleware:
- * 1. Extracts session ID from request cookies
- * 2. Validates session against database
- * 3. Enriches context with user data
- * 4. Returns null for user if not authenticated
+ * 1. Gets env from Cloudflare Workers bindings
+ * 2. Extracts session ID from request cookies
+ * 3. Validates session against database
+ * 4. Enriches context with user data and env
+ * 5. Returns null for user if not authenticated
  *
  * Use this for endpoints where authentication is optional
  */
 export const authMiddleware = createMiddleware().server(async ({ request, next }) => {
-  const db = getDbFromEnv()
+  const db = getDb(env)
   const sessionId = getSessionId(request.headers)
   const userId = sessionId ? await auth.validateSession(db, sessionId) : null
 
   // Always use the same return structure to avoid type inference issues
   return next({
     context: {
+      env,
       user: userId ? { id: userId } : null,
       sessionId: sessionId ?? undefined,
     } satisfies MiddlewareContext,
@@ -59,7 +63,7 @@ export const authMiddleware = createMiddleware().server(async ({ request, next }
  * Use this for endpoints that must have a valid user
  */
 export const requireAuthMiddleware = createMiddleware().server(async ({ request, next }) => {
-  const db = getDbFromEnv()
+  const db = getDb(env)
   const sessionId = getSessionId(request.headers)
 
   if (!sessionId) {
@@ -73,8 +77,23 @@ export const requireAuthMiddleware = createMiddleware().server(async ({ request,
 
   return next({
     context: {
+      env,
       user: { id: userId },
       sessionId,
     } satisfies AuthenticatedContext,
+  })
+})
+
+/**
+ * Environment middleware - adds env to context without authentication
+ * Use this for public endpoints that need access to Workers environment (DB, config)
+ */
+export const envMiddleware = createMiddleware().server(async ({ next }) => {
+  return next({
+    context: {
+      env,
+      user: null,
+      sessionId: undefined,
+    } satisfies MiddlewareContext,
   })
 })

@@ -17,14 +17,7 @@ export interface AuthConfig {
   sessionTTLMs: number
 }
 
-function getConfig(): AuthConfig {
-  // Read from Workers environment
-  if (!globalThis.env) {
-    throw new Error('Workers environment not available')
-  }
-
-  const env = globalThis.env
-
+function getConfig(env: CloudflareEnv): AuthConfig {
   return {
     rpID: env.RP_ID ?? 'localhost',
     origin: env.ORIGIN ?? 'http://localhost:5173',
@@ -49,8 +42,9 @@ async function cleanupExpiredSessions(db: ReturnType<typeof getDb>, userId: stri
 export async function createSession(
   db: ReturnType<typeof getDb>,
   userId: string,
+  env: CloudflareEnv,
 ): Promise<{ sessionId: string; expiresAt: number; sessionTTLSeconds: number }> {
-  const config = getConfig()
+  const config = getConfig(env)
   const sessionId = newId()
   const now = nowMs()
   const expiresAt = now + config.sessionTTLMs
@@ -88,9 +82,9 @@ export async function revokeSession(db: ReturnType<typeof getDb>, sessionId: str
 }
 
 // Generate registration options
-export async function authRegisterStart(db: ReturnType<typeof getDb>) {
+export async function authRegisterStart(db: ReturnType<typeof getDb>, env: CloudflareEnv) {
   await cleanupExpiredChallenges(db)
-  const config = getConfig()
+  const config = getConfig(env)
   const userId = newId()
   const challengeId = newId()
 
@@ -118,8 +112,13 @@ export async function authRegisterStart(db: ReturnType<typeof getDb>) {
 }
 
 // Verify registration response
-export async function authRegisterFinish(db: ReturnType<typeof getDb>, attestation: RegistrationResponseJSON, challengeId: string) {
-  const config = getConfig()
+export async function authRegisterFinish(
+  db: ReturnType<typeof getDb>,
+  attestation: RegistrationResponseJSON,
+  challengeId: string,
+  env: CloudflareEnv,
+) {
+  const config = getConfig(env)
   const now = nowMs()
 
   // Load challenge
@@ -192,7 +191,7 @@ export async function authRegisterFinish(db: ReturnType<typeof getDb>, attestati
   await db.deleteFrom('auth_challenges').where('id', '=', challengeId).execute()
 
   // Create session
-  const { sessionId, sessionTTLSeconds } = await createSession(db, userId)
+  const { sessionId, sessionTTLSeconds } = await createSession(db, userId, env)
 
   // Cleanup expired sessions for this user
   await cleanupExpiredSessions(db, userId)
@@ -201,9 +200,9 @@ export async function authRegisterFinish(db: ReturnType<typeof getDb>, attestati
 }
 
 // Generate authentication options
-export async function authLoginStart(db: ReturnType<typeof getDb>) {
+export async function authLoginStart(db: ReturnType<typeof getDb>, env: CloudflareEnv) {
   await cleanupExpiredChallenges(db)
-  const config = getConfig()
+  const config = getConfig(env)
   const challengeId = newId()
 
   const options = await generateAuthenticationOptions({
@@ -228,8 +227,13 @@ export async function authLoginStart(db: ReturnType<typeof getDb>) {
 }
 
 // Verify authentication response
-export async function authLoginFinish(db: ReturnType<typeof getDb>, assertion: AuthenticationResponseJSON, challengeId: string) {
-  const config = getConfig()
+export async function authLoginFinish(
+  db: ReturnType<typeof getDb>,
+  assertion: AuthenticationResponseJSON,
+  challengeId: string,
+  env: CloudflareEnv,
+) {
+  const config = getConfig(env)
   const now = nowMs()
 
   // Load challenge
@@ -299,7 +303,7 @@ export async function authLoginFinish(db: ReturnType<typeof getDb>, assertion: A
   await db.deleteFrom('auth_challenges').where('id', '=', challengeId).execute()
 
   // Create session
-  const { sessionId, sessionTTLSeconds } = await createSession(db, credentialRecord.user_id)
+  const { sessionId, sessionTTLSeconds } = await createSession(db, credentialRecord.user_id, env)
 
   // Cleanup expired sessions for this user
   await cleanupExpiredSessions(db, credentialRecord.user_id)

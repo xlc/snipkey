@@ -1,7 +1,7 @@
 import { snippetCreateInput, snippetListInput, snippetUpdateInput } from '@shared/validation'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
-import { getDbFromEnv } from '~/lib/server/context'
+import { getDbFromEnv, getServerFnContext } from '~/lib/server/context'
 import { requireAuthMiddleware } from '~/lib/server/middleware'
 import type { SerializedError } from '~/lib/server/result'
 import * as snippets from '~/lib/server/snippets'
@@ -11,7 +11,8 @@ export const snippetsList = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])
   .inputValidator(snippetListInput)
   .handler(async ({ data, context }) => {
-    const db = getDbFromEnv()
+    const ctx = getServerFnContext({ context })
+    const db = getDbFromEnv(ctx.env)
     const userId = context.user.id
     const result = await snippets.snippetsList(db, userId, data)
 
@@ -29,7 +30,8 @@ export const snippetGet = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])
   .inputValidator(z.object({ id: z.string().uuid() }))
   .handler(async ({ data: { id }, context }) => {
-    const db = getDbFromEnv()
+    const ctx = getServerFnContext({ context })
+    const db = getDbFromEnv(ctx.env)
     const userId = context.user.id
     const result = await snippets.snippetGet(db, userId, id)
 
@@ -47,7 +49,8 @@ export const snippetCreate = createServerFn({ method: 'POST' })
   .middleware([requireAuthMiddleware])
   .inputValidator(snippetCreateInput)
   .handler(async ({ data, context }) => {
-    const db = getDbFromEnv()
+    const ctx = getServerFnContext({ context })
+    const db = getDbFromEnv(ctx.env)
     const userId = context.user.id
     const result = await snippets.snippetCreate(db, userId, data)
 
@@ -68,7 +71,8 @@ export const snippetUpdate = createServerFn({ method: 'POST' })
     const { id } = data
     const validated = data
 
-    const db = getDbFromEnv()
+    const ctx = getServerFnContext({ context })
+    const db = getDbFromEnv(ctx.env)
     const userId = context.user.id
     const result = await snippets.snippetUpdate(db, userId, id, validated)
 
@@ -86,7 +90,8 @@ export const snippetDelete = createServerFn({ method: 'POST' })
   .middleware([requireAuthMiddleware])
   .inputValidator(z.object({ id: z.string().uuid() }))
   .handler(async ({ data: { id }, context }) => {
-    const db = getDbFromEnv()
+    const ctx = getServerFnContext({ context })
+    const db = getDbFromEnv(ctx.env)
     const userId = context.user.id
     const result = await snippets.snippetDelete(db, userId, id)
 

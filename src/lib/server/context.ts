@@ -1,19 +1,5 @@
-import type { Env } from '@shared/db/db'
 import { getDb } from '@shared/db/db'
 import type { MiddlewareContext } from './middleware-types'
-
-// Global env will be set by the Cloudflare Workers adapter
-declare global {
-  var env: Env | undefined
-}
-
-// Get database instance from Workers env
-export function getDbFromEnv() {
-  if (!globalThis.env) {
-    throw new Error('Workers environment not available')
-  }
-  return getDb(globalThis.env)
-}
 
 // Get session ID from request headers
 export function getSessionId(headers: Headers): string | undefined {
@@ -36,7 +22,20 @@ export function createClearedSessionCookie(): string {
 /**
  * Helper to extract middleware context from TanStack Start server function context
  * This avoids using 'as any' casts by providing a type-safe way to access the context
+ *
+ * Note: This function requires that the context exists and contains env.
+ * It should only be called on server functions that use middleware.
  */
 export function getServerFnContext(ctx: { context?: MiddlewareContext }): MiddlewareContext {
-  return ctx.context ?? { user: null, sessionId: undefined }
+  if (!ctx.context) {
+    throw new Error('Server function context not found. Did you forget to add middleware?')
+  }
+  return ctx.context
+}
+
+/**
+ * Get database instance from env (which should come from middleware context)
+ */
+export function getDbFromEnv(env: CloudflareEnv) {
+  return getDb(env)
 }

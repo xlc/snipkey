@@ -1,14 +1,15 @@
 import type { ApiError } from '@shared/types'
 import { createServerFn } from '@tanstack/react-start'
 import { sql } from 'kysely'
-import { getDbFromEnv } from '~/lib/server/context'
+import { getDbFromEnv, getServerFnContext } from '~/lib/server/context'
 import { requireAuthMiddleware } from '~/lib/server/middleware'
 
 // Get all tags with their counts
 export const tagsList = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])
   .handler(async ({ context }) => {
-    const db = getDbFromEnv()
+    const ctx = getServerFnContext({ context })
+    const db = getDbFromEnv(ctx.env)
     const userId = context.user.id
 
     try {

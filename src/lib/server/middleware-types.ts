@@ -3,6 +3,7 @@
  */
 
 export interface MiddlewareContext {
+  env: CloudflareEnv
   user: { id: string } | null
   sessionId?: string
 }
@@ -12,6 +13,7 @@ export interface MiddlewareContext {
  * User is guaranteed to be non-null
  */
 export interface AuthenticatedContext {
+  env: CloudflareEnv
   user: { id: string }
   sessionId: string
 }
