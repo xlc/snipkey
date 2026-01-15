@@ -15,7 +15,7 @@ import {
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
-import { snippetsList } from '~/server/snippets'
+import { tagsList } from '~/server/tags'
 
 export const Route = createFileRoute('/tags')({
   component: TagsPage,
@@ -32,11 +32,7 @@ function TagsPage() {
 
   const loadTags = useCallback(async () => {
     setLoading(true)
-    const result = await snippetsList({
-      data: {
-        limit: 1000,
-      },
-    })
+    const result = await tagsList({})
 
     if (result.error) {
       toast.error(result.error.message)
@@ -44,12 +40,16 @@ function TagsPage() {
       return
     }
 
-    // Aggregate tags from all snippets
+    if (!result.data) {
+      toast.error('Failed to load tags')
+      setLoading(false)
+      return
+    }
+
+    // Convert array to map for easier manipulation
     const tagCounts = new Map<string, number>()
-    for (const snippet of result.data.items) {
-      for (const tag of snippet.tags) {
-        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1)
-      }
+    for (const { tag, count } of result.data.tags) {
+      tagCounts.set(tag, count)
     }
 
     setTags(tagCounts)
@@ -80,19 +80,6 @@ function TagsPage() {
       return
     }
 
-    // Get all snippets with this tag
-    const result = await snippetsList({
-      data: {
-        limit: 1000,
-      },
-    })
-
-    if (result.error) {
-      toast.error(result.error.message)
-      return
-    }
-
-    // Update each snippet
     // Note: This requires implementing bulk update or individual updates
     toast.info('Tag renaming requires backend updates - coming soon')
     setEditingTag(null)
@@ -107,20 +94,6 @@ function TagsPage() {
   async function confirmDeleteTag() {
     if (!tagToDelete) return
 
-    // Get all snippets with this tag
-    const result = await snippetsList({
-      data: {
-        limit: 1000,
-      },
-    })
-
-    if (result.error) {
-      toast.error(result.error.message)
-      setShowDeleteDialog(false)
-      return
-    }
-
-    // Update each snippet to remove the tag
     // Note: This requires implementing bulk update or individual updates
     toast.info('Tag deletion requires backend updates - coming soon')
     setShowDeleteDialog(false)

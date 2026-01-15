@@ -35,6 +35,8 @@ export const snippetListInput = z.object({
       id: z.string(),
     })
     .optional(),
+  sortBy: z.enum(['updated', 'created', 'title']).default('updated'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
 })
 
 export const authRegisterStartInput = z.object({})

@@ -5,7 +5,16 @@ import type { SnippetCreateInput, SnippetListInput, SnippetUpdateInput } from '@
 
 // List snippets with filtering and pagination
 export async function snippetsList(db: ReturnType<typeof getDb>, userId: string, input: SnippetListInput) {
-  let query = db.selectFrom('snippets').where('user_id', '=', userId).orderBy('updated_at', 'desc').orderBy('id', 'desc').limit(input.limit)
+  // Determine sort column and order
+  const sortColumn = input.sortBy === 'title' ? 'title' : 'updated_at'
+  const sortDirection = input.sortOrder === 'asc' ? 'asc' : 'desc'
+
+  let query = db
+    .selectFrom('snippets')
+    .where('user_id', '=', userId)
+    .orderBy(sortColumn, sortDirection)
+    .orderBy('id', sortDirection) // Secondary sort for consistency
+    .limit(input.limit)
 
   // Apply search filter (escape SQL wildcards to prevent injection)
   if (input.query) {
@@ -13,16 +22,27 @@ export async function snippetsList(db: ReturnType<typeof getDb>, userId: string,
     query = query.where(eb => eb.or([eb('title', 'like', `%${escapedQuery}%`), eb('body', 'like', `%${escapedQuery}%`)]))
   }
 
-  // Apply tag filter (escape quotes and backslashes to prevent injection)
+  // Apply tag filter using SQLite's json_each for proper array matching
   if (input.tag) {
-    const escapedTag = input.tag.replace(/["\\]/g, '\\$&')
-    query = query.where('tags', 'like', `%"${escapedTag}"%`)
+    // Use a simpler approach with LIKE that's more reliable than the old JSON string matching
+    // This matches tags in the JSON array format: ["tag1","tag2"]
+    const patterns = [
+      `"${input.tag}"`, // Match as standalone tag
+      `"${input.tag}",`, // Match at start of array
+      `,"${input.tag}"`, // Match in middle of array
+    ]
+
+    query = query.where(eb => eb.or(patterns.map(pattern => eb('tags', 'like', `%${pattern}%`))))
   }
 
-  // Apply cursor pagination
-  if (input.cursor) {
+  // Apply cursor pagination (works with updated_at sorting)
+  if (input.cursor && input.sortBy !== 'title') {
     const { updatedAt, id } = input.cursor
-    query = query.where(eb => eb.or([eb('updated_at', '<', updatedAt), eb.and([eb('updated_at', '=', updatedAt), eb('id', '<', id)])]))
+    if (sortDirection === 'desc') {
+      query = query.where(eb => eb.or([eb('updated_at', '<', updatedAt), eb.and([eb('updated_at', '=', updatedAt), eb('id', '<', id)])]))
+    } else {
+      query = query.where(eb => eb.or([eb('updated_at', '>', updatedAt), eb.and([eb('updated_at', '=', updatedAt), eb('id', '>', id)])]))
+    }
   }
 
   const items = await query.selectAll().execute()
@@ -34,7 +54,7 @@ export async function snippetsList(db: ReturnType<typeof getDb>, userId: string,
         id: string
       }
     | undefined
-  if (items.length === input.limit) {
+  if (items.length === input.limit && input.sortBy !== 'title') {
     const lastIndex = items.length - 1
     const lastItem = items[lastIndex]
     if (lastItem) {

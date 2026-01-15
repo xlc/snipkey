@@ -44,9 +44,11 @@ function Index() {
     setLoading(true)
     const result = await snippetsList({
       data: {
-        limit: 100,
+        limit: 20,
         query: debouncedSearchQuery || undefined,
         tag: selectedTag || undefined,
+        sortBy,
+        sortOrder,
       },
     })
 
@@ -56,22 +58,9 @@ function Index() {
       return
     }
 
-    let items = result.data.items
+    const items = result.data.items
 
-    // Sort items locally
-    items = items.sort((a, b) => {
-      let comparison = 0
-      if (sortBy === 'title') {
-        comparison = a.title.localeCompare(b.title)
-      } else if (sortBy === 'created') {
-        comparison = a.updated_at - b.updated_at // using updated_at as proxy
-      } else {
-        comparison = a.updated_at - b.updated_at
-      }
-      return sortOrder === 'asc' ? comparison : -comparison
-    })
-
-    // Extract all unique tags
+    // Extract all unique tags from fetched snippets
     const tags = new Set<string>()
     for (const item of items) {
       for (const tag of item.tags) {
@@ -80,7 +69,7 @@ function Index() {
     }
     setAllTags(Array.from(tags).sort())
 
-    setSnippets(items.slice(0, 20)) // Only show first 20 after sorting
+    setSnippets(items)
     setLoading(false)
   }
 
