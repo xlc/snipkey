@@ -155,18 +155,25 @@ bun run check        # Run Biome linter/formatter (fixes issues)
 bun run typecheck    # TypeScript type checking
 bun run lint         # Biome lint only
 bun run format       # Biome format only
+bun run db:migrate   # Apply pending D1 migrations (local)
 ```
 
 ## Database Migrations
 
-Migrations are in `migrations/` directory and must be run manually:
+Use wrangler's built-in migration system to manage database changes:
 
 ```bash
-# Local development
-wrangler d1 execute snipkey-db --local --file=./migrations/0001_init.sql
+# Create a new migration
+bun run db:migration:create <name>
 
-# Production
-wrangler d1 execute snipkey-db --file=./migrations/0001_init.sql
+# List pending migrations
+bun run db:migration:list
+
+# Apply pending migrations (local)
+bun run db:migrate
+
+# Apply pending migrations (production)
+wrangler d1 migrations apply snipkey-db --remote
 ```
 
 **Always** create new migrations for schema changes. Never modify existing migrations.
@@ -200,10 +207,10 @@ Development uses defaults from `wrangler.json`:
 3. Use Zod for runtime validation
 
 ### Adding a database migration
-1. Create new file in `migrations/` with next number: `0004_name.sql`
-2. Write SQL for D1 (SQLite syntax)
-3. Run locally for testing
-4. Document in `DEPLOYMENT.md`
+1. Run `bun run db:migration:create <description>` to create a new migration file
+2. Edit the generated file in `migrations/` with your SQL (D1/SQLite syntax)
+3. Run `bun run db:migrate` to apply locally
+4. Run `wrangler d1 migrations apply snipkey-db --remote` for production
 
 ## Deployment
 
