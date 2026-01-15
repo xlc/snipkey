@@ -1,53 +1,53 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { useDebounce } from "~/lib/hooks/useDebounce";
-import { snippetsList } from "~/server/snippets";
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { Badge } from '~/components/ui/badge'
+import { Button } from '~/components/ui/button'
+import { Input } from '~/components/ui/input'
+import { useDebounce } from '~/lib/hooks/useDebounce'
+import { snippetsList } from '~/server/snippets'
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute('/')({
 	component: Index,
-});
+})
 
 function Index() {
 	const [snippets, setSnippets] = useState<Array<{
-		id: string;
-		title: string;
-		body: string;
-		tags: string[];
-		updated_at: number;
-	}> | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [searchQuery, setSearchQuery] = useState("");
-	const [selectedTag, setSelectedTag] = useState<string | null>(null);
+		id: string
+		title: string
+		body: string
+		tags: string[]
+		updated_at: number
+	}> | null>(null)
+	const [loading, setLoading] = useState(true)
+	const [searchQuery, setSearchQuery] = useState('')
+	const [selectedTag, setSelectedTag] = useState<string | null>(null)
 
 	// Debounce search input to reduce API calls
-	const debouncedSearchQuery = useDebounce(searchQuery, 500);
+	const debouncedSearchQuery = useDebounce(searchQuery, 500)
 
 	async function loadSnippets() {
-		setLoading(true);
+		setLoading(true)
 		const result = await snippetsList({
 			limit: 20,
 			query: debouncedSearchQuery || undefined,
 			tag: selectedTag || undefined,
-		});
+		})
 
 		if (result.error) {
-			toast.error("Failed to load snippets");
-			setLoading(false);
-			return;
+			toast.error('Failed to load snippets')
+			setLoading(false)
+			return
 		}
 
-		setSnippets(result.data.items);
-		setLoading(false);
+		setSnippets(result.data.items)
+		setLoading(false)
 	}
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: Re-load when search or tag changes
 	useEffect(() => {
-		loadSnippets();
-	}, [debouncedSearchQuery, selectedTag]);
+		loadSnippets()
+	}, [debouncedSearchQuery, selectedTag])
 
 	return (
 		<div className="space-y-8">
@@ -66,7 +66,7 @@ function Index() {
 					<Input
 						placeholder="Search snippets..."
 						value={searchQuery}
-						onChange={(e) => setSearchQuery(e.target.value)}
+						onChange={e => setSearchQuery(e.target.value)}
 						className="max-w-sm"
 					/>
 				</div>
@@ -89,7 +89,7 @@ function Index() {
 				<div className="text-center py-12 text-muted-foreground">Loading snippets...</div>
 			) : snippets && snippets.length > 0 ? (
 				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-					{snippets.map((snippet) => (
+					{snippets.map(snippet => (
 						<Link key={snippet.id} to={`/snippets/${snippet.id}`} className="block group">
 							<div className="p-4 border rounded-lg hover:border-primary transition-colors">
 								<h3 className="font-semibold group-hover:text-primary transition-colors">
@@ -97,11 +97,11 @@ function Index() {
 								</h3>
 								<p className="text-sm text-muted-foreground mt-2 line-clamp-3">
 									{snippet.body.slice(0, 150)}
-									{snippet.body.length > 150 && "..."}
+									{snippet.body.length > 150 && '...'}
 								</p>
 								{snippet.tags.length > 0 && (
 									<div className="flex gap-2 mt-3 flex-wrap">
-										{snippet.tags.map((tag) => (
+										{snippet.tags.map(tag => (
 											<Badge key={tag} variant="outline" className="text-xs">
 												{tag}
 											</Badge>
@@ -116,8 +116,8 @@ function Index() {
 				<div className="text-center py-12">
 					<p className="text-muted-foreground mb-4">
 						{searchQuery || selectedTag
-							? "No snippets found matching your criteria"
-							: "No snippets yet. Create your first snippet to get started!"}
+							? 'No snippets found matching your criteria'
+							: 'No snippets yet. Create your first snippet to get started!'}
 					</p>
 					{!searchQuery && !selectedTag && (
 						<Button asChild>
@@ -127,5 +127,5 @@ function Index() {
 				</div>
 			)}
 		</div>
-	);
+	)
 }

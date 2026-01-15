@@ -11,7 +11,7 @@
 	},
 	"overrides": [
 		{
-			"includes": ["apps/web/src/routeTree.gen.ts"],
+			"includes": ["src/routeTree.gen.ts"],
 			"linter": {
 				"enabled": false
 			}
@@ -51,11 +51,11 @@
 			"jsxQuoteStyle": "double",
 			"quoteProperties": "asNeeded",
 			"trailingCommas": "all",
-			"semicolons": "always",
-			"arrowParentheses": "always",
+			"semicolons": "asNeeded",
+			"arrowParentheses": "asNeeded",
 			"bracketSpacing": true,
 			"bracketSameLine": false,
-			"quoteStyle": "double",
+			"quoteStyle": "single",
 			"attributePosition": "auto"
 		}
 	},

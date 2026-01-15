@@ -1,6 +1,6 @@
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
-import { Button } from "~/components/ui/button";
-import { Toaster } from "~/components/ui/toaster";
+import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
+import { Button } from '~/components/ui/button'
+import { Toaster } from '~/components/ui/toaster'
 
 export const Route = createRootRoute({
 	component: () => (
@@ -28,4 +28,4 @@ export const Route = createRootRoute({
 			<Toaster />
 		</>
 	),
-});
+})

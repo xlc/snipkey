@@ -9,20 +9,20 @@ export const LIMITS = {
 	MAX_TAG_LENGTH: 50,
 	MAX_SEARCH_QUERY_LENGTH: 200,
 	MAX_SNIPPETS_PER_PAGE: 100,
-} as const;
+} as const
 
 /**
  * Validates placeholder count doesn't exceed limits
  */
 export function validatePlaceholderCount(count: number): {
-	valid: boolean;
-	error?: string;
+	valid: boolean
+	error?: string
 } {
 	if (count > LIMITS.MAX_PLACEHOLDERS_PER_SNIPPET) {
 		return {
 			valid: false,
 			error: `Maximum ${LIMITS.MAX_PLACEHOLDERS_PER_SNIPPET} placeholders allowed per snippet`,
-		};
+		}
 	}
-	return { valid: true };
+	return { valid: true }
 }

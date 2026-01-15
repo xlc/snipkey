@@ -3,5 +3,5 @@
  */
 
 export interface MiddlewareContext {
-	user: { id: string } | null;
+	user: { id: string } | null
 }

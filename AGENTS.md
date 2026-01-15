@@ -1,176 +1,231 @@
-# AI Agents
-
-This document describes the AI agents used in the development of Snipkey.
-
-## Architecture & Design Agents
-
-### compound-engineering:design:design-implementation-reviewer
-Reviews UI implementations against Figma designs to ensure visual accuracy.
-
-**Usage**: Call when UI implementations need to be verified against design specifications.
-
-### compound-engineering:design:design-iterator
-Iteratively refines UI designs through multiple systematic improvements.
-
-**Usage**: Use proactively when initial design work isn't coming together. Performs 5-10 iterations of visual improvements.
-
-### compound-engineering:design:figma-design-sync
-Synchronizes web implementations with Figma designs by detecting and fixing visual differences.
-
-**Usage**: Use after implementing UI components to automatically match Figma specifications.
-
-## Backend Development Agents
-
-### backend-development:backend-architect
-Expert backend architect specializing in scalable API design, microservices, and distributed systems.
-
-**Usage**: Use PROACTIVELY when creating new backend services or APIs.
-
-### backend-development:tdd-orchestrator
-Master TDD orchestrator for test-driven development practices and multi-agent workflow coordination.
-
-**Usage**: Use PROACTIVELY for TDD implementation and governance.
-
-### backend-development:temporal-python-pro
-Master Temporal workflow orchestration with Python SDK.
-
-**Usage**: Use PROACTIVELY for workflow design, microservice orchestration, or long-running processes.
-
-## Code Review Agents
-
-### compound-engineering:review:dhh-rails-reviewer
-Brutally honest Rails code review from David Heinemeier Hansson's perspective.
-
-**Usage**: Review Rails code for anti-patterns, JavaScript framework contamination, and Rails convention violations.
-
-### compound-engineering:review:kieran-rails-reviewer
-High-quality Rails code review with Kieran's strict conventions and taste preferences.
-
-**Usage**: Use after implementing features, modifying code, or creating Rails components.
-
-### compound-engineering:review:kieran-python-reviewer
-High-quality Python code review with strict Python conventions.
-
-**Usage**: Use after implementing features, modifying code, or creating Python modules.
-
-### compound-engineering:review:kieran-typescript-reviewer
-High-quality TypeScript code review with strict TypeScript conventions.
-
-**Usage**: Use after implementing features, modifying code, or creating TypeScript components.
-
-### compound-engineering:review:code-simplicity-reviewer
-Final review pass to ensure code changes are as simple and minimal as possible.
-
-**Usage**: Use after implementation is complete but before finalizing changes.
-
-### compound-engineering:review:data-migration-expert
-Validates ID mappings against production reality and checks for swapped values in migrations.
-
-**Usage**: Essential for any migration involving ID mappings, column renames, or data transformations.
-
-### compound-engineering:review:deployment-verification-agent
-Creates deployment checklists with SQL verification queries and rollback procedures.
-
-**Usage**: Use for PRs that touch production data, migrations, or any behavior that could silently discard or duplicate records.
-
-### compound-engineering:review:agent-native-audit
-Runs comprehensive agent-native architecture review with scored principles.
-
-**Usage**: Verify that features are accessible to agents (parity with users).
-
-### compound-engineering:review:architecture-strategist
-Analyzes code changes from an architectural perspective and evaluates system design decisions.
-
-**Usage**: Use when reviewing PRs for architectural compliance or evaluating system design changes.
-
-### compound-engineering:review:julik-frontend-races-reviewer
-Reviews JavaScript and Stimulus frontend code with special focus on race conditions.
-
-**Usage**: Use after implementing JavaScript features or creating Stimulus controllers.
-
-### compound-engineering:review:performance-oracle
-Analyzes code for performance issues, optimizes algorithms, and identifies bottlenecks.
-
-**Usage**: Use proactively to verify performance characteristics or when performance concerns arise.
-
-### compound-engineering:review:security-sentinel
-Performs security audits, vulnerability assessments, and security reviews.
-
-**Usage**: Use proactively to verify security posture or review authentication/authorization implementations.
-
-### compound-engineering:review:pattern-recognition-specialist
-Analyzes code for design patterns, anti-patterns, naming conventions, and code duplication.
-
-**Usage**: Use to analyze codebase for patterns and ensure consistency.
-
-## Research Agents
-
-### compound-engineering:research:framework-docs-researcher
-Gathers comprehensive documentation and best practices for frameworks, libraries, and dependencies.
-
-**Usage**: Use when needing to understand how to properly implement features using specific libraries or frameworks.
-
-### compound-engineering:research:best-practices-researcher
-Researches external best practices, documentation, and examples for any technology or development practice.
-
-**Usage**: Use when researching best practices for specific technologies or implementation patterns.
-
-### compound-engineering:research:git-history-analyzer
-Analyzes git repository history to understand code evolution and trace the origins of code patterns.
-
-**Usage**: Use when understanding the historical context of code changes or analyzing commit history.
-
-### compound-engineering:research:repo-research-analyst
-Conducts thorough research on repository structure, documentation, and patterns.
-
-**Usage**: Use when onboarding to new projects or analyzing repository conventions.
-
-## Workflow Agents
-
-### compound-engineering:workflows:plan
-Transforms feature descriptions into well-structured project plans following conventions.
-
-**Usage**: Use when given a feature description that needs to be planned.
-
-### compound-engineering:workflows:review
-Performs exhaustive code reviews using multi-agent analysis, ultra-thinking, and worktrees.
-
-**Usage**: Use for comprehensive code reviews beyond what standard linters provide.
-
-### compound-engineering:workflows:compound
-Documents solved problems as categorized documentation for future knowledge lookup.
-
-**Usage**: Use after solving complex problems to document the solution.
-
-### compound-engineering:workflows:work
-Executes work plans efficiently while maintaining quality and finishing features.
-
-**Usage**: Use when implementing features based on a plan.
-
-## Specialized Agents
-
-### playwright-skill:playwright-skill
-Complete browser automation with Playwright for testing websites.
-
-**Usage**: Use when needing to test websites, automate browser interactions, validate UX, or perform browser-based testing.
-
-### frontend-design:frontend-design
-Creates distinctive, production-grade frontend interfaces with high design quality.
-
-**Usage**: Use when user asks to build web components, pages, or applications.
-
-## Task Management
-
-Tasks are tracked using the TodoWrite tool throughout the conversation. Always update task status:
-- Mark tasks as `in_progress` when starting work
-- Mark tasks as `completed` immediately after finishing
-- Only one task should be `in_progress` at a time
-- Remove tasks that are no longer relevant
-
-## Agent Selection Guidelines
-
-- **Use PROACTIVELY**: Some agents should be used proactively (backend-architect, tdd-orchestrator, frontend-developer, performance-engineer, etc.)
-- **Use after changes**: Review agents should be used after implementing features
-- **Use for research**: Research agents when investigating new libraries or patterns
-- **Use for planning**: Plan agent when designing implementation strategies
-- **Match the task**: Select agents based on the specific task requirements (language, framework, concern)
+# Snipkey - AI Agent Instructions
+
+This document contains project-specific rules and instructions for AI agents working on this codebase.
+
+## Project Overview
+
+**Snipkey** is a private snippet manager with placeholder support and inline editing. It's a full-stack TypeScript application deployed on Cloudflare Workers with D1 database.
+
+- **Single-package repository** (no workspaces)
+- **Runtime**: Bun
+- **Framework**: TanStack Start (React SSR with file-based routing)
+- **Database**: Cloudflare D1 (SQLite) via Kysely ORM
+- **Authentication**: WebAuthn passkeys via SimpleWebAuthn
+- **Styling**: Tailwind CSS + shadcn/ui components
+- **Linting/Formatting**: Biome
+
+## Project Structure
+
+```
+snipkey/
+├── src/
+│   ├── app/              # App-level providers and layouts
+│   ├── components/       # React components
+│   │   └── ui/           # shadcn/ui base components
+│   ├── lib/
+│   │   ├── server/       # Server-side utilities (auth, middleware, db)
+│   │   ├── hooks/        # Custom React hooks
+│   │   └── auth/         # Client-side auth utilities
+│   ├── routes/           # TanStack Start file-based routes
+│   ├── server/           # TanStack Start server functions
+│   └── styles/           # Global styles
+├── shared/
+│   └── src/
+│       ├── db/           # Database schema and utilities
+│       ├── template/     # Placeholder parsing and rendering
+│       ├── types/        # Shared TypeScript types
+│       └── validation/   # Zod schemas and validation limits
+├── migrations/           # D1 database migrations
+├── routes/               # Legacy routes directory (unused)
+├── wrangler.json         # Cloudflare Workers configuration
+├── biome.json            # Biome linting/formatting config
+├── vite.config.ts        # Vite configuration
+└── package.json          # Single package at root
+```
+
+## Code Style
+
+**Always follow Biome configuration** - run `bun run check` before committing.
+
+Key style rules:
+- **Indentation**: Tabs, width 2
+- **Line width**: 100 characters
+- **Quotes**: Double quotes for strings/JSX
+- **Semicolons**: Always
+- **Trailing commas**: All
+- **Arrow parentheses**: Always
+- **Import type**: Use `import type` for type-only imports
+
+## Architecture Patterns
+
+### TanStack Start Server Functions
+
+Server functions are defined in `src/server/` using `createServerFn`:
+
+```typescript
+import { createServerFn } from "@tanstack/start";
+import { getDbFromEnv } from "~/lib/server/context";
+import { authMiddleware } from "~/lib/server/middleware";
+
+// Optional auth - returns null user if not authenticated
+export const myFn = createServerFn({ method: "GET" }, async (_, ctx: ServerFnContext) => {
+  // ctx.context.user is available (may be null)
+}).middleware([authMiddleware]);
+
+// Required auth - throws if not authenticated
+export const protectedFn = createServerFn(
+  { method: "POST" },
+  async ({ data }, ctx: ServerFnContext) => {
+    // ctx.context.user.id is guaranteed to exist
+  },
+).middleware([requireAuthMiddleware]);
+```
+
+**Critical patterns:**
+- Use `getDbFromEnv()` to get database instance (works in both dev/prod)
+- Use `authMiddleware` for optional auth, `requireAuthMiddleware` for required
+- Server functions receive `(_, ctx)` - first arg is request data, second is context
+- Set cookies using `createSessionCookie()` or `createClearedSessionCookie()`
+
+### Authentication Flow
+
+Authentication uses WebAuthn passkeys with server-side challenges:
+
+1. **Registration**: `authRegisterStart` → `authRegisterFinish` (sets session cookie)
+2. **Login**: `authLoginStart` → `authLoginFinish` (sets session cookie)
+3. **Logout**: `authLogout` (clears session cookie)
+4. **Get user**: `authMe` (returns current user or null)
+
+**Never hardcode user IDs** - always use middleware to get authenticated user.
+
+### Database Access
+
+- Use Kysely query builder via `getDbFromEnv()`
+- Database schema is defined in `shared/src/db/schema.ts`
+- Type-safe queries - Kysely infers types from schema
+- Use parameterized queries - never concatenate strings
+
+Example:
+```typescript
+const db = getDbFromEnv();
+const snippet = await db
+  .selectFrom("snippets")
+  .where("user_id", "=", userId)
+  .where("id", "=", id)
+  .executeTakeFirst();
+```
+
+### Placeholder System
+
+Placeholders use `{{name:type}}` or `{{name:type=default}}` syntax:
+
+- **Types**: `text`, `number`, `enum(option1,option2,...)`
+- **Parsing**: `shared/src/template/parse.ts`
+- **Rendering**: `shared/src/template/render.ts`
+- **Validation**: `shared/src/validation/`
+
+**Supported limits** (enforced in `shared/src/validation/limits.ts`):
+- Max placeholders: 20
+- Max tags: 10
+- Max title length: 200 chars
+- Max body length: 50,000 chars
+
+## Important Files
+
+### Configuration
+- `wrangler.json` - Cloudflare Workers config (D1 binding, env vars)
+- `biome.json` - Code style rules
+- `vite.config.ts` - Vite bundler config
+- `tsconfig.json` - TypeScript config
+
+### Key Source Files
+- `src/lib/server/context.ts` - Database initialization, cookie utilities
+- `src/lib/server/auth.ts` - WebAuthn auth logic (registration/login/logout)
+- `src/lib/server/middleware.ts` - Authentication middleware
+- `src/lib/server/middleware-types.ts` - Middleware context types
+- `src/lib/server/types.ts` - Server function types
+- `shared/src/db/schema.ts` - Database schema definitions
+
+## Development Commands
+
+```bash
+bun run dev          # Start dev server (http://localhost:5173)
+bun run build        # Production build
+bun run check        # Run Biome linter/formatter (fixes issues)
+bun run typecheck    # TypeScript type checking
+bun run lint         # Biome lint only
+bun run format       # Biome format only
+```
+
+## Database Migrations
+
+Migrations are in `migrations/` directory and must be run manually:
+
+```bash
+# Local development
+wrangler d1 execute snipkey-db --local --file=./migrations/0001_init.sql
+
+# Production
+wrangler d1 execute snipkey-db --file=./migrations/0001_init.sql
+```
+
+**Always** create new migrations for schema changes. Never modify existing migrations.
+
+## Environment Variables
+
+Development uses defaults from `wrangler.json`:
+- `RP_ID=localhost`
+- `ORIGIN=http://localhost:5173`
+- `CHALLENGE_TTL_MS=300000` (5 minutes)
+- `SESSION_TTL_MS=604800000` (7 days)
+
+**Production must update** `RP_ID` and `ORIGIN` in `wrangler.json`.
+
+## Common Tasks
+
+### Adding a new server function
+1. Create function in `src/server/` with `createServerFn`
+2. Add appropriate middleware (`authMiddleware` or `requireAuthMiddleware`)
+3. Use `getDbFromEnv()` for database access
+4. Return typed data or `Response` with headers
+
+### Adding a new route
+1. Create file in `src/routes/` following TanStack Start conventions
+2. Use file-based routing: `index.tsx`, `login.tsx`, `snippets.$id.tsx`
+3. Server loaders use `createServerFn` with middleware
+
+### Adding validation
+1. Define schema in `shared/src/validation/schemas.ts`
+2. Add limits to `shared/src/validation/limits.ts`
+3. Use Zod for runtime validation
+
+### Adding a database migration
+1. Create new file in `migrations/` with next number: `0004_name.sql`
+2. Write SQL for D1 (SQLite syntax)
+3. Run locally for testing
+4. Document in `DEPLOYMENT.md`
+
+## Deployment
+
+1. Update `wrangler.json` with production `database_id` and env vars
+2. Run all migrations against production D1
+3. Deploy with `wrangler deploy`
+
+See `DEPLOYMENT.md` for detailed instructions.
+
+## Security Rules
+
+- **Never** trust client input - always validate with Zod schemas
+- **Never** expose database errors to clients - return generic errors
+- **Always** use middleware for authentication - never trust request data
+- **Never** hardcode credentials or API keys
+- **Always** use parameterized queries - prevent SQL injection
+- **Never** expose session IDs or challenge IDs in error messages
+
+## Testing
+
+Tests are not currently set up. When adding tests:
+- Use Bun test runner
+- Test server functions with mocked `getDbFromEnv()`
+- Test authentication flows with mocked WebAuthn
+- Test placeholder parsing/rendering edge cases

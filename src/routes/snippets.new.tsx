@@ -1,76 +1,76 @@
-import { parseTemplate } from "@shared/template";
-import { LIMITS } from "@shared/validation/limits";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Textarea } from "~/components/ui/textarea";
-import { snippetCreate } from "~/server/snippets";
+import { parseTemplate } from '@shared/template'
+import { LIMITS } from '@shared/validation/limits'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { useState } from 'react'
+import { toast } from 'sonner'
+import { Badge } from '~/components/ui/badge'
+import { Button } from '~/components/ui/button'
+import { Input } from '~/components/ui/input'
+import { Textarea } from '~/components/ui/textarea'
+import { snippetCreate } from '~/server/snippets'
 
-export const Route = createFileRoute("/snippets/new")({
+export const Route = createFileRoute('/snippets/new')({
 	component: NewSnippet,
-});
+})
 
 function NewSnippet() {
-	const router = useRouter();
-	const [title, setTitle] = useState("");
-	const [body, setBody] = useState("");
-	const [tagInput, setTagInput] = useState("");
-	const [tags, setTags] = useState<string[]>([]);
-	const [loading, setLoading] = useState(false);
+	const router = useRouter()
+	const [title, setTitle] = useState('')
+	const [body, setBody] = useState('')
+	const [tagInput, setTagInput] = useState('')
+	const [tags, setTags] = useState<string[]>([])
+	const [loading, setLoading] = useState(false)
 
 	// Real-time parsing
-	const parseResult = parseTemplate(body);
+	const parseResult = parseTemplate(body)
 
 	function handleAddTag() {
-		const trimmed = tagInput.trim().toLowerCase();
+		const trimmed = tagInput.trim().toLowerCase()
 		if (trimmed && !tags.includes(trimmed)) {
-			setTags([...tags, trimmed]);
+			setTags([...tags, trimmed])
 		}
-		setTagInput("");
+		setTagInput('')
 	}
 
 	function handleRemoveTag(tag: string) {
-		setTags(tags.filter((t) => t !== tag));
+		setTags(tags.filter(t => t !== tag))
 	}
 
 	async function handleSubmit(e: React.FormEvent) {
-		e.preventDefault();
+		e.preventDefault()
 
 		if (!title.trim()) {
-			toast.error("Title is required");
-			return;
+			toast.error('Title is required')
+			return
 		}
 
 		if (!body.trim()) {
-			toast.error("Body is required");
-			return;
+			toast.error('Body is required')
+			return
 		}
 
 		// Validate placeholder count
-		const parseResult = parseTemplate(body);
+		const parseResult = parseTemplate(body)
 		if (parseResult.placeholders.length > LIMITS.MAX_PLACEHOLDERS_PER_SNIPPET) {
-			toast.error(`Maximum ${LIMITS.MAX_PLACEHOLDERS_PER_SNIPPET} placeholders allowed`);
-			return;
+			toast.error(`Maximum ${LIMITS.MAX_PLACEHOLDERS_PER_SNIPPET} placeholders allowed`)
+			return
 		}
 
-		setLoading(true);
+		setLoading(true)
 		const result = await snippetCreate({
 			title: title.trim(),
 			body,
 			tags,
-		});
+		})
 
 		if (result.error) {
-			toast.error(result.error.message);
-			setLoading(false);
-			return;
+			toast.error(result.error.message)
+			setLoading(false)
+			return
 		}
 
-		toast.success("Snippet created!");
-		router.push({ to: "/" });
+		toast.success('Snippet created!')
+		router.push({ to: '/' })
 	}
 
 	return (
@@ -91,7 +91,7 @@ function NewSnippet() {
 						id="title"
 						placeholder="My snippet"
 						value={title}
-						onChange={(e) => setTitle(e.target.value)}
+						onChange={e => setTitle(e.target.value)}
 						required
 					/>
 				</div>
@@ -104,14 +104,14 @@ function NewSnippet() {
 						id="body"
 						placeholder="Hello {{name:text=World}}, you are {{age:number=30}} years old."
 						value={body}
-						onChange={(e) => setBody(e.target.value)}
+						onChange={e => setBody(e.target.value)}
 						rows={10}
 						className="font-mono text-sm"
 						required
 					/>
 					<p className="text-xs text-muted-foreground">
-						Use {"{{name:text}}"} for text, {"{{age:number}}"} for numbers, or{" "}
-						{"{{tone:enum(formal,casual)}}"} for enums
+						Use {'{{name:text}}'} for text, {'{{age:number}}'} for numbers, or{' '}
+						{'{{tone:enum(formal,casual)}}'} for enums
 					</p>
 				</div>
 
@@ -121,12 +121,12 @@ function NewSnippet() {
 						<h3 className="text-sm font-medium">Placeholders Found</h3>
 						{parseResult.placeholders.length > 0 ? (
 							<div className="space-y-2">
-								{parseResult.placeholders.map((ph) => (
+								{parseResult.placeholders.map(ph => (
 									<div key={ph.name} className="flex items-center gap-2">
 										<Badge variant="secondary">{ph.name}</Badge>
 										<span className="text-xs text-muted-foreground">
 											{ph.phType}
-											{ph.options && ` (${ph.options.join(", ")})}`}
+											{ph.options && ` (${ph.options.join(', ')})}`}
 											{ph.defaultValue !== undefined && ` = "${ph.defaultValue}"`}
 										</span>
 									</div>
@@ -139,7 +139,7 @@ function NewSnippet() {
 						{parseResult.errors.length > 0 && (
 							<div className="space-y-2">
 								<h4 className="text-sm font-medium text-destructive">Errors</h4>
-								{parseResult.errors.map((error) => (
+								{parseResult.errors.map(error => (
 									<p key={error.start} className="text-sm text-destructive">
 										{error.message}
 									</p>
@@ -158,11 +158,11 @@ function NewSnippet() {
 							id="tags"
 							placeholder="Add a tag..."
 							value={tagInput}
-							onChange={(e) => setTagInput(e.target.value)}
-							onKeyDown={(e) => {
-								if (e.key === "Enter") {
-									e.preventDefault();
-									handleAddTag();
+							onChange={e => setTagInput(e.target.value)}
+							onKeyDown={e => {
+								if (e.key === 'Enter') {
+									e.preventDefault()
+									handleAddTag()
 								}
 							}}
 						/>
@@ -172,7 +172,7 @@ function NewSnippet() {
 					</div>
 					{tags.length > 0 && (
 						<div className="flex gap-2 flex-wrap mt-2">
-							{tags.map((tag) => (
+							{tags.map(tag => (
 								<Badge
 									key={tag}
 									variant="secondary"
@@ -188,12 +188,12 @@ function NewSnippet() {
 
 				<div className="flex gap-4">
 					<Button type="submit" disabled={loading}>
-						{loading ? "Creating..." : "Create Snippet"}
+						{loading ? 'Creating...' : 'Create Snippet'}
 					</Button>
 					<Button
 						type="button"
 						variant="outline"
-						onClick={() => router.push({ to: "/" })}
+						onClick={() => router.push({ to: '/' })}
 						disabled={loading}
 					>
 						Cancel
@@ -201,5 +201,5 @@ function NewSnippet() {
 				</div>
 			</form>
 		</div>
-	);
+	)
 }

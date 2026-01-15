@@ -1,9 +1,9 @@
-import type { Placeholder } from "@shared/template";
-import { useEffect, useState } from "react";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import type { Placeholder } from '@shared/template'
+import { useEffect, useState } from 'react'
+import { Badge } from '~/components/ui/badge'
+import { Button } from '~/components/ui/button'
+import { Input } from '~/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import {
 	Sheet,
 	SheetContent,
@@ -11,54 +11,54 @@ import {
 	SheetHeader,
 	SheetTitle,
 	SheetTrigger,
-} from "~/components/ui/sheet";
-import { Textarea } from "~/components/ui/textarea";
-import { useMediaQuery } from "~/lib/hooks/useMediaQuery";
+} from '~/components/ui/sheet'
+import { Textarea } from '~/components/ui/textarea'
+import { useMediaQuery } from '~/lib/hooks/useMediaQuery'
 
 interface PlaceholderEditorProps {
-	placeholders: Placeholder[];
-	values: Record<string, string>;
-	onChange: (values: Record<string, string>) => void;
+	placeholders: Placeholder[]
+	values: Record<string, string>
+	onChange: (values: Record<string, string>) => void
 }
 
 export function PlaceholderEditor({ placeholders, values, onChange }: PlaceholderEditorProps) {
-	const isDesktop = useMediaQuery("(min-width: 768px)");
-	const [openPlaceholder, setOpenPlaceholder] = useState<string | null>(null);
-	const [tempValue, setTempValue] = useState("");
+	const isDesktop = useMediaQuery('(min-width: 768px)')
+	const [openPlaceholder, setOpenPlaceholder] = useState<string | null>(null)
+	const [tempValue, setTempValue] = useState('')
 
 	// Find the currently open placeholder
-	const activePlaceholder = placeholders.find((ph) => ph.name === openPlaceholder);
+	const activePlaceholder = placeholders.find(ph => ph.name === openPlaceholder)
 
 	// Load current value when opening editor
 	useEffect(() => {
 		if (openPlaceholder && activePlaceholder) {
-			const currentValue = values[openPlaceholder] ?? "";
-			setTempValue(currentValue);
+			const currentValue = values[openPlaceholder] ?? ''
+			setTempValue(currentValue)
 		}
-	}, [openPlaceholder, activePlaceholder, values]);
+	}, [openPlaceholder, activePlaceholder, values])
 
 	function handleOpen(placeholderName: string) {
-		setOpenPlaceholder(placeholderName);
+		setOpenPlaceholder(placeholderName)
 	}
 
 	function handleClose() {
-		setOpenPlaceholder(null);
-		setTempValue("");
+		setOpenPlaceholder(null)
+		setTempValue('')
 	}
 
 	function handleSave() {
 		if (openPlaceholder && activePlaceholder) {
 			onChange({
 				...values,
-				[openPlaceholder]: tempValue || activePlaceholder.defaultValue || "",
-			});
+				[openPlaceholder]: tempValue || activePlaceholder.defaultValue || '',
+			})
 		}
-		handleClose();
+		handleClose()
 	}
 
 	function handleReset() {
 		if (openPlaceholder && activePlaceholder && activePlaceholder.defaultValue !== undefined) {
-			setTempValue(activePlaceholder.defaultValue);
+			setTempValue(activePlaceholder.defaultValue)
 		}
 	}
 
@@ -68,36 +68,36 @@ export function PlaceholderEditor({ placeholders, values, onChange }: Placeholde
 				<div className="text-sm font-medium">
 					{activePlaceholder?.name} ({activePlaceholder?.phType})
 				</div>
-				{activePlaceholder?.phType === "text" && (
+				{activePlaceholder?.phType === 'text' && (
 					<Textarea
-						placeholder={activePlaceholder.defaultValue ?? ""}
+						placeholder={activePlaceholder.defaultValue ?? ''}
 						value={tempValue}
-						onChange={(e) => setTempValue(e.target.value)}
+						onChange={e => setTempValue(e.target.value)}
 						rows={4}
 						autoFocus
 					/>
 				)}
-				{activePlaceholder?.phType === "number" && (
+				{activePlaceholder?.phType === 'number' && (
 					<Input
 						type="number"
-						placeholder={activePlaceholder.defaultValue ?? ""}
+						placeholder={activePlaceholder.defaultValue ?? ''}
 						value={tempValue}
-						onChange={(e) => setTempValue(e.target.value)}
+						onChange={e => setTempValue(e.target.value)}
 						autoFocus
 					/>
 				)}
-				{activePlaceholder?.phType === "enum" && (
+				{activePlaceholder?.phType === 'enum' && (
 					<div className="space-y-2">
-						{activePlaceholder.options?.map((option) => (
+						{activePlaceholder.options?.map(option => (
 							<Button
 								key={option}
 								type="button"
-								variant={tempValue === option ? "default" : "outline"}
+								variant={tempValue === option ? 'default' : 'outline'}
 								className="w-full justify-start"
 								onClick={() => setTempValue(option)}
 							>
 								{option}
-								{option === activePlaceholder.defaultValue && " (default)"}
+								{option === activePlaceholder.defaultValue && ' (default)'}
 							</Button>
 						))}
 					</div>
@@ -119,21 +119,21 @@ export function PlaceholderEditor({ placeholders, values, onChange }: Placeholde
 				)}
 			</div>
 		</div>
-	);
+	)
 
 	if (isDesktop) {
 		return (
 			<fieldset className="flex gap-2 flex-wrap border-0 p-0 m-0">
 				<legend className="sr-only">Placeholder values</legend>
-				{placeholders.map((placeholder) => (
+				{placeholders.map(placeholder => (
 					<Popover
 						key={placeholder.name}
 						open={openPlaceholder === placeholder.name}
-						onOpenChange={(open) => {
+						onOpenChange={open => {
 							if (open) {
-								handleOpen(placeholder.name);
+								handleOpen(placeholder.name)
 							} else {
-								handleClose();
+								handleClose()
 							}
 						}}
 					>
@@ -145,7 +145,7 @@ export function PlaceholderEditor({ placeholders, values, onChange }: Placeholde
 								aria-haspopup="dialog"
 							>
 								{placeholder.name}
-								{values[placeholder.name] && " ✓"}
+								{values[placeholder.name] && ' ✓'}
 							</Badge>
 						</PopoverTrigger>
 						<PopoverContent className="w-80" align="start">
@@ -154,21 +154,21 @@ export function PlaceholderEditor({ placeholders, values, onChange }: Placeholde
 					</Popover>
 				))}
 			</fieldset>
-		);
+		)
 	}
 
 	return (
 		<fieldset className="flex gap-2 flex-wrap border-0 p-0 m-0">
 			<legend className="sr-only">Placeholder values</legend>
-			{placeholders.map((placeholder) => (
+			{placeholders.map(placeholder => (
 				<Sheet
 					key={placeholder.name}
 					open={openPlaceholder === placeholder.name}
-					onOpenChange={(open) => {
+					onOpenChange={open => {
 						if (open) {
-							handleOpen(placeholder.name);
+							handleOpen(placeholder.name)
 						} else {
-							handleClose();
+							handleClose()
 						}
 					}}
 				>
@@ -180,7 +180,7 @@ export function PlaceholderEditor({ placeholders, values, onChange }: Placeholde
 							aria-haspopup="dialog"
 						>
 							{placeholder.name}
-							{values[placeholder.name] && " ✓"}
+							{values[placeholder.name] && ' ✓'}
 						</Badge>
 					</SheetTrigger>
 					<SheetContent side="bottom">
@@ -195,5 +195,5 @@ export function PlaceholderEditor({ placeholders, values, onChange }: Placeholde
 				</Sheet>
 			))}
 		</fieldset>
-	);
+	)
 }

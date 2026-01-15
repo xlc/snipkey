@@ -1,104 +1,104 @@
-import { parseTemplate, renderTemplate } from "@shared/template";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { PlaceholderEditor } from "~/components/PlaceholderEditor";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { usePlaceholderStorage } from "~/lib/hooks/usePlaceholderStorage";
-import { snippetDelete, snippetGet } from "~/server/snippets";
+import { parseTemplate, renderTemplate } from '@shared/template'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { PlaceholderEditor } from '~/components/PlaceholderEditor'
+import { Badge } from '~/components/ui/badge'
+import { Button } from '~/components/ui/button'
+import { usePlaceholderStorage } from '~/lib/hooks/usePlaceholderStorage'
+import { snippetDelete, snippetGet } from '~/server/snippets'
 
-export const Route = createFileRoute("/snippets/$id")({
+export const Route = createFileRoute('/snippets/$id')({
 	component: SnippetDetail,
-});
+})
 
 function SnippetDetail() {
-	const router = useRouter();
-	const { id } = Route.useParams();
+	const router = useRouter()
+	const { id } = Route.useParams()
 	const [snippet, setSnippet] = useState<{
-		id: string;
-		title: string;
-		body: string;
-		tags: string[];
-	} | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [rendered, setRendered] = useState("");
-	const [renderErrors, setRenderErrors] = useState(false);
+		id: string
+		title: string
+		body: string
+		tags: string[]
+	} | null>(null)
+	const [loading, setLoading] = useState(true)
+	const [rendered, setRendered] = useState('')
+	const [renderErrors, setRenderErrors] = useState(false)
 
 	// Load placeholder values from localStorage
-	const [placeholderValues, setPlaceholderValues] = usePlaceholderStorage(id, {});
+	const [placeholderValues, setPlaceholderValues] = usePlaceholderStorage(id, {})
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: Only load on mount
 	useEffect(() => {
-		loadSnippet();
-	}, [id]);
+		loadSnippet()
+	}, [id])
 
 	async function loadSnippet() {
-		setLoading(true);
-		const result = await snippetGet({ id });
+		setLoading(true)
+		const result = await snippetGet({ id })
 
 		if (result.error) {
-			toast.error(result.error.message);
-			router.push({ to: "/" });
-			setLoading(false);
-			return;
+			toast.error(result.error.message)
+			router.push({ to: '/' })
+			setLoading(false)
+			return
 		}
 
-		setSnippet(result.data);
-		setLoading(false);
+		setSnippet(result.data)
+		setLoading(false)
 	}
 
 	useEffect(() => {
-		if (!snippet) return;
+		if (!snippet) return
 
 		// Parse the body
-		const parseResult = parseTemplate(snippet.body);
+		const parseResult = parseTemplate(snippet.body)
 
 		// Render with current values
-		const renderResult = renderTemplate(parseResult.segments, placeholderValues);
-		setRendered(renderResult.rendered);
-		setRenderErrors(!!renderResult.errors);
-	}, [snippet, placeholderValues]);
+		const renderResult = renderTemplate(parseResult.segments, placeholderValues)
+		setRendered(renderResult.rendered)
+		setRenderErrors(!!renderResult.errors)
+	}, [snippet, placeholderValues])
 
 	async function handleCopy() {
-		if (!snippet) return;
+		if (!snippet) return
 
 		if (renderErrors) {
-			toast.error("Cannot copy: placeholder values have errors");
-			return;
+			toast.error('Cannot copy: placeholder values have errors')
+			return
 		}
 
 		try {
-			await navigator.clipboard.writeText(rendered);
-			toast.success("Copied to clipboard!");
+			await navigator.clipboard.writeText(rendered)
+			toast.success('Copied to clipboard!')
 		} catch {
-			toast.error("Failed to copy to clipboard");
+			toast.error('Failed to copy to clipboard')
 		}
 	}
 
 	async function handleDelete() {
-		if (!snippet) return;
-		if (!confirm("Are you sure you want to delete this snippet?")) return;
+		if (!snippet) return
+		if (!confirm('Are you sure you want to delete this snippet?')) return
 
-		const result = await snippetDelete({ id });
+		const result = await snippetDelete({ id })
 		if (result.error) {
-			toast.error(result.error.message);
-			return;
+			toast.error(result.error.message)
+			return
 		}
 
-		toast.success("Snippet deleted");
-		router.push({ to: "/" });
+		toast.success('Snippet deleted')
+		router.push({ to: '/' })
 	}
 
 	if (loading) {
-		return <div className="text-center py-12 text-muted-foreground">Loading snippet...</div>;
+		return <div className="text-center py-12 text-muted-foreground">Loading snippet...</div>
 	}
 
 	if (!snippet) {
-		return <div className="text-center py-12 text-muted-foreground">Snippet not found</div>;
+		return <div className="text-center py-12 text-muted-foreground">Snippet not found</div>
 	}
 
-	const parseResult = parseTemplate(snippet.body);
+	const parseResult = parseTemplate(snippet.body)
 
 	return (
 		<div className="max-w-4xl mx-auto space-y-8">
@@ -107,7 +107,7 @@ function SnippetDetail() {
 					<h1 className="text-3xl font-bold tracking-tight">{snippet.title}</h1>
 					{snippet.tags.length > 0 && (
 						<div className="flex gap-2 mt-3 flex-wrap">
-							{snippet.tags.map((tag) => (
+							{snippet.tags.map(tag => (
 								<Badge key={tag} variant="outline">
 									{tag}
 								</Badge>
@@ -164,5 +164,5 @@ function SnippetDetail() {
 				</div>
 			</details>
 		</div>
-	);
+	)
 }

@@ -1,15 +1,15 @@
-import { z } from "zod";
-import { LIMITS } from "./limits";
+import { z } from 'zod'
+import { LIMITS } from './limits'
 
 export const snippetSchema = z.object({
 	title: z
 		.string()
-		.min(1, "Title is required")
+		.min(1, 'Title is required')
 		.max(
 			LIMITS.MAX_SNIPPET_TITLE_LENGTH,
 			`Title must be less than ${LIMITS.MAX_SNIPPET_TITLE_LENGTH} characters`,
 		)
-		.transform((val) => val.trim()),
+		.transform(val => val.trim()),
 	body: z
 		.string()
 		.max(
@@ -18,26 +18,26 @@ export const snippetSchema = z.object({
 		),
 	tags: z
 		.array(z.string())
-		.transform((tags) =>
+		.transform(tags =>
 			tags
-				.map((tag) => tag.trim().toLowerCase())
-				.filter((tag) => tag.length > 0)
+				.map(tag => tag.trim().toLowerCase())
+				.filter(tag => tag.length > 0)
 				.filter((tag, i, arr) => arr.indexOf(tag) === i),
 		)
 		.refine(
-			(tags) => tags.length <= LIMITS.MAX_TAGS_PER_SNIPPET,
+			tags => tags.length <= LIMITS.MAX_TAGS_PER_SNIPPET,
 			`Maximum ${LIMITS.MAX_TAGS_PER_SNIPPET} tags allowed`,
 		),
-});
+})
 
-export const snippetCreateInput = snippetSchema;
+export const snippetCreateInput = snippetSchema
 
 export const snippetUpdateInput = snippetSchema
 	.partial()
 	.required({ id: true })
 	.extend({
-		id: z.string().uuid("Invalid snippet ID"),
-	});
+		id: z.string().uuid('Invalid snippet ID'),
+	})
 
 export const snippetListInput = z.object({
 	query: z.string().max(LIMITS.MAX_SEARCH_QUERY_LENGTH).optional(),
@@ -49,24 +49,24 @@ export const snippetListInput = z.object({
 			id: z.string(),
 		})
 		.optional(),
-});
+})
 
-export const authRegisterStartInput = z.object({});
+export const authRegisterStartInput = z.object({})
 
 export const authRegisterFinishInput = z.object({
 	attestation: z.any(),
-	challengeId: z.string().uuid("Invalid challenge ID"),
-});
+	challengeId: z.string().uuid('Invalid challenge ID'),
+})
 
-export const authLoginStartInput = z.object({});
+export const authLoginStartInput = z.object({})
 
 export const authLoginFinishInput = z.object({
 	assertion: z.any(),
-	challengeId: z.string().uuid("Invalid challenge ID"),
-});
+	challengeId: z.string().uuid('Invalid challenge ID'),
+})
 
-export type SnippetCreateInput = z.infer<typeof snippetCreateInput>;
-export type SnippetUpdateInput = z.infer<typeof snippetUpdateInput>;
-export type SnippetListInput = z.infer<typeof snippetListInput>;
-export type AuthRegisterFinishInput = z.infer<typeof authRegisterFinishInput>;
-export type AuthLoginFinishInput = z.infer<typeof authLoginFinishInput>;
+export type SnippetCreateInput = z.infer<typeof snippetCreateInput>
+export type SnippetUpdateInput = z.infer<typeof snippetUpdateInput>
+export type SnippetListInput = z.infer<typeof snippetListInput>
+export type AuthRegisterFinishInput = z.infer<typeof authRegisterFinishInput>
+export type AuthLoginFinishInput = z.infer<typeof authLoginFinishInput>

@@ -1,104 +1,104 @@
-import { parseTemplate } from "@shared/template";
-import { LIMITS } from "@shared/validation/limits";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Textarea } from "~/components/ui/textarea";
-import { snippetGet, snippetUpdate } from "~/server/snippets";
+import { parseTemplate } from '@shared/template'
+import { LIMITS } from '@shared/validation/limits'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { useState } from 'react'
+import { toast } from 'sonner'
+import { Badge } from '~/components/ui/badge'
+import { Button } from '~/components/ui/button'
+import { Input } from '~/components/ui/input'
+import { Textarea } from '~/components/ui/textarea'
+import { snippetGet, snippetUpdate } from '~/server/snippets'
 
-export const Route = createFileRoute("/snippets/$id/edit")({
+export const Route = createFileRoute('/snippets/$id/edit')({
 	component: EditSnippet,
-});
+})
 
 function EditSnippet() {
-	const router = useRouter();
-	const { id } = Route.useParams();
-	const [title, setTitle] = useState("");
-	const [body, setBody] = useState("");
-	const [tagInput, setTagInput] = useState("");
-	const [tags, setTags] = useState<string[]>([]);
-	const [loading, setLoading] = useState(false);
-	const [initialLoading, setInitialLoading] = useState(true);
+	const router = useRouter()
+	const { id } = Route.useParams()
+	const [title, setTitle] = useState('')
+	const [body, setBody] = useState('')
+	const [tagInput, setTagInput] = useState('')
+	const [tags, setTags] = useState<string[]>([])
+	const [loading, setLoading] = useState(false)
+	const [initialLoading, setInitialLoading] = useState(true)
 
 	useEffect(() => {
-		loadSnippet();
-	}, [id]);
+		loadSnippet()
+	}, [id])
 
 	async function loadSnippet() {
-		setInitialLoading(true);
-		const result = await snippetGet({ id });
+		setInitialLoading(true)
+		const result = await snippetGet({ id })
 
 		if (result.error) {
-			toast.error(result.error.message);
-			router.push({ to: "/" });
-			setInitialLoading(false);
-			return;
+			toast.error(result.error.message)
+			router.push({ to: '/' })
+			setInitialLoading(false)
+			return
 		}
 
-		setTitle(result.data.title);
-		setBody(result.data.body);
-		setTags(result.data.tags);
-		setInitialLoading(false);
+		setTitle(result.data.title)
+		setBody(result.data.body)
+		setTags(result.data.tags)
+		setInitialLoading(false)
 	}
 
 	function handleAddTag() {
-		const trimmed = tagInput.trim().toLowerCase();
+		const trimmed = tagInput.trim().toLowerCase()
 		if (trimmed && !tags.includes(trimmed)) {
-			setTags([...tags, trimmed]);
+			setTags([...tags, trimmed])
 		}
-		setTagInput("");
+		setTagInput('')
 	}
 
 	function handleRemoveTag(tag: string) {
-		setTags(tags.filter((t) => t !== tag));
+		setTags(tags.filter(t => t !== tag))
 	}
 
 	async function handleSubmit(e: React.FormEvent) {
-		e.preventDefault();
+		e.preventDefault()
 
 		if (!title.trim()) {
-			toast.error("Title is required");
-			return;
+			toast.error('Title is required')
+			return
 		}
 
 		if (!body.trim()) {
-			toast.error("Body is required");
-			return;
+			toast.error('Body is required')
+			return
 		}
 
 		// Validate placeholder count
-		const parseResult = parseTemplate(body);
+		const parseResult = parseTemplate(body)
 		if (parseResult.placeholders.length > LIMITS.MAX_PLACEHOLDERS_PER_SNIPPET) {
-			toast.error(`Maximum ${LIMITS.MAX_PLACEHOLDERS_PER_SNIPPET} placeholders allowed`);
-			return;
+			toast.error(`Maximum ${LIMITS.MAX_PLACEHOLDERS_PER_SNIPPET} placeholders allowed`)
+			return
 		}
 
-		setLoading(true);
+		setLoading(true)
 		const result = await snippetUpdate({
 			id,
 			title: title.trim(),
 			body,
 			tags,
-		});
+		})
 
 		if (result.error) {
-			toast.error(result.error.message);
-			setLoading(false);
-			return;
+			toast.error(result.error.message)
+			setLoading(false)
+			return
 		}
 
-		toast.success("Snippet updated!");
-		router.push({ to: `/snippets/${id}` });
+		toast.success('Snippet updated!')
+		router.push({ to: `/snippets/${id}` })
 	}
 
 	if (initialLoading) {
-		return <div className="text-center py-12 text-muted-foreground">Loading snippet...</div>;
+		return <div className="text-center py-12 text-muted-foreground">Loading snippet...</div>
 	}
 
-	const parseResult = parseTemplate(body);
+	const parseResult = parseTemplate(body)
 
 	return (
 		<div className="max-w-3xl mx-auto space-y-8">
@@ -116,7 +116,7 @@ function EditSnippet() {
 						id="title"
 						placeholder="My snippet"
 						value={title}
-						onChange={(e) => setTitle(e.target.value)}
+						onChange={e => setTitle(e.target.value)}
 						required
 					/>
 				</div>
@@ -129,14 +129,14 @@ function EditSnippet() {
 						id="body"
 						placeholder="Hello {{name:text=World}}, you are {{age:number=30}} years old."
 						value={body}
-						onChange={(e) => setBody(e.target.value)}
+						onChange={e => setBody(e.target.value)}
 						rows={10}
 						className="font-mono text-sm"
 						required
 					/>
 					<p className="text-xs text-muted-foreground">
-						Use {"{{name:text}}"} for text, {"{{age:number}}"} for numbers, or{" "}
-						{"{{tone:enum(formal,casual)}}"} for enums
+						Use {'{{name:text}}'} for text, {'{{age:number}}'} for numbers, or{' '}
+						{'{{tone:enum(formal,casual)}}'} for enums
 					</p>
 				</div>
 
@@ -146,12 +146,12 @@ function EditSnippet() {
 						<h3 className="text-sm font-medium">Placeholders Found</h3>
 						{parseResult.placeholders.length > 0 ? (
 							<div className="space-y-2">
-								{parseResult.placeholders.map((ph) => (
+								{parseResult.placeholders.map(ph => (
 									<div key={ph.name} className="flex items-center gap-2">
 										<Badge variant="secondary">{ph.name}</Badge>
 										<span className="text-xs text-muted-foreground">
 											{ph.phType}
-											{ph.options && ` (${ph.options.join(", ")})`}
+											{ph.options && ` (${ph.options.join(', ')})`}
 											{ph.defaultValue !== undefined && ` = "${ph.defaultValue}"`}
 										</span>
 									</div>
@@ -164,7 +164,7 @@ function EditSnippet() {
 						{parseResult.errors.length > 0 && (
 							<div className="space-y-2">
 								<h4 className="text-sm font-medium text-destructive">Errors</h4>
-								{parseResult.errors.map((error) => (
+								{parseResult.errors.map(error => (
 									<p key={error.start} className="text-sm text-destructive">
 										{error.message}
 									</p>
@@ -183,11 +183,11 @@ function EditSnippet() {
 							id="tags"
 							placeholder="Add a tag..."
 							value={tagInput}
-							onChange={(e) => setTagInput(e.target.value)}
-							onKeyDown={(e) => {
-								if (e.key === "Enter") {
-									e.preventDefault();
-									handleAddTag();
+							onChange={e => setTagInput(e.target.value)}
+							onKeyDown={e => {
+								if (e.key === 'Enter') {
+									e.preventDefault()
+									handleAddTag()
 								}
 							}}
 						/>
@@ -197,7 +197,7 @@ function EditSnippet() {
 					</div>
 					{tags.length > 0 && (
 						<div className="flex gap-2 flex-wrap mt-2">
-							{tags.map((tag) => (
+							{tags.map(tag => (
 								<Badge
 									key={tag}
 									variant="secondary"
@@ -213,7 +213,7 @@ function EditSnippet() {
 
 				<div className="flex gap-4">
 					<Button type="submit" disabled={loading}>
-						{loading ? "Updating..." : "Update Snippet"}
+						{loading ? 'Updating...' : 'Update Snippet'}
 					</Button>
 					<Button
 						type="button"
@@ -226,5 +226,5 @@ function EditSnippet() {
 				</div>
 			</form>
 		</div>
-	);
+	)
 }

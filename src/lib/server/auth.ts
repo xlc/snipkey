@@ -1,52 +1,52 @@
-import { type getDb, newId, nowMs } from "@shared/db/db";
-import type { ApiError } from "@shared/types";
-import { err, ok } from "@shared/types";
-import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simplewebauthn/server";
+import { type getDb, newId, nowMs } from '@shared/db/db'
+import type { ApiError } from '@shared/types'
+import { err, ok } from '@shared/types'
+import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/server'
 import {
 	generateAuthenticationOptions,
 	generateRegistrationOptions,
 	verifyAuthenticationResponse,
 	verifyRegistrationResponse,
-} from "@simplewebauthn/server";
+} from '@simplewebauthn/server'
 
 // Environment config will be loaded from wrangler vars via TanStack Start
 export interface AuthConfig {
-	rpID: string;
-	origin: string;
-	challengeTTLMs: number;
-	sessionTTLMs: number;
+	rpID: string
+	origin: string
+	challengeTTLMs: number
+	sessionTTLMs: number
 }
 
 function getConfig(): AuthConfig {
 	// Read from Workers environment
 	if (!globalThis.env) {
-		throw new Error("Workers environment not available");
+		throw new Error('Workers environment not available')
 	}
 
-	const env = globalThis.env;
+	const env = globalThis.env
 
 	return {
-		rpID: env.RP_ID ?? "localhost",
-		origin: env.ORIGIN ?? "http://localhost:5173",
+		rpID: env.RP_ID ?? 'localhost',
+		origin: env.ORIGIN ?? 'http://localhost:5173',
 		challengeTTLMs: 5 * 60 * 1000, // 5 minutes
 		sessionTTLMs: 7 * 24 * 60 * 60 * 1000, // 7 days
-	};
+	}
 }
 
 // Helper to cleanup expired challenges
 async function cleanupExpiredChallenges(db: ReturnType<typeof getDb>): Promise<void> {
-	const now = nowMs();
-	await db.deleteFrom("auth_challenges").where("expires_at", "<", now).execute();
+	const now = nowMs()
+	await db.deleteFrom('auth_challenges').where('expires_at', '<', now).execute()
 }
 
 // Helper to cleanup expired sessions for a user
 async function cleanupExpiredSessions(db: ReturnType<typeof getDb>, userId: string): Promise<void> {
-	const now = nowMs();
+	const now = nowMs()
 	await db
-		.deleteFrom("sessions")
-		.where("user_id", "=", userId)
-		.where("expires_at", "<", now)
-		.execute();
+		.deleteFrom('sessions')
+		.where('user_id', '=', userId)
+		.where('expires_at', '<', now)
+		.execute()
 }
 
 // Create a new session
@@ -54,22 +54,22 @@ export async function createSession(
 	db: ReturnType<typeof getDb>,
 	userId: string,
 ): Promise<{ sessionId: string; expiresAt: number; sessionTTLSeconds: number }> {
-	const config = getConfig();
-	const sessionId = newId();
-	const now = nowMs();
-	const expiresAt = now + config.sessionTTLMs;
+	const config = getConfig()
+	const sessionId = newId()
+	const now = nowMs()
+	const expiresAt = now + config.sessionTTLMs
 
 	await db
-		.insertInto("sessions")
+		.insertInto('sessions')
 		.values({
 			id: sessionId,
 			user_id: userId,
 			created_at: now,
 			expires_at: expiresAt,
 		})
-		.execute();
+		.execute()
 
-	return { sessionId, expiresAt, sessionTTLSeconds: Math.floor(config.sessionTTLMs / 1000) };
+	return { sessionId, expiresAt, sessionTTLSeconds: Math.floor(config.sessionTTLMs / 1000) }
 }
 
 // Validate session and return user ID
@@ -77,16 +77,16 @@ export async function validateSession(
 	db: ReturnType<typeof getDb>,
 	sessionId: string,
 ): Promise<string | null> {
-	const now = nowMs();
+	const now = nowMs()
 	const session = await db
-		.selectFrom("sessions")
-		.where("id", "=", sessionId)
-		.where("expires_at", ">", now)
-		.where("revoked_at", "is", null)
-		.select(["user_id", "expires_at"])
-		.executeTakeFirst();
+		.selectFrom('sessions')
+		.where('id', '=', sessionId)
+		.where('expires_at', '>', now)
+		.where('revoked_at', 'is', null)
+		.select(['user_id', 'expires_at'])
+		.executeTakeFirst()
 
-	return session?.user_id ?? null;
+	return session?.user_id ?? null
 }
 
 // Revoke a session
@@ -95,56 +95,56 @@ export async function revokeSession(
 	sessionId: string,
 ): Promise<void> {
 	await db
-		.updateTable("sessions")
+		.updateTable('sessions')
 		.set({ revoked_at: nowMs() })
-		.where("id", "=", sessionId)
-		.execute();
+		.where('id', '=', sessionId)
+		.execute()
 }
 
 // Generate registration options
 export async function authRegisterStart(db: ReturnType<typeof getDb>) {
-	await cleanupExpiredChallenges(db);
-	const config = getConfig();
-	const userId = newId();
-	const challengeId = newId();
+	await cleanupExpiredChallenges(db)
+	const config = getConfig()
+	const userId = newId()
+	const challengeId = newId()
 
 	const options = await generateRegistrationOptions({
-		rpName: "Snipkey",
+		rpName: 'Snipkey',
 		rpID: config.rpID,
 		userID: userId,
 		userName: userId, // Using user ID as username for discoverable passkeys
 		authenticatorSelection: {
-			authenticatorAttachment: "platform",
-			userVerification: "preferred",
+			authenticatorAttachment: 'platform',
+			userVerification: 'preferred',
 		},
-	});
+	})
 
 	// Store challenge
 	await db
-		.insertInto("auth_challenges")
+		.insertInto('auth_challenges')
 		.values({
 			id: challengeId,
 			challenge: options.challenge,
-			type: "registration",
+			type: 'registration',
 			user_id: userId,
 			expires_at: nowMs() + config.challengeTTLMs,
 			created_at: nowMs(),
 		})
-		.execute();
+		.execute()
 
 	// Create user row (required by FK constraints)
 	// Note: This may create users for incomplete registrations.
 	// A background cleanup job could remove orphaned users.
 	await db
-		.insertInto("users")
+		.insertInto('users')
 		.values({
 			id: userId,
 			created_at: nowMs(),
 		})
-		.onConflict((db) => db.doNothing())
-		.execute();
+		.onConflict(db => db.doNothing())
+		.execute()
 
-	return ok({ options, challengeId });
+	return ok({ options, challengeId })
 }
 
 // Verify registration response
@@ -153,24 +153,24 @@ export async function authRegisterFinish(
 	attestation: RegistrationResponseJSON,
 	challengeId: string,
 ) {
-	const config = getConfig();
-	const now = nowMs();
+	const config = getConfig()
+	const now = nowMs()
 
 	// Load challenge
 	const challenge = await db
-		.selectFrom("auth_challenges")
-		.where("id", "=", challengeId)
-		.where("type", "=", "registration")
-		.where("expires_at", ">", now)
-		.select(["challenge", "user_id"])
-		.executeTakeFirst();
+		.selectFrom('auth_challenges')
+		.where('id', '=', challengeId)
+		.where('type', '=', 'registration')
+		.where('expires_at', '>', now)
+		.select(['challenge', 'user_id'])
+		.executeTakeFirst()
 
 	if (!challenge) {
 		return err({
-			code: "VALIDATION_ERROR",
-			message: "Invalid or expired challenge",
+			code: 'VALIDATION_ERROR',
+			message: 'Invalid or expired challenge',
 			details: { challengeId },
-		} satisfies ApiError);
+		} satisfies ApiError)
 	}
 
 	// Verify attestation
@@ -179,28 +179,28 @@ export async function authRegisterFinish(
 		expectedChallenge: challenge.challenge,
 		expectedOrigin: config.origin,
 		expectedRPID: config.rpID,
-	});
+	})
 
 	if (!verification.verified) {
 		return err({
-			code: "VALIDATION_ERROR",
-			message: "Failed to verify registration",
+			code: 'VALIDATION_ERROR',
+			message: 'Failed to verify registration',
 			details: { verificationError: verification.registrationInfo },
-		} satisfies ApiError);
+		} satisfies ApiError)
 	}
 
 	// Store credential
-	const { credential } = verification.registrationInfo ?? {};
+	const { credential } = verification.registrationInfo ?? {}
 
 	if (!credential) {
 		return err({
-			code: "INTERNAL",
-			message: "No credential in verification response",
-		} satisfies ApiError);
+			code: 'INTERNAL',
+			message: 'No credential in verification response',
+		} satisfies ApiError)
 	}
 
 	await db
-		.insertInto("webauthn_credentials")
+		.insertInto('webauthn_credentials')
 		.values({
 			credential_id: credential.id,
 			user_id: challenge.user_id,
@@ -209,49 +209,49 @@ export async function authRegisterFinish(
 			transports: JSON.stringify(credential.transports ?? []),
 			created_at: nowMs(),
 		})
-		.execute();
+		.execute()
 
 	// Delete challenge
-	await db.deleteFrom("auth_challenges").where("id", "=", challengeId).execute();
+	await db.deleteFrom('auth_challenges').where('id', '=', challengeId).execute()
 
 	// Create session
-	const { sessionId, sessionTTLSeconds } = await createSession(db, challenge.user_id);
+	const { sessionId, sessionTTLSeconds } = await createSession(db, challenge.user_id)
 
 	// Cleanup expired sessions for this user
-	await cleanupExpiredSessions(db, challenge.user_id);
+	await cleanupExpiredSessions(db, challenge.user_id)
 
-	return ok({ sessionId, userId: challenge.user_id, sessionTTLSeconds });
+	return ok({ sessionId, userId: challenge.user_id, sessionTTLSeconds })
 }
 
 // Generate authentication options
 export async function authLoginStart(db: ReturnType<typeof getDb>) {
-	await cleanupExpiredChallenges(db);
-	const config = getConfig();
-	const challengeId = newId();
+	await cleanupExpiredChallenges(db)
+	const config = getConfig()
+	const challengeId = newId()
 
 	const options = await generateAuthenticationOptions({
 		rpID: config.rpID,
-		userVerification: "preferred",
+		userVerification: 'preferred',
 		authenticatorSelection: {
-			authenticatorAttachment: "platform",
-			userVerification: "preferred",
+			authenticatorAttachment: 'platform',
+			userVerification: 'preferred',
 		},
-	});
+	})
 
 	// Store challenge
 	await db
-		.insertInto("auth_challenges")
+		.insertInto('auth_challenges')
 		.values({
 			id: challengeId,
 			challenge: options.challenge,
-			type: "authentication",
+			type: 'authentication',
 			user_id: null,
 			expires_at: nowMs() + config.challengeTTLMs,
 			created_at: nowMs(),
 		})
-		.execute();
+		.execute()
 
-	return ok({ options, challengeId });
+	return ok({ options, challengeId })
 }
 
 // Verify authentication response
@@ -260,38 +260,38 @@ export async function authLoginFinish(
 	assertion: AuthenticationResponseJSON,
 	challengeId: string,
 ) {
-	const config = getConfig();
-	const now = nowMs();
+	const config = getConfig()
+	const now = nowMs()
 
 	// Load challenge
 	const challenge = await db
-		.selectFrom("auth_challenges")
-		.where("id", "=", challengeId)
-		.where("type", "=", "authentication")
-		.where("expires_at", ">", now)
-		.select(["challenge"])
-		.executeTakeFirst();
+		.selectFrom('auth_challenges')
+		.where('id', '=', challengeId)
+		.where('type', '=', 'authentication')
+		.where('expires_at', '>', now)
+		.select(['challenge'])
+		.executeTakeFirst()
 
 	if (!challenge) {
 		return err({
-			code: "VALIDATION_ERROR",
-			message: "Invalid or expired challenge",
+			code: 'VALIDATION_ERROR',
+			message: 'Invalid or expired challenge',
 			details: { challengeId },
-		} satisfies ApiError);
+		} satisfies ApiError)
 	}
 
 	// Find credential
 	const credentialRecord = await db
-		.selectFrom("webauthn_credentials")
-		.where("credential_id", "=", assertion.id)
-		.select(["credential_id", "user_id", "public_key", "counter", "transports"])
-		.executeTakeFirst();
+		.selectFrom('webauthn_credentials')
+		.where('credential_id', '=', assertion.id)
+		.select(['credential_id', 'user_id', 'public_key', 'counter', 'transports'])
+		.executeTakeFirst()
 
 	if (!credentialRecord) {
 		return err({
-			code: "NOT_FOUND",
-			message: "Credential not found",
-		} satisfies ApiError);
+			code: 'NOT_FOUND',
+			message: 'Credential not found',
+		} satisfies ApiError)
 	}
 
 	// Verify assertion
@@ -305,42 +305,42 @@ export async function authLoginFinish(
 			credentialPublicKey: JSON.parse(credentialRecord.public_key),
 			counter: credentialRecord.counter,
 		},
-	});
+	})
 
 	if (!verification.verified) {
 		return err({
-			code: "VALIDATION_ERROR",
-			message: "Failed to verify authentication",
+			code: 'VALIDATION_ERROR',
+			message: 'Failed to verify authentication',
 			details: { verificationError: verification.authenticationInfo },
-		} satisfies ApiError);
+		} satisfies ApiError)
 	}
 
 	// Update counter
-	const { newCounter } = verification.authenticationInfo ?? {};
+	const { newCounter } = verification.authenticationInfo ?? {}
 	if (newCounter !== undefined) {
 		await db
-			.updateTable("webauthn_credentials")
+			.updateTable('webauthn_credentials')
 			.set({ counter: newCounter })
-			.where("credential_id", "=", credentialRecord.credential_id)
-			.execute();
+			.where('credential_id', '=', credentialRecord.credential_id)
+			.execute()
 	}
 
 	// Delete challenge
-	await db.deleteFrom("auth_challenges").where("id", "=", challengeId).execute();
+	await db.deleteFrom('auth_challenges').where('id', '=', challengeId).execute()
 
 	// Create session
-	const { sessionId, sessionTTLSeconds } = await createSession(db, credentialRecord.user_id);
+	const { sessionId, sessionTTLSeconds } = await createSession(db, credentialRecord.user_id)
 
 	// Cleanup expired sessions for this user
-	await cleanupExpiredSessions(db, credentialRecord.user_id);
+	await cleanupExpiredSessions(db, credentialRecord.user_id)
 
-	return ok({ sessionId, userId: credentialRecord.user_id, sessionTTLSeconds });
+	return ok({ sessionId, userId: credentialRecord.user_id, sessionTTLSeconds })
 }
 
 // Logout - revoke session
 export async function authLogout(db: ReturnType<typeof getDb>, sessionId: string) {
-	await revokeSession(db, sessionId);
-	return ok({ success: true });
+	await revokeSession(db, sessionId)
+	return ok({ success: true })
 }
 
 // Get user from session
@@ -348,9 +348,9 @@ export async function getUserFromSession(
 	db: ReturnType<typeof getDb>,
 	sessionId: string,
 ): Promise<{ userId: string } | null> {
-	const userId = await validateSession(db, sessionId);
+	const userId = await validateSession(db, sessionId)
 	if (!userId) {
-		return null;
+		return null
 	}
-	return { userId };
+	return { userId }
 }
