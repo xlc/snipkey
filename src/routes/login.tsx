@@ -39,6 +39,13 @@ function Login() {
         },
       })
 
+      // Check for error response first (before treating as Response)
+      if ('error' in finishResult && typeof finishResult.error === 'object' && finishResult.error !== null) {
+        const errorResult = finishResult.error as { message?: string }
+        toast.error(errorResult.message || 'Registration failed')
+        return
+      }
+
       // Handle Response object (authRegisterFinish returns Response)
       if (finishResult instanceof Response) {
         if (!finishResult.ok) {

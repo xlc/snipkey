@@ -246,10 +246,10 @@ export function renameSnippetId(oldId: string, newId: string): boolean {
 
     // Add ID mapping to prevent zombie snippets
     // This allows UI to resolve old IDs to new IDs after sync
-    // Check if saveIdMap succeeds - if it fails, we should not consider the rename successful
+    // Perform mapping BEFORE removing old key to prevent data loss if mapping fails
     if (!addIdMapping(oldId, newId)) {
-      // Mapping failed - attempt rollback
-      localStorage.setItem(oldKey, newData)
+      // Mapping failed - don't remove old key, keep data safe
+      // Remove the new key we just created to avoid duplication
       localStorage.removeItem(newKey)
       return false
     }

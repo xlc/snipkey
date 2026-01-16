@@ -15,6 +15,7 @@ import {
 import { Input } from '~/components/ui/input'
 import { useDebounce } from '~/lib/hooks/useDebounce'
 import { useKeyboardShortcuts } from '~/lib/hooks/useKeyboardShortcuts'
+import { useStorageListener } from '~/lib/hooks/useStorageListener'
 import { createSnippet, getAuthStatus, listSnippets, syncToServer } from '~/lib/snippet-api'
 import { tagsList } from '~/server/tags'
 
@@ -44,6 +45,12 @@ function Index() {
 
   // Debounce search input to reduce API calls
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
+
+  // Listen for localStorage changes from other tabs to keep UI in sync
+  useStorageListener('snipkey_meta', () => {
+    // Reload snippets when metadata changes (e.g., authentication, sync status)
+    loadSnippets()
+  })
 
   // Check authentication status
   useEffect(() => {
