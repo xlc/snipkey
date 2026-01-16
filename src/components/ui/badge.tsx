@@ -25,7 +25,7 @@ const badgeVariants = cva(
 )
 
 export interface BadgeProps extends VariantProps<typeof badgeVariants> {
-  onClick?: () => void
+  onClick?: (e: React.MouseEvent | React.KeyboardEvent) => void
   interactive?: boolean
   className?: string
   children?: React.ReactNode
@@ -36,7 +36,20 @@ function Badge({ className, variant, interactive, onClick, children, ...props }:
   // When interactive, render as button for accessibility
   if (interactive || onClick) {
     return (
-      <button type="button" onClick={onClick} className={cn(badgeVariants({ variant, interactive: true }), className)} {...props}>
+      <button
+        type="button"
+        onClick={e => {
+          e.stopPropagation()
+          onClick?.(e)
+        }}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.stopPropagation()
+          }
+        }}
+        className={cn(badgeVariants({ variant, interactive: true }), className)}
+        {...props}
+      >
         {children}
       </button>
     )

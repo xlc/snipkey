@@ -6,9 +6,8 @@ import { useEffect, useRef } from 'react'
  *
  * @param key - The localStorage key to watch
  * @param callback - Function to call when the key changes
- * @param deps - Dependencies for the callback (if it references other state)
  */
-export function useStorageListener<T>(key: string, callback: (newValue: T | null) => void, _deps: React.DependencyList = []) {
+export function useStorageListener<T>(key: string, callback: (newValue: T | null) => void) {
   // Use ref to store the latest callback without causing effect re-runs
   const callbackRef = useRef(callback)
 
@@ -52,13 +51,9 @@ export function useStorageListener<T>(key: string, callback: (newValue: T | null
  * Useful for updating UI when user logs in/out in another tab
  */
 export function useAuthSync(onAuthChange: (userId: string | null) => void) {
-  useStorageListener<{ userId: string | null }>(
-    'snipkey_meta',
-    newValue => {
-      if (newValue) {
-        onAuthChange(newValue.userId)
-      }
-    },
-    [], // No deps - callbackRef handles the latest callback
-  )
+  useStorageListener<{ userId: string | null }>('snipkey_meta', newValue => {
+    if (newValue) {
+      onAuthChange(newValue.userId)
+    }
+  })
 }
