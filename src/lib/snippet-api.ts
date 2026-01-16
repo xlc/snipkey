@@ -12,6 +12,7 @@ import {
   markAsSynced,
   permanentlyDeleteSnippet,
   renameSnippetId,
+  saveLocalSnippet,
   setMeta,
   updateLocalSnippet,
 } from '~/lib/local-storage'
@@ -65,10 +66,19 @@ export async function listSnippets(filters: {
     // Merge server results with local unsynced snippets
     const serverItems: SnippetListItem[] = result.data.items
     const localUnsynced = listLocalSnippets().filter(s => !s.synced)
+    const localDeleted = getDeletedSnippets()
 
     // Build merged list, prioritizing local unsynced snippets
     const merged: SnippetListItem[] = []
     const processedServerIds = new Set<string>()
+
+    // Collect server IDs of locally deleted snippets to exclude them
+    const deletedServerIds = new Set<string>()
+    for (const deleted of localDeleted) {
+      if (deleted.serverId) {
+        deletedServerIds.add(deleted.serverId)
+      }
+    }
 
     // First, add all local unsynced snippets
     for (const local of localUnsynced) {
@@ -78,9 +88,9 @@ export async function listSnippets(filters: {
       }
     }
 
-    // Then, add server items that weren't overridden by local changes
+    // Then, add server items that weren't overridden by local changes or deletions
     for (const server of serverItems) {
-      if (!processedServerIds.has(server.id)) {
+      if (!processedServerIds.has(server.id) && !deletedServerIds.has(server.id)) {
         merged.push(server)
       }
     }
@@ -135,6 +145,11 @@ export async function getSnippet(id: string): Promise<ApiResult<Snippet>> {
   const hasLocalUnsynced = local && !local.synced && !local.deleted
 
   if (isAuthenticated()) {
+    // If snippet is marked as deleted locally, return error immediately
+    if (local?.deleted) {
+      return { error: 'Snippet not found' }
+    }
+
     // If we have local unsynced changes, prefer those
     if (hasLocalUnsynced && local) {
       return { data: fromLocalSnippet(local) }
@@ -302,9 +317,28 @@ export async function syncToServer(): Promise<{ synced: number; updated: number;
         const serverId = result.data.id
         // Only rename if the snippet hasn't been modified during the sync request
         const current = getLocalSnippet(snippet.id)
-        if (current && current.updated_at === snippetTimestamp && renameSnippetId(snippet.id, serverId)) {
-          synced++
+        if (current && current.updated_at === snippetTimestamp) {
+          if (renameSnippetId(snippet.id, serverId)) {
+            synced++
+          } else {
+            // Rename failed, but at least update the serverId to prevent duplicate creates
+            const updatedSnippet = getLocalSnippet(snippet.id)
+            if (updatedSnippet) {
+              updatedSnippet.serverId = serverId
+              updatedSnippet.synced = true
+              saveLocalSnippet(updatedSnippet)
+              synced++
+            } else {
+              errors++
+            }
+          }
         } else {
+          // Snippet was modified during sync, just update serverId to prevent duplicate
+          const updatedSnippet = getLocalSnippet(snippet.id)
+          if (updatedSnippet) {
+            updatedSnippet.serverId = serverId
+            saveLocalSnippet(updatedSnippet)
+          }
           errors++
         }
       }

@@ -225,6 +225,13 @@ export function renameSnippetId(oldId: string, newId: string): boolean {
     // Only remove old key after new key is saved
     localStorage.removeItem(oldKey)
 
+    // Verify the old key was actually removed (prevent local duplication)
+    if (localStorage.getItem(oldKey) !== null) {
+      // Removal failed - attempt to clean up by removing the new key to prevent duplicates
+      localStorage.removeItem(newKey)
+      return false
+    }
+
     return true
   } catch {
     return false
