@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
 import { usePlaceholderStorage } from '~/lib/hooks/usePlaceholderStorage'
-import { snippetDelete, snippetGet } from '~/server/snippets'
+import { deleteSnippet, getSnippet } from '~/lib/snippet-api'
 
 export const Route = createFileRoute('/snippets/$id')({
   component: SnippetDetail,
@@ -55,10 +55,10 @@ function SnippetDetail() {
 
   async function loadSnippet() {
     setLoading(true)
-    const result = await snippetGet({ data: { id } })
+    const result = await getSnippet(id)
 
-    if (result.error) {
-      toast.error(result.error.message)
+    if (result.error || !result.data) {
+      toast.error(result.error || 'Failed to load snippet')
       router.navigate({ to: '/' })
       setLoading(false)
       return
@@ -141,10 +141,10 @@ function SnippetDetail() {
     if (!snippet) return
 
     setIsDeleting(true)
-    const result = await snippetDelete({ data: { id } })
+    const result = await deleteSnippet(id)
 
     if (result.error) {
-      toast.error(result.error.message)
+      toast.error(result.error)
       setIsDeleting(false)
       setShowDeleteDialog(false)
       return

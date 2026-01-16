@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { SnippetForm } from '~/components/snippets/SnippetForm'
-import { snippetCreate } from '~/server/snippets'
+import { createSnippet } from '~/lib/snippet-api'
 
 export const Route = createFileRoute('/snippets/new')({
   component: NewSnippet,
@@ -9,11 +9,11 @@ export const Route = createFileRoute('/snippets/new')({
 
 function NewSnippet() {
   const handleSubmit = async (data: { title: string; body: string; tags: string[] }) => {
-    const result = await snippetCreate({ data })
+    const result = await createSnippet(data)
 
     if (result.error) {
-      toast.error(result.error.message)
-      throw result.error // Re-throw to let SnippetForm handle loading state
+      toast.error(result.error)
+      throw new Error(result.error) // Re-throw to let SnippetForm handle loading state
     }
 
     toast.success('Snippet created!')

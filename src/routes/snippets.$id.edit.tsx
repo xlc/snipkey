@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { SnippetForm } from '~/components/snippets/SnippetForm'
-import { snippetGet, snippetUpdate } from '~/server/snippets'
+import { getSnippet, updateSnippet } from '~/lib/snippet-api'
 
 export const Route = createFileRoute('/snippets/$id/edit')({
   component: EditSnippet,
@@ -19,10 +19,10 @@ function EditSnippet() {
 
   useEffect(() => {
     async function loadSnippet() {
-      const result = await snippetGet({ data: { id } })
+      const result = await getSnippet(id)
 
-      if (result.error) {
-        toast.error(result.error.message)
+      if (result.error || !result.data) {
+        toast.error(result.error || 'Failed to load snippet')
         setLoading(false)
         return
       }
@@ -39,11 +39,11 @@ function EditSnippet() {
   }, [id])
 
   const handleSubmit = async (data: { title: string; body: string; tags: string[] }) => {
-    const result = await snippetUpdate({ data: { id, ...data } })
+    const result = await updateSnippet(id, data)
 
     if (result.error) {
-      toast.error(result.error.message)
-      throw result.error // Re-throw to let SnippetForm handle loading state
+      toast.error(result.error)
+      throw new Error(result.error) // Re-throw to let SnippetForm handle loading state
     }
 
     toast.success('Snippet updated!')
