@@ -4,6 +4,12 @@ import { sql } from 'kysely'
 import { getDbFromEnv, getServerFnContext } from '~/lib/server/context'
 import { requireAuthMiddleware } from '~/lib/server/middleware'
 
+// Result type for tag aggregation query
+interface TagCountRow {
+  tag: string
+  count: number
+}
+
 // Get all tags with their counts
 export const tagsList = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])
@@ -25,9 +31,9 @@ export const tagsList = createServerFn({ method: 'GET' })
 
       return {
         data: {
-          tags: result.map((row: unknown) => ({
-            tag: (row as { tag: string }).tag,
-            count: (row as { count: number }).count,
+          tags: result.map(row => ({
+            tag: (row as TagCountRow).tag,
+            count: (row as TagCountRow).count,
           })),
         },
       }
