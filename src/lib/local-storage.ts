@@ -52,6 +52,7 @@ export function getMeta(): Meta {
   try {
     return { ...defaultMeta, ...JSON.parse(stored) }
   } catch {
+    // Metadata corrupted, return defaults (safe to ignore - will be recreated)
     return defaultMeta
   }
 }
