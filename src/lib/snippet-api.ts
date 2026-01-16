@@ -296,13 +296,20 @@ export async function getAuthStatus(): Promise<{ authenticated: boolean; userId?
 }
 
 // Sync to server
-export async function syncToServer(): Promise<{ synced: number; updated: number; deleted: number; errors: number }> {
+export async function syncToServer(): Promise<{
+  synced: number
+  updated: number
+  deleted: number
+  errors: number
+  skipped: number
+}> {
   const unsynced = getUnsyncedSnippets()
   const deleted = getDeletedSnippets()
   let synced = 0
   let updated = 0
   let deletedCount = 0
   let errors = 0
+  let skipped = 0
 
   // Sync new and modified snippets
   for (const snippet of unsynced) {
@@ -330,8 +337,8 @@ export async function syncToServer(): Promise<{ synced: number; updated: number;
           markAsSynced(snippet.id)
           updated++
         } else {
-          // Snippet was modified during sync, leave it as unsynced
-          errors++
+          // Snippet was modified during sync, leave it as unsynced (not an error)
+          skipped++
         }
       }
     } else {
@@ -371,13 +378,13 @@ export async function syncToServer(): Promise<{ synced: number; updated: number;
             }
           }
         } else {
-          // Snippet was modified during sync, just update serverId to prevent duplicate
+          // Snippet was modified during sync, just update serverId to prevent duplicate (not an error)
           const updatedSnippet = getLocalSnippet(snippet.id)
           if (updatedSnippet) {
             updatedSnippet.serverId = serverId
             saveLocalSnippet(updatedSnippet)
           }
-          errors++
+          skipped++
         }
       }
     }
@@ -409,7 +416,7 @@ export async function syncToServer(): Promise<{ synced: number; updated: number;
     setMeta({ lastSyncAt: Date.now() })
   }
 
-  return { synced, updated, deleted: deletedCount, errors }
+  return { synced, updated, deleted: deletedCount, errors, skipped }
 }
 
 // Convert local snippet to server format

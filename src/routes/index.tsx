@@ -142,6 +142,9 @@ function Index() {
       } else {
         toast.info('Everything is already synced')
       }
+      if (result.skipped > 0) {
+        toast.info(`${result.skipped} snippets skipped (modified during sync)`)
+      }
       if (result.errors > 0) {
         toast.error(`${result.errors} snippets failed to sync`)
       }

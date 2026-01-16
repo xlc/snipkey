@@ -13,7 +13,7 @@ const badgeVariants = cva(
         outline: 'text-foreground',
       },
       interactive: {
-        true: 'cursor-pointer touch-manipulation min-h-[44px] min-w-[44px] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring',
+        true: 'cursor-pointer touch-manipulation relative focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring before:absolute before:inset-[-10px] before:content-[""]',
         false: '',
       },
     },
