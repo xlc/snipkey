@@ -250,10 +250,8 @@ export function renameSnippetId(oldId: string, newId: string): boolean {
       return false
     }
 
-    // Add server ID mapping for efficient reverse lookups
-    if (!addServerIdMapping(newId, newId)) {
-      // If this fails, it's not critical - continue anyway
-    }
+    // Note: No server ID mapping needed here since newId equals serverId
+    // The getSnippet logic handles this naturally via direct lookup
 
     // Only remove old key after new key is saved AND mapping is successful
     localStorage.removeItem(oldKey)
