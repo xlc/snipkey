@@ -339,13 +339,13 @@ function Index() {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-muted-foreground">Active filters:</span>
             {selectedTag && (
-              <Badge variant="secondary" className="cursor-pointer" onClick={() => setSelectedTag(null)}>
+              <Badge variant="secondary" interactive onClick={() => setSelectedTag(null)}>
                 Tag: {selectedTag}
                 <X className="h-3 w-3 ml-1" />
               </Badge>
             )}
             {searchQuery && (
-              <Badge variant="secondary" className="cursor-pointer" onClick={() => setSearchQuery('')}>
+              <Badge variant="secondary" interactive onClick={() => setSearchQuery('')}>
                 Search: {searchQuery.slice(0, 20)}
                 {searchQuery.length > 20 && '...'}
                 <X className="h-3 w-3 ml-1" />
@@ -372,7 +372,7 @@ function Index() {
             <p className="text-sm text-muted-foreground">Popular tags:</p>
             <div className="flex gap-2 flex-wrap">
               {allTags.slice(0, 10).map(tag => (
-                <Badge key={tag} variant="outline" className="cursor-pointer hover:bg-accent" onClick={() => setSelectedTag(tag)}>
+                <Badge key={tag} variant="outline" interactive className="hover:bg-accent" onClick={() => setSelectedTag(tag)}>
                   {tag}
                 </Badge>
               ))}
