@@ -16,6 +16,7 @@ import { authMe } from '~/server/auth'
 import { snippetCreate, snippetDelete, snippetGet, snippetsList, snippetUpdate } from '~/server/snippets'
 
 export type { SnippetData }
+export { setMeta }
 
 export interface SnippetListItem {
   id: string

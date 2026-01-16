@@ -1,8 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import { LogOut, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '~/components/ui/button'
-import { getAuthStatus } from '~/lib/snippet-api'
+import { getAuthStatus, setMeta } from '~/lib/snippet-api'
 import { authLogout } from '~/server/auth'
 
 export function Header() {
@@ -20,6 +21,10 @@ export function Header() {
 
   async function handleLogout() {
     await authLogout({})
+    // Clear userId but keep local data
+    setMeta({ userId: null, mode: 'local' })
+    setAuthenticated(false)
+    toast.info('Logged out. Your snippets are saved locally.')
     window.location.href = '/'
   }
 

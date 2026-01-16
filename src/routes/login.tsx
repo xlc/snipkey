@@ -3,6 +3,7 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '~/components/ui/button'
+import { setMeta, syncToServer } from '~/lib/snippet-api'
 import { authLoginFinish, authLoginStart, authRegisterFinish, authRegisterStart } from '~/server/auth'
 
 export const Route = createFileRoute('/login')({
@@ -44,7 +45,23 @@ function Login() {
           toast.error('Registration failed')
           return
         }
-        toast.success('Account created successfully!')
+
+        // Parse response to get userId
+        const responseData = (await finishResult.json()) as { userId: string; sessionId: string }
+        const { userId } = responseData
+
+        // Update metadata with userId
+        setMeta({ userId, mode: 'cloud' })
+
+        // Sync local snippets to server
+        const syncResult = await syncToServer()
+
+        if (syncResult.synced > 0) {
+          toast.success(`Account created! Synced ${syncResult.synced} snippets to the cloud.`)
+        } else {
+          toast.success('Account created successfully!')
+        }
+
         router.navigate({ to: '/' })
         return
       }
@@ -90,6 +107,14 @@ function Login() {
           toast.error('Login failed')
           return
         }
+
+        // Parse response to get userId
+        const responseData = (await finishResult.json()) as { userId: string; sessionId: string }
+        const { userId } = responseData
+
+        // Update metadata with userId
+        setMeta({ userId, mode: 'cloud' })
+
         toast.success('Welcome back!')
         router.navigate({ to: '/' })
         return
