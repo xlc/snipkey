@@ -12,10 +12,11 @@ export const Route = createFileRoute('/login')({
 function Login() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [action, setAction] = useState<'login' | 'register' | null>(null)
 
   const handleRegister = async () => {
     setIsLoading(true)
+    setAction('register')
     try {
       // Start registration
       const startResult = await authRegisterStart()
@@ -43,23 +44,25 @@ function Login() {
           toast.error('Registration failed')
           return
         }
-        toast.success('Registration successful!')
+        toast.success('Account created successfully!')
         router.navigate({ to: '/' })
         return
       }
 
       // This shouldn't happen since authRegisterFinish always returns Response
-      toast.success('Registration successful!')
+      toast.success('Account created successfully!')
       router.navigate({ to: '/' })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Registration failed')
     } finally {
       setIsLoading(false)
+      setAction(null)
     }
   }
 
   const handleLogin = async () => {
     setIsLoading(true)
+    setAction('login')
     try {
       // Start login
       const startResult = await authLoginStart()
@@ -87,18 +90,19 @@ function Login() {
           toast.error('Login failed')
           return
         }
-        toast.success('Login successful!')
+        toast.success('Welcome back!')
         router.navigate({ to: '/' })
         return
       }
 
       // This shouldn't happen since authLoginFinish always returns Response
-      toast.success('Login successful!')
+      toast.success('Welcome back!')
       router.navigate({ to: '/' })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Login failed')
     } finally {
       setIsLoading(false)
+      setAction(null)
     }
   }
 
@@ -106,27 +110,18 @@ function Login() {
     <div className="flex min-h-[calc(100vh-200px)] items-center justify-center">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight">{mode === 'login' ? 'Welcome back' : 'Create account'}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {mode === 'login' ? 'Sign in with your passkey to continue' : 'Register with a passkey to get started'}
-          </p>
+          <h2 className="text-3xl font-bold tracking-tight">Welcome to Snipkey</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Choose an option to continue</p>
         </div>
 
         <div className="space-y-4">
-          <Button onClick={mode === 'login' ? handleLogin : handleRegister} disabled={isLoading} className="w-full" size="lg">
-            {isLoading ? 'Processing...' : mode === 'login' ? 'Sign in with passkey' : 'Register with passkey'}
+          <Button onClick={handleLogin} disabled={isLoading} className="w-full" size="lg" variant="default">
+            {isLoading && action === 'login' ? 'Signing in...' : 'Sign in with passkey'}
           </Button>
 
-          <div className="text-center text-sm">
-            <button
-              type="button"
-              onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-              className="text-muted-foreground underline hover:text-foreground"
-              disabled={isLoading}
-            >
-              {mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Sign in'}
-            </button>
-          </div>
+          <Button onClick={handleRegister} disabled={isLoading} className="w-full" size="lg" variant="outline">
+            {isLoading && action === 'register' ? 'Creating account...' : 'Create account with passkey'}
+          </Button>
         </div>
 
         <div className="text-center text-xs text-muted-foreground">

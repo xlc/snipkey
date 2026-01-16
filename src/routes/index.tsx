@@ -14,7 +14,7 @@ import {
 import { Input } from '~/components/ui/input'
 import { useDebounce } from '~/lib/hooks/useDebounce'
 import { useKeyboardShortcuts } from '~/lib/hooks/useKeyboardShortcuts'
-import { snippetCreate, snippetsList } from '~/server/snippets'
+import { createSnippet, getAuthStatus, listSnippets, syncToServer } from '~/lib/snippet-api'
 
 export const Route = createFileRoute('/')({
   component: Index,
@@ -29,6 +29,7 @@ function Index() {
     body: string
     tags: string[]
     updated_at: number
+    synced?: boolean
   }> | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -36,20 +37,29 @@ function Index() {
   const [sortBy, setSortBy] = useState<'updated' | 'created' | 'title'>('updated')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [allTags, setAllTags] = useState<string[]>([])
+  const [authenticated, setAuthenticated] = useState(false)
+  const [syncing, setSyncing] = useState(false)
 
   // Debounce search input to reduce API calls
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
 
+  // Check authentication status
+  useEffect(() => {
+    async function checkAuth() {
+      const status = await getAuthStatus()
+      setAuthenticated(status.authenticated)
+    }
+    checkAuth()
+  }, [])
+
   async function loadSnippets() {
     setLoading(true)
-    const result = await snippetsList({
-      data: {
-        limit: 20,
-        query: debouncedSearchQuery || undefined,
-        tag: selectedTag || undefined,
-        sortBy,
-        sortOrder,
-      },
+    const result = await listSnippets({
+      limit: 20,
+      query: debouncedSearchQuery || undefined,
+      tag: selectedTag || undefined,
+      sortBy,
+      sortOrder,
     })
 
     if (result.error) {
@@ -58,7 +68,7 @@ function Index() {
       return
     }
 
-    const items = result.data.items
+    const items = result.data || []
 
     // Extract all unique tags from fetched snippets
     const tags = new Set<string>()
@@ -73,11 +83,34 @@ function Index() {
     setLoading(false)
   }
 
+  async function handleSync() {
+    if (!authenticated) {
+      toast.error('Please sign up to sync your snippets')
+      return
+    }
+
+    setSyncing(true)
+    try {
+      const result = await syncToServer()
+      if (result.synced > 0) {
+        toast.success(`Synced ${result.synced} snippets`)
+        await loadSnippets()
+      } else {
+        toast.info('Everything is already synced')
+      }
+      if (result.errors > 0) {
+        toast.error(`${result.errors} snippets failed to sync`)
+      }
+    } catch {
+      toast.error('Failed to sync snippets')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   async function handleExport() {
     // Export all snippets
-    const result = await snippetsList({
-      data: { limit: 1000 },
-    })
+    const result = await listSnippets({ limit: 1000 })
 
     if (result.error) {
       toast.error('Failed to export snippets')
@@ -87,7 +120,7 @@ function Index() {
     const exportData = {
       version: '1.0',
       exportedAt: new Date().toISOString(),
-      snippets: result.data.items,
+      snippets: result.data || [],
     }
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
@@ -102,7 +135,8 @@ function Index() {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 
-    toast.success(`Exported ${result.data.items.length} snippets`)
+    const itemCount = result.data?.length || 0
+    toast.success(`Exported ${itemCount} snippets`)
   }
 
   async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
@@ -121,12 +155,10 @@ function Index() {
       let skipped = 0
 
       for (const snippet of importData.snippets) {
-        const result = await snippetCreate({
-          data: {
-            title: snippet.title,
-            body: snippet.body,
-            tags: snippet.tags,
-          },
+        const result = await createSnippet({
+          title: snippet.title,
+          body: snippet.body,
+          tags: snippet.tags,
         })
 
         if (result.error) {
@@ -192,9 +224,21 @@ function Index() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">My Snippets</h2>
-          <p className="text-muted-foreground mt-2">Your private snippet vault with placeholders</p>
+          <p className="text-muted-foreground mt-2">
+            Your private snippet vault with placeholders
+            {!authenticated && ' • Works Offline'}
+          </p>
         </div>
         <div className="flex gap-2">
+          {authenticated ? (
+            <Button variant="outline" onClick={handleSync} disabled={syncing}>
+              {syncing ? 'Syncing...' : 'Sync Now'}
+            </Button>
+          ) : (
+            <Button variant="outline" asChild>
+              <Link to="/login">Sign Up (It's Free)</Link>
+            </Button>
+          )}
           <Button variant="outline" asChild>
             <a href="/tags">
               <Tags className="h-4 w-4 mr-2" />
@@ -318,8 +362,13 @@ function Index() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {snippets.map(snippet => (
             <Link key={snippet.id} to="/snippets/$id" params={{ id: snippet.id }} className="block group">
-              <div className="p-4 border rounded-lg hover:border-primary transition-colors">
-                <h3 className="font-semibold group-hover:text-primary transition-colors">{snippet.title}</h3>
+              <div className="p-4 border rounded-lg hover:border-primary transition-colors relative">
+                {!authenticated && snippet.synced === false && (
+                  <Badge variant="secondary" className="absolute top-2 right-2 text-xs">
+                    Unsynced
+                  </Badge>
+                )}
+                <h3 className="font-semibold group-hover:text-primary transition-colors pr-16">{snippet.title}</h3>
                 <p className="text-sm text-muted-foreground mt-2 line-clamp-3">
                   {snippet.body.slice(0, 150)}
                   {snippet.body.length > 150 && '...'}
