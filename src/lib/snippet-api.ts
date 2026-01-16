@@ -1,12 +1,12 @@
-import type { Snippet, SnippetData } from '~/lib/local-storage'
+import type { ServerIdMap, Snippet, SnippetData } from '~/lib/local-storage'
 import {
-  addServerIdMapping,
   createLocalSnippet,
   deleteLocalSnippet,
   getDeletedSnippets,
   getLocalIdByServerId,
   getLocalSnippet,
   getMeta,
+  getServerIdMap,
   getUnsyncedSnippets,
   isAuthenticated,
   type LocalSnippet,
@@ -16,6 +16,7 @@ import {
   renameSnippetId,
   resolveSnippetId,
   saveLocalSnippet,
+  saveServerIdMap,
   setMeta,
   updateLocalSnippet,
 } from '~/lib/local-storage'
@@ -326,6 +327,9 @@ export async function syncToServer(): Promise<{
   let errors = 0
   let skipped = 0
 
+  // Batch server ID map updates for performance
+  const serverIdMapUpdates: ServerIdMap = {}
+
   // Sync new and modified snippets
   for (const snippet of unsynced) {
     // Capture the timestamp BEFORE the sync request to detect race conditions
@@ -386,8 +390,8 @@ export async function syncToServer(): Promise<{
                 // Saving failed - count as error to prevent duplicate sync
                 errors++
               } else {
-                // Add server ID mapping for efficient lookups
-                addServerIdMapping(snippet.id, serverId)
+                // Collect server ID mapping for batch update
+                serverIdMapUpdates[serverId] = snippet.id
                 synced++
               }
             } else {
@@ -400,8 +404,8 @@ export async function syncToServer(): Promise<{
           if (updatedSnippet) {
             updatedSnippet.serverId = serverId
             saveLocalSnippet(updatedSnippet)
-            // Add server ID mapping for efficient lookups
-            addServerIdMapping(snippet.id, serverId)
+            // Collect server ID mapping for batch update
+            serverIdMapUpdates[serverId] = snippet.id
           }
           skipped++
         }
@@ -429,6 +433,13 @@ export async function syncToServer(): Promise<{
       permanentlyDeleteSnippet(snippet.id)
       deletedCount++
     }
+  }
+
+  // Batch update server ID map for better performance
+  if (Object.keys(serverIdMapUpdates).length > 0) {
+    const existingMap = getServerIdMap()
+    const mergedMap = { ...existingMap, ...serverIdMapUpdates }
+    saveServerIdMap(mergedMap)
   }
 
   if (synced > 0 || updated > 0 || deletedCount > 0) {

@@ -444,41 +444,36 @@ function Index() {
         // Snippet grid
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {snippets.map(snippet => (
-            // biome-ignore lint/a11y/useSemanticElements: Using div to avoid nesting interactive Badge buttons inside button element
             <div
               key={snippet.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => router.navigate({ to: '/snippets/$id', params: { id: snippet.id } })}
-              onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  router.navigate({ to: '/snippets/$id', params: { id: snippet.id } })
-                }
-              }}
-              className="relative p-4 border rounded-lg hover:shadow-md hover:border-primary/50 transition-all duration-200 bg-card h-full flex flex-col cursor-pointer group animate-in fade-in slide-in-from-bottom-2 duration-300"
+              className="relative p-4 border rounded-lg hover:shadow-md hover:border-primary/50 transition-all duration-200 bg-card h-full flex flex-col group animate-in fade-in slide-in-from-bottom-2 duration-300"
             >
+              {/* Link overlay for card navigation */}
+              <Link to="/snippets/$id" params={{ id: snippet.id }} className="absolute inset-0 z-0" aria-label={`View ${snippet.title}`} />
+
               {/* Sync status badge */}
               {authenticated && <SyncStatusBadge snippet={snippet} />}
 
               {/* Title */}
-              <h3 className="font-semibold text-base group-hover:text-primary transition-colors pr-12 line-clamp-2">{snippet.title}</h3>
+              <h3 className="font-semibold text-base group-hover:text-primary transition-colors pr-12 line-clamp-2 relative z-10">
+                {snippet.title}
+              </h3>
 
               {/* Timestamp */}
-              <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground relative z-10">
                 <Clock className="h-3 w-3" />
                 <span>{formatRelativeTime(snippet.updated_at)}</span>
               </div>
 
               {/* Preview */}
-              <p className="text-sm text-muted-foreground mt-3 line-clamp-3 flex-1">
+              <p className="text-sm text-muted-foreground mt-3 line-clamp-3 flex-1 relative z-10">
                 {snippet.body.slice(0, 150)}
                 {snippet.body.length > 150 && '...'}
               </p>
 
               {/* Tags */}
               {snippet.tags.length > 0 && (
-                <div className="flex gap-3 mt-4 flex-wrap">
+                <div className="flex gap-3 mt-4 flex-wrap relative z-10">
                   {snippet.tags.slice(0, 3).map(tag => (
                     <Badge
                       key={tag}
@@ -500,7 +495,7 @@ function Index() {
               )}
 
               {/* Hover indicator */}
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                 <FileCode className="h-5 w-5 text-muted-foreground" />
               </div>
             </div>

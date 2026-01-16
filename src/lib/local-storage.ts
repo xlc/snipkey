@@ -258,16 +258,9 @@ export function renameSnippetId(oldId: string, newId: string): boolean {
     // Only remove old key after new key is saved AND mapping is successful
     localStorage.removeItem(oldKey)
 
-    // Verify the old key was actually removed (prevent local duplication)
-    if (localStorage.getItem(oldKey) !== null) {
-      // Removal failed - attempt to clean up by removing the new key and mapping
-      localStorage.removeItem(newKey)
-      // Attempt to remove the ID mapping as well
-      const map = getIdMap()
-      delete map[oldId]
-      saveIdMap(map)
-      return false
-    }
+    // If removal failed, accept the duplication rather than risking data loss
+    // The new key is accessible via the ID mapping, so this is safe
+    // Verification removed to prevent dangerous rollback that could orphan data
 
     return true
   } catch {
