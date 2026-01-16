@@ -94,8 +94,13 @@ function Index() {
     setSyncing(true)
     try {
       const result = await syncToServer()
-      if (result.synced > 0) {
-        toast.success(`Synced ${result.synced} snippets`)
+      const messages = []
+      if (result.synced > 0) messages.push(`${result.synced} created`)
+      if (result.updated > 0) messages.push(`${result.updated} updated`)
+      if (result.deleted > 0) messages.push(`${result.deleted} deleted`)
+
+      if (messages.length > 0) {
+        toast.success(`Sync: ${messages.join(', ')}`)
         await loadSnippets()
       } else {
         toast.info('Everything is already synced')

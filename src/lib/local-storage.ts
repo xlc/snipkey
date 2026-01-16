@@ -22,6 +22,7 @@ const META_KEY = 'snipkey_meta'
 export interface LocalSnippet extends Snippet {
   synced: boolean
   deleted: boolean
+  serverId?: string // Track server ID after sync
 }
 
 export interface Meta {
@@ -175,6 +176,64 @@ export function markAsSynced(id: string): void {
 export function getUnsyncedSnippets(): LocalSnippet[] {
   const snippets = listLocalSnippets()
   return snippets.filter(s => !s.synced && !s.deleted)
+}
+
+export function getDeletedSnippets(): LocalSnippet[] {
+  if (typeof window === 'undefined') return []
+
+  const snippets: LocalSnippet[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (!key?.startsWith(STORAGE_PREFIX)) continue
+
+    try {
+      const data = localStorage.getItem(key)
+      if (!data) continue
+
+      const snippet = JSON.parse(data) as LocalSnippet
+      // Only include deleted snippets that haven't been synced
+      if (snippet.deleted && !snippet.synced) {
+        snippets.push(snippet)
+      }
+    } catch {}
+  }
+
+  return snippets
+}
+
+export function renameSnippetId(oldId: string, newId: string): boolean {
+  if (typeof window === 'undefined') return false
+
+  const oldKey = getSnippetKey(oldId)
+  const data = localStorage.getItem(oldKey)
+
+  if (!data) return false
+
+  // Remove old key
+  localStorage.removeItem(oldKey)
+
+  // Save with new key
+  const snippet = JSON.parse(data) as LocalSnippet
+  snippet.id = newId
+  snippet.serverId = newId // Track server ID
+  snippet.synced = true
+
+  const newKey = getSnippetKey(newId)
+  localStorage.setItem(newKey, JSON.stringify(snippet))
+
+  return true
+}
+
+export function permanentlyDeleteSnippet(id: string): boolean {
+  if (typeof window === 'undefined') return false
+
+  const key = getSnippetKey(id)
+  const exists = localStorage.getItem(key)
+
+  if (!exists) return false
+
+  localStorage.removeItem(key)
+  return true
 }
 
 export function clearLocalSnippets(): void {

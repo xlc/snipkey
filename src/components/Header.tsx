@@ -3,7 +3,8 @@ import { Cloud, CloudOff, LogOut, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '~/components/ui/button'
-import { getAuthStatus, setMeta } from '~/lib/snippet-api'
+import { clearLocalSnippets, setMeta } from '~/lib/local-storage'
+import { getAuthStatus } from '~/lib/snippet-api'
 import { authLogout } from '~/server/auth'
 
 export function Header() {
@@ -26,10 +27,11 @@ export function Header() {
 
   async function handleLogout() {
     await authLogout({})
-    // Clear userId but keep local data
-    setMeta({ userId: null, mode: 'local' })
+    // Clear all local data for privacy
+    clearLocalSnippets()
+    setMeta({ userId: null, mode: 'local', lastSyncAt: null })
     setAuthenticated(false)
-    toast.info('Logged out. Your snippets are saved locally.')
+    toast.info('Logged out. All local data has been cleared.')
     window.location.href = '/'
   }
 

@@ -2,6 +2,7 @@ import type { Snippet, SnippetData } from '~/lib/local-storage'
 import {
   createLocalSnippet,
   deleteLocalSnippet,
+  getDeletedSnippets,
   getLocalSnippet,
   getMeta,
   getUnsyncedSnippets,
@@ -9,6 +10,8 @@ import {
   type LocalSnippet,
   listLocalSnippets,
   markAsSynced,
+  permanentlyDeleteSnippet,
+  renameSnippetId,
   setMeta,
   updateLocalSnippet,
 } from '~/lib/local-storage'
@@ -208,33 +211,85 @@ export async function getAuthStatus(): Promise<{ authenticated: boolean; userId?
 }
 
 // Sync to server
-export async function syncToServer(): Promise<{ synced: number; errors: number }> {
+export async function syncToServer(): Promise<{ synced: number; updated: number; deleted: number; errors: number }> {
   const unsynced = getUnsyncedSnippets()
+  const deleted = getDeletedSnippets()
   let synced = 0
+  let updated = 0
+  let deletedCount = 0
   let errors = 0
 
+  // Sync new and modified snippets
   for (const snippet of unsynced) {
-    const result = await snippetCreate({
-      data: {
-        title: snippet.title,
-        body: snippet.body,
-        tags: snippet.tags,
-      },
-    })
+    // If snippet has a serverId, it's an update, otherwise it's a new snippet
+    if (snippet.serverId) {
+      // Update existing snippet on server
+      const result = await snippetUpdate({
+        data: {
+          id: snippet.serverId,
+          title: snippet.title,
+          body: snippet.body,
+          tags: snippet.tags,
+        },
+      })
 
-    if (result.error) {
-      errors++
+      if (result.error) {
+        errors++
+      } else {
+        markAsSynced(snippet.id)
+        updated++
+      }
     } else {
-      markAsSynced(snippet.id)
-      synced++
+      // Create new snippet on server
+      const result = await snippetCreate({
+        data: {
+          title: snippet.title,
+          body: snippet.body,
+          tags: snippet.tags,
+        },
+      })
+
+      if (result.error) {
+        errors++
+      } else if (result.data) {
+        // Update local snippet with server ID
+        const serverId = result.data.id
+        if (renameSnippetId(snippet.id, serverId)) {
+          synced++
+        } else {
+          errors++
+        }
+      }
     }
   }
 
-  if (synced > 0) {
+  // Sync deletions to server
+  for (const snippet of deleted) {
+    if (snippet.serverId) {
+      // Delete from server
+      const result = await snippetDelete({
+        data: { id: snippet.serverId },
+      })
+
+      if (result.error) {
+        errors++
+      } else {
+        // Permanently delete from local storage
+        permanentlyDeleteSnippet(snippet.id)
+        deletedCount++
+      }
+    } else {
+      // Never synced to server, just delete locally
+      permanentlyDeleteSnippet(snippet.id)
+      deletedCount++
+    }
+  }
+
+  if (synced > 0 || updated > 0 || deletedCount > 0) {
     setMeta({ lastSyncAt: Date.now() })
   }
 
-  return { synced, errors }
+  return { synced, updated, deleted: deletedCount, errors }
 }
 
 // Convert local snippet to server format

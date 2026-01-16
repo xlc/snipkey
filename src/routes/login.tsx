@@ -56,8 +56,13 @@ function Login() {
         // Sync local snippets to server
         const syncResult = await syncToServer()
 
-        if (syncResult.synced > 0) {
-          toast.success(`Account created! Synced ${syncResult.synced} snippets to the cloud.`)
+        const messages = []
+        if (syncResult.synced > 0) messages.push(`${syncResult.synced} created`)
+        if (syncResult.updated > 0) messages.push(`${syncResult.updated} updated`)
+        if (syncResult.deleted > 0) messages.push(`${syncResult.deleted} deleted`)
+
+        if (messages.length > 0) {
+          toast.success(`Account created! Synced ${messages.join(', ')} to the cloud.`)
         } else {
           toast.success('Account created successfully!')
         }
