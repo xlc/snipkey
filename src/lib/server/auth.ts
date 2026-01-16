@@ -165,7 +165,7 @@ export async function authRegisterFinish(
   }
 
   // Reuse userId from authRegisterStart for consistency
-  const userId = challenge.user_id || crypto.randomUUID()
+  const userId = challenge.user_id || newId()
 
   // Create user record FIRST (required by foreign key constraint)
   await db

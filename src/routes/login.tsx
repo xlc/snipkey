@@ -49,6 +49,16 @@ function Login() {
       // Handle Response object (authRegisterFinish returns Response)
       if (finishResult instanceof Response) {
         if (!finishResult.ok) {
+          // Try to parse error response for better error message
+          try {
+            const errorResponse = (await finishResult.json()) as { error?: { message: string } }
+            if (errorResponse.error?.message) {
+              toast.error(errorResponse.error.message)
+              return
+            }
+          } catch {
+            // If parsing fails, fall back to generic error
+          }
           toast.error('Registration failed')
           return
         }

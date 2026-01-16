@@ -354,8 +354,12 @@ export async function syncToServer(): Promise<{ synced: number; updated: number;
             if (updatedSnippet) {
               updatedSnippet.serverId = serverId
               updatedSnippet.synced = true
-              saveLocalSnippet(updatedSnippet)
-              synced++
+              if (!saveLocalSnippet(updatedSnippet)) {
+                // Saving failed - count as error to prevent duplicate sync
+                errors++
+              } else {
+                synced++
+              }
             } else {
               errors++
             }
