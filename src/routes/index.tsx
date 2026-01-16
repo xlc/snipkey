@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
-import { Download, Filter, Search, Tags, Upload, X } from 'lucide-react'
+import { Clock, Download, FileCode, Filter, Plus, Search, Tags, Upload, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { SyncStatusBadge } from '~/components/SyncStatusBadge'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import {
@@ -80,7 +81,8 @@ function Index() {
     setAllTags(Array.from(tags).sort())
 
     setSnippets(items)
-    setLoading(false)
+    // Add a small delay for smoother transitions
+    setTimeout(() => setLoading(false), 100)
   }
 
   async function handleSync() {
@@ -219,9 +221,24 @@ function Index() {
     loadSnippets()
   }, [debouncedSearchQuery, selectedTag, sortBy, sortOrder])
 
+  // Format timestamp to relative time
+  function formatRelativeTime(timestamp: number): string {
+    const seconds = Math.floor((Date.now() - timestamp) / 1000)
+
+    if (seconds < 60) return 'just now'
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
+    return new Date(timestamp).toLocaleDateString()
+  }
+
+  // Calculate unsynced count
+  const unsyncedCount = snippets?.filter(s => s.synced === false).length || 0
+
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">My Snippets</h2>
           <p className="text-muted-foreground mt-2">
@@ -229,10 +246,10 @@ function Index() {
             {!authenticated && ' • Works Offline'}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {authenticated ? (
-            <Button variant="outline" onClick={handleSync} disabled={syncing}>
-              {syncing ? 'Syncing...' : 'Sync Now'}
+            <Button variant="outline" onClick={handleSync} disabled={syncing || unsyncedCount === 0}>
+              {syncing ? 'Syncing...' : `Sync${unsyncedCount > 0 ? ` (${unsyncedCount})` : ''}`}
             </Button>
           ) : (
             <Button variant="outline" asChild>
@@ -242,22 +259,25 @@ function Index() {
           <Button variant="outline" asChild>
             <a href="/tags">
               <Tags className="h-4 w-4 mr-2" />
-              Manage Tags
+              <span className="hidden sm:inline">Manage Tags</span>
             </a>
           </Button>
           <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
-            Export
+            <span className="hidden sm:inline">Export</span>
           </Button>
           <Button variant="outline" asChild className="relative">
             <label htmlFor="import-input" className="cursor-pointer">
               <Upload className="h-4 w-4 mr-2" />
-              Import
+              <span className="hidden sm:inline">Import</span>
               <input id="import-input" type="file" accept=".json" onChange={handleImport} className="hidden" />
             </label>
           </Button>
           <Button asChild>
-            <Link to="/snippets/new">New Snippet</Link>
+            <Link to="/snippets/new">
+              <Plus className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">New Snippet</span>
+            </Link>
           </Button>
         </div>
       </div>
@@ -357,29 +377,60 @@ function Index() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">Loading snippets...</div>
+        // Loading skeleton
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="p-4 border rounded-lg animate-pulse">
+              <div className="h-5 bg-muted rounded w-3/4 mb-3" />
+              <div className="space-y-2">
+                <div className="h-3 bg-muted/50 rounded w-full" />
+                <div className="h-3 bg-muted/50 rounded w-5/6" />
+                <div className="h-3 bg-muted/50 rounded w-4/6" />
+              </div>
+              <div className="flex gap-2 mt-4">
+                <div className="h-5 bg-muted/30 rounded w-16" />
+                <div className="h-5 bg-muted/30 rounded w-20" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : snippets && snippets.length > 0 ? (
+        // Snippet grid
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {snippets.map(snippet => (
-            <Link key={snippet.id} to="/snippets/$id" params={{ id: snippet.id }} className="block group">
-              <div className="p-4 border rounded-lg hover:border-primary transition-colors relative">
-                {!authenticated && snippet.synced === false && (
-                  <Badge variant="secondary" className="absolute top-2 right-2 text-xs">
-                    Unsynced
-                  </Badge>
-                )}
-                <h3 className="font-semibold group-hover:text-primary transition-colors pr-16">{snippet.title}</h3>
-                <p className="text-sm text-muted-foreground mt-2 line-clamp-3">
+            <Link
+              key={snippet.id}
+              to="/snippets/$id"
+              params={{ id: snippet.id }}
+              className="block group animate-in fade-in slide-in-from-bottom-2 duration-300"
+            >
+              <div className="relative p-4 border rounded-lg hover:shadow-md hover:border-primary/50 transition-all duration-200 bg-card h-full flex flex-col">
+                {/* Sync status badge */}
+                {authenticated && <SyncStatusBadge snippet={snippet} />}
+
+                {/* Title */}
+                <h3 className="font-semibold text-base group-hover:text-primary transition-colors pr-12 line-clamp-2">{snippet.title}</h3>
+
+                {/* Timestamp */}
+                <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <span>{formatRelativeTime(snippet.updated_at)}</span>
+                </div>
+
+                {/* Preview */}
+                <p className="text-sm text-muted-foreground mt-3 line-clamp-3 flex-1">
                   {snippet.body.slice(0, 150)}
                   {snippet.body.length > 150 && '...'}
                 </p>
+
+                {/* Tags */}
                 {snippet.tags.length > 0 && (
-                  <div className="flex gap-2 mt-3 flex-wrap">
-                    {snippet.tags.map(tag => (
+                  <div className="flex gap-2 mt-4 flex-wrap">
+                    {snippet.tags.slice(0, 3).map(tag => (
                       <Badge
                         key={tag}
-                        variant="outline"
-                        className="text-xs cursor-pointer hover:bg-accent"
+                        variant="secondary"
+                        className="text-xs cursor-pointer hover:bg-accent transition-colors"
                         onClick={e => {
                           e.preventDefault()
                           e.stopPropagation()
@@ -389,22 +440,40 @@ function Index() {
                         {tag}
                       </Badge>
                     ))}
+                    {snippet.tags.length > 3 && (
+                      <Badge variant="secondary" className="text-xs">
+                        +{snippet.tags.length - 3}
+                      </Badge>
+                    )}
                   </div>
                 )}
+
+                {/* Hover indicator */}
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <FileCode className="h-5 w-5 text-muted-foreground" />
+                </div>
               </div>
             </Link>
           ))}
         </div>
       ) : (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">
+        // Empty state
+        <div className="text-center py-16 px-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+            <FileCode className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">{searchQuery || selectedTag ? 'No snippets found' : 'No snippets yet'}</h3>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             {searchQuery || selectedTag
-              ? 'No snippets found matching your criteria'
-              : 'No snippets yet. Create your first snippet to get started!'}
+              ? 'Try adjusting your search or filters to find what you are looking for.'
+              : 'Create your first snippet to get started with your private snippet vault.'}
           </p>
           {!searchQuery && !selectedTag && (
-            <Button asChild>
-              <Link to="/snippets/new">Create Snippet</Link>
+            <Button asChild size="lg">
+              <Link to="/snippets/new">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Snippet
+              </Link>
             </Button>
           )}
         </div>

@@ -24,7 +24,7 @@ export interface SnippetListItem {
   body: string
   tags: string[]
   updated_at: number
-  created_at: number
+  created_at?: number
   synced?: boolean
 }
 

@@ -1,6 +1,6 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
-import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { Copy, Download, Trash2, Undo } from 'lucide-react'
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { Copy, Download, FileCode, Trash2, Undo } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { PlaceholderEditor } from '~/components/PlaceholderEditor'
@@ -192,38 +192,61 @@ function SnippetDetail() {
   }
 
   if (loading) {
-    return <div className="text-center py-12 text-muted-foreground">Loading snippet...</div>
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-muted rounded w-3/4" />
+          <div className="flex gap-2">
+            <div className="h-6 bg-muted/50 rounded w-20" />
+            <div className="h-6 bg-muted/50 rounded w-24" />
+          </div>
+          <div className="h-64 bg-muted/30 rounded-lg" />
+        </div>
+      </div>
+    )
   }
 
   if (!snippet) {
-    return <div className="text-center py-12 text-muted-foreground">Snippet not found</div>
+    return (
+      <div className="text-center py-16 px-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+          <FileCode className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">Snippet not found</h3>
+        <p className="text-muted-foreground mb-6">The snippet you are looking for does not exist or has been deleted.</p>
+        <Button asChild>
+          <Link to="/">Go Back</Link>
+        </Button>
+      </div>
+    )
   }
 
   // React Compiler automatically memoizes this
   const parseResult = snippet ? parseTemplate(snippet.body) : null
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="flex items-start justify-between">
-        <div>
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
           <h1 className="text-3xl font-bold tracking-tight">{snippet.title}</h1>
           {snippet.tags.length > 0 && (
             <div className="flex gap-2 mt-3 flex-wrap">
               {snippet.tags.map(tag => (
-                <Badge key={tag} variant="outline">
+                <Badge key={tag} variant="outline" className="hover:bg-accent transition-colors cursor-default">
                   {tag}
                 </Badge>
               ))}
             </div>
           )}
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
+        <div className="flex gap-2 shrink-0">
+          <Button variant="outline" asChild className="touch-manipulation">
             <a href={`/snippets/${id}/edit`}>Edit</a>
           </Button>
-          <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+          <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} className="touch-manipulation">
             <Trash2 className="h-4 w-4 mr-2" />
-            Delete
+            <span className="hidden sm:inline">Delete</span>
           </Button>
         </div>
       </div>
@@ -262,46 +285,54 @@ function SnippetDetail() {
       {/* Rendered output */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium">Rendered Output</h2>
+          <h2 className="text-base font-semibold">Rendered Output</h2>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" disabled={renderErrors}>
+              <Button variant="outline" size="sm" disabled={renderErrors} className="touch-manipulation">
                 <Copy className="h-4 w-4 mr-2" />
                 Copy
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleCopyRendered}>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={handleCopyRendered} className="touch-manipulation cursor-pointer">
                 <Copy className="h-4 w-4 mr-2" />
-                Copy rendered output
+                <span>Copy rendered output</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleCopyRaw}>
+              <DropdownMenuItem onClick={handleCopyRaw} className="touch-manipulation cursor-pointer">
                 <Copy className="h-4 w-4 mr-2" />
-                Copy raw template
+                <span>Copy raw template</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleCopyUnrendered}>
+              <DropdownMenuItem onClick={handleCopyUnrendered} className="touch-manipulation cursor-pointer">
                 <Copy className="h-4 w-4 mr-2" />
-                Copy unrendered template
+                <span>Copy unrendered template</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleDownload}>
+              <DropdownMenuItem onClick={handleDownload} className="touch-manipulation cursor-pointer">
                 <Download className="h-4 w-4 mr-2" />
-                Download as file
+                <span>Download as file</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="p-4 bg-muted rounded-lg">
-          <pre className="whitespace-pre-wrap font-mono text-sm">{rendered || snippet.body}</pre>
+        <div className="p-4 bg-muted rounded-lg border">
+          <pre className="whitespace-pre-wrap font-mono text-sm break-words">{rendered || snippet.body}</pre>
         </div>
-        {renderErrors && <p className="text-sm text-destructive">Some placeholder values have errors. Please fix them before copying.</p>}
+        {renderErrors && (
+          <p className="text-sm text-destructive flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
+            Some placeholder values have errors. Please fix them before copying.
+          </p>
+        )}
       </div>
 
       {/* Raw body */}
-      <details className="space-y-2">
-        <summary className="text-sm font-medium cursor-pointer">Raw Template</summary>
-        <div className="p-4 bg-muted rounded-lg">
-          <pre className="whitespace-pre-wrap font-mono text-xs">{snippet.body}</pre>
+      <details className="space-y-2 group">
+        <summary className="text-base font-semibold cursor-pointer list-none flex items-center justify-between p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+          <span>Raw Template</span>
+          <span className="text-muted-foreground group-open:rotate-180 transition-transform duration-200">▼</span>
+        </summary>
+        <div className="p-4 bg-muted/50 rounded-lg mt-2 border">
+          <pre className="whitespace-pre-wrap font-mono text-xs break-words">{snippet.body}</pre>
         </div>
       </details>
     </div>
