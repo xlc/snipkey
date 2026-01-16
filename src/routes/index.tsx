@@ -473,10 +473,8 @@ function Index() {
                       <Badge
                         key={tag}
                         variant="secondary"
-                        className="text-xs cursor-pointer hover:bg-accent transition-colors"
-                        onClick={e => {
-                          e.preventDefault()
-                          e.stopPropagation()
+                        interactive
+                        onClick={() => {
                           setSelectedTag(tag)
                         }}
                       >

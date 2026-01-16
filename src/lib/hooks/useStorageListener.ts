@@ -59,6 +59,6 @@ export function useAuthSync(onAuthChange: (userId: string | null) => void) {
         onAuthChange(newValue.userId)
       }
     },
-    [onAuthChange],
+    [], // No deps - callbackRef handles the latest callback
   )
 }

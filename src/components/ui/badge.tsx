@@ -14,7 +14,7 @@ const badgeVariants = cva(
         outline: 'text-foreground',
       },
       interactive: {
-        true: 'cursor-pointer touch-manipulation min-h-[44px] min-w-[44px]',
+        true: 'cursor-pointer touch-manipulation min-h-[44px] min-w-[44px] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500',
         false: '',
       },
     },
@@ -25,10 +25,29 @@ const badgeVariants = cva(
   },
 )
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
+export interface BadgeProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onClick'>, VariantProps<typeof badgeVariants> {
+  onClick?: () => void
+  interactive?: boolean
+}
 
-function Badge({ className, variant, interactive, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant, interactive }), className)} {...props} />
+function Badge({ className, variant, interactive, onClick, ...props }: BadgeProps) {
+  // When interactive, render as button for accessibility
+  if (interactive || onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(badgeVariants({ variant, interactive: true }), className)}
+        // Only pass safe attributes to button
+        style={props.style}
+        title={props.title}
+        id={props.id}
+      />
+    )
+  }
+
+  // Non-interactive badges remain as divs
+  return <div className={cn(badgeVariants({ variant }), className)} {...props} />
 }
 
 export { Badge, badgeVariants }
