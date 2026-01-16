@@ -137,8 +137,8 @@ function TagsPage() {
                             setNewTagName('')
                           }
                         }}
-                        autoFocus
                         className="flex-1"
+                        autoComplete="off"
                       />
                       <Button size="sm" onClick={() => handleRenameTag(tag)}>
                         Save

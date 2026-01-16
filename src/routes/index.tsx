@@ -294,7 +294,7 @@ function Index() {
         <div className="flex flex-wrap gap-2">
           {authenticated ? (
             <Button variant="outline" onClick={handleSync} disabled={syncing || unsyncedCount === 0}>
-              {syncing ? 'Syncing...' : `Sync${unsyncedCount > 0 ? ` (${unsyncedCount})` : ''}`}
+              {syncing ? 'Syncing…' : `Sync${unsyncedCount > 0 ? ` (${unsyncedCount})` : ''}`}
             </Button>
           ) : (
             <Button variant="outline" asChild>
@@ -302,10 +302,10 @@ function Index() {
             </Button>
           )}
           <Button variant="outline" asChild>
-            <a href="/tags">
+            <Link to="/tags">
               <Tags className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Manage Tags</span>
-            </a>
+            </Link>
           </Button>
           <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
@@ -333,10 +333,11 @@ function Index() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               ref={searchInputRef}
-              placeholder="Search snippets... (title, content, tags) (/ to focus)"
+              placeholder="Search snippets… (title, content, tags) (/ to focus)"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="pl-10 pr-10"
+              autoComplete="off"
             />
             {searchQuery && (
               <button
@@ -387,7 +388,7 @@ function Index() {
             {searchQuery && (
               <Badge variant="secondary" interactive onClick={() => setSearchQuery('')}>
                 Search: {searchQuery.slice(0, 20)}
-                {searchQuery.length > 20 && '...'}
+                {searchQuery.length > 20 && '…'}
                 <X className="h-3 w-3 ml-1" />
               </Badge>
             )}
@@ -468,7 +469,7 @@ function Index() {
               {/* Preview */}
               <p className="text-sm text-muted-foreground mt-3 line-clamp-3 flex-1 relative z-10">
                 {snippet.body.slice(0, 150)}
-                {snippet.body.length > 150 && '...'}
+                {snippet.body.length > 150 && '…'}
               </p>
 
               {/* Tags */}

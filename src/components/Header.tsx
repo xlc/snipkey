@@ -52,9 +52,9 @@ export function Header() {
     setIsLoggingOut(true)
     try {
       await authLogout({})
-    } catch (error) {
-      // Log error but continue with cleanup
-      console.error('Logout failed on server, clearing local data anyway:', error)
+    } catch {
+      // Logout failed on server, but continue with local cleanup
+      // Error is silently handled - user experience is preserved
     } finally {
       // Always clear local data, even if authLogout fails
       clearLocalSnippets()
@@ -120,7 +120,7 @@ export function Header() {
               className="touch-manipulation hover:bg-destructive/10 hover:text-destructive transition-colors"
             >
               <LogOut className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
+              <span className="hidden sm:inline">{isLoggingOut ? 'Logging out…' : 'Logout'}</span>
             </Button>
           ) : (
             <Button variant="default" size="sm" asChild className="touch-manipulation shadow-sm hover:shadow transition-all duration-200">

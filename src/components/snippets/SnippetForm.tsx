@@ -42,6 +42,23 @@ export function SnippetForm({
   // Real-time parsing
   const parseResult = parseTemplate(body)
 
+  // Check if form has unsaved changes
+  const hasUnsavedChanges =
+    title.trim() !== initialTitle || body.trim() !== initialBody || JSON.stringify(tags) !== JSON.stringify(initialTags)
+
+  // Warn before navigation with unsaved changes
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = '' // Chrome requires returnValue to be set
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
   // Save draft to localStorage
   useEffect(() => {
     if (!enableAutoSave) return
@@ -201,7 +218,7 @@ export function SnippetForm({
               {saving ? (
                 <>
                   <Save className="h-3 w-3 animate-pulse" />
-                  Saving...
+                  Saving…
                 </>
               ) : lastSaved ? (
                 <>
@@ -219,7 +236,7 @@ export function SnippetForm({
           <label htmlFor="title" className="text-sm font-medium">
             Title <span className="text-destructive">*</span>
           </label>
-          <Input id="title" placeholder="My snippet" value={title} onChange={e => setTitle(e.target.value)} required />
+          <Input id="title" placeholder="My snippet" value={title} onChange={e => setTitle(e.target.value)} required autoComplete="off" />
         </div>
 
         <div className="space-y-2">
@@ -234,6 +251,7 @@ export function SnippetForm({
             rows={10}
             className="font-mono text-sm"
             required
+            autoComplete="off"
           />
           <p className="text-xs text-muted-foreground">
             Use {'{{name:text}}'} for text, {'{{age:number}}'} for numbers, or {'{{tone:enum(formal,casual)}}'} for enums
@@ -290,6 +308,7 @@ export function SnippetForm({
                   handleAddTag()
                 }
               }}
+              autoComplete="off"
             />
             <Button type="button" variant="outline" onClick={handleAddTag}>
               Add
@@ -314,6 +333,11 @@ export function SnippetForm({
             type="button"
             variant="outline"
             onClick={() => {
+              if (hasUnsavedChanges) {
+                if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+                  return
+                }
+              }
               if (mode === 'create') {
                 router.navigate({ to: '/' })
               } else if (id) {
