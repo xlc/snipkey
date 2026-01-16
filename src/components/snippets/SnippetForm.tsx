@@ -2,7 +2,7 @@ import { parseTemplate } from '@shared/template'
 import { LIMITS } from '@shared/validation/limits'
 import { useRouter } from '@tanstack/react-router'
 import { Save } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
@@ -42,9 +42,15 @@ export function SnippetForm({
   // Real-time parsing
   const parseResult = parseTemplate(body)
 
-  // Check if form has unsaved changes
-  const hasUnsavedChanges =
-    title.trim() !== initialTitle || body.trim() !== initialBody || JSON.stringify(tags) !== JSON.stringify(initialTags)
+  // Check if form has unsaved changes (memoized to prevent recomputation)
+  const hasUnsavedChanges = useMemo(
+    () =>
+      title.trim() !== initialTitle ||
+      body.trim() !== initialBody ||
+      tags.length !== initialTags.length ||
+      tags.some((t, i) => t !== initialTags[i]),
+    [title, body, tags, initialTitle, initialBody, initialTags],
+  )
 
   // Warn before navigation with unsaved changes
   useEffect(() => {

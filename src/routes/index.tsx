@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import { Clock, Download, FileCode, Filter, Plus, Search, Tags, Upload, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { SyncStatusBadge } from '~/components/SyncStatusBadge'
 import { Badge } from '~/components/ui/badge'
@@ -23,6 +23,88 @@ import { tagsList } from '~/server/tags'
 export const Route = createFileRoute('/')({
   component: Index,
 })
+
+// Hoist loading skeleton outside component to prevent recreation on every render
+const LOADING_SKELETON = (
+  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    {[1, 2, 3, 4, 5, 6].map(i => (
+      <div key={i} className="p-4 border rounded-lg animate-pulse">
+        <div className="h-5 bg-muted rounded w-3/4 mb-3" />
+        <div className="space-y-2">
+          <div className="h-3 bg-muted/50 rounded w-full" />
+          <div className="h-3 bg-muted/50 rounded w-5/6" />
+          <div className="h-3 bg-muted/50 rounded w-4/6" />
+        </div>
+        <div className="flex gap-2 mt-4">
+          <div className="h-5 bg-muted/30 rounded w-16" />
+          <div className="h-5 bg-muted/30 rounded w-20" />
+        </div>
+      </div>
+    ))}
+  </div>
+)
+
+// Memoized snippet card component to prevent unnecessary re-renders
+interface SnippetCardProps {
+  snippet: {
+    id: string
+    title: string
+    body: string
+    tags: string[]
+    updated_at: number
+    synced?: boolean
+  }
+  authenticated: boolean
+  onTagClick: (tag: string) => void
+  formatRelativeTime: (timestamp: number) => string
+}
+
+const SnippetCard = memo(({ snippet, authenticated, onTagClick, formatRelativeTime }: SnippetCardProps) => (
+  <div className="relative p-4 border rounded-lg hover:shadow-md hover:border-primary/50 transition-all duration-200 bg-card h-full flex flex-col group animate-in fade-in slide-in-from-bottom-2 duration-300 [content-visibility:auto]">
+    {/* Link overlay for card navigation */}
+    <Link to="/snippets/$id" params={{ id: snippet.id }} className="absolute inset-0 z-0" aria-label={`View ${snippet.title}`} />
+
+    {/* Sync status badge */}
+    {authenticated && <SyncStatusBadge snippet={snippet} />}
+
+    {/* Title */}
+    <h3 className="font-semibold text-base group-hover:text-primary transition-colors pr-12 line-clamp-2 relative z-10">{snippet.title}</h3>
+
+    {/* Timestamp */}
+    <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground relative z-10">
+      <Clock className="h-3 w-3" />
+      <span>{formatRelativeTime(snippet.updated_at)}</span>
+    </div>
+
+    {/* Preview */}
+    <p className="text-sm text-muted-foreground mt-3 line-clamp-3 flex-1 relative z-10">
+      {snippet.body.slice(0, 150)}
+      {snippet.body.length > 150 && '…'}
+    </p>
+
+    {/* Tags */}
+    {snippet.tags.length > 0 ? (
+      <div className="flex gap-3 mt-4 flex-wrap relative z-10">
+        {snippet.tags.slice(0, 3).map(tag => (
+          <Badge key={tag} variant="secondary" interactive onClick={() => onTagClick(tag)}>
+            {tag}
+          </Badge>
+        ))}
+        {snippet.tags.length > 3 && (
+          <Badge variant="secondary" className="text-xs">
+            +{snippet.tags.length - 3}
+          </Badge>
+        )}
+      </div>
+    ) : null}
+
+    {/* Hover indicator */}
+    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      <FileCode className="h-5 w-5 text-muted-foreground" />
+    </div>
+  </div>
+))
+SnippetCard.displayName = 'SnippetCard'
 
 function Index() {
   const router = useRouter()
@@ -64,50 +146,44 @@ function Index() {
 
   async function loadSnippets() {
     setLoading(true)
-    const result = await listSnippets({
-      limit: 20,
-      query: debouncedSearchQuery || undefined,
-      tag: selectedTag || undefined,
-      sortBy,
-      sortOrder,
-    })
 
-    if (result.error) {
+    // Parallel fetch: start both requests at once (async-parallel rule)
+    const [snippetsResult, tagsResult] = await Promise.all([
+      listSnippets({
+        limit: 20,
+        query: debouncedSearchQuery || undefined,
+        tag: selectedTag || undefined,
+        sortBy,
+        sortOrder,
+      }),
+      // Only fetch tags if authenticated, otherwise resolve immediately
+      authenticated ? tagsList({}) : Promise.resolve({ error: null, data: null }),
+    ])
+
+    if (snippetsResult.error) {
       toast.error('Failed to load snippets')
       setLoading(false)
       return
     }
 
-    const items = result.data || []
+    const items = snippetsResult.data || []
 
-    // Load tags from server for accurate counts (only if authenticated)
-    if (authenticated) {
-      const tagsResult = await tagsList({})
-      if (!tagsResult.error && tagsResult.data) {
-        // Merge server tags with tags from local unsynced snippets
-        const serverTags = new Set(tagsResult.data.tags.map(t => t.tag))
+    // Process tags in parallel with snippets fetch
+    if (authenticated && tagsResult?.data) {
+      // Merge server tags with tags from local unsynced snippets
+      const serverTags = new Set(tagsResult.data.tags.map(t => t.tag))
 
-        // Add tags from local unsynced snippets
-        const localUnsynced = getUnsyncedSnippets()
-        for (const local of localUnsynced) {
-          for (const tag of local.tags) {
-            serverTags.add(tag)
-          }
+      // Add tags from local unsynced snippets
+      const localUnsynced = getUnsyncedSnippets()
+      for (const local of localUnsynced) {
+        for (const tag of local.tags) {
+          serverTags.add(tag)
         }
-
-        setAllTags(Array.from(serverTags).sort())
-      } else {
-        // Fallback: extract tags from fetched snippets
-        const tags = new Set<string>()
-        for (const item of items) {
-          for (const tag of item.tags) {
-            tags.add(tag)
-          }
-        }
-        setAllTags(Array.from(tags).sort())
       }
+
+      setAllTags(Array.from(serverTags).sort())
     } else {
-      // Local mode: extract tags from fetched snippets
+      // Extract tags from fetched snippets (both authenticated fallback and local mode)
       const tags = new Set<string>()
       for (const item of items) {
         for (const tag of item.tags) {
@@ -424,82 +500,18 @@ function Index() {
       </div>
 
       {loading ? (
-        // Loading skeleton
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="p-4 border rounded-lg animate-pulse">
-              <div className="h-5 bg-muted rounded w-3/4 mb-3" />
-              <div className="space-y-2">
-                <div className="h-3 bg-muted/50 rounded w-full" />
-                <div className="h-3 bg-muted/50 rounded w-5/6" />
-                <div className="h-3 bg-muted/50 rounded w-4/6" />
-              </div>
-              <div className="flex gap-2 mt-4">
-                <div className="h-5 bg-muted/30 rounded w-16" />
-                <div className="h-5 bg-muted/30 rounded w-20" />
-              </div>
-            </div>
-          ))}
-        </div>
+        LOADING_SKELETON
       ) : snippets && snippets.length > 0 ? (
         // Snippet grid
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {snippets.map(snippet => (
-            <div
+            <SnippetCard
               key={snippet.id}
-              className="relative p-4 border rounded-lg hover:shadow-md hover:border-primary/50 transition-all duration-200 bg-card h-full flex flex-col group animate-in fade-in slide-in-from-bottom-2 duration-300"
-            >
-              {/* Link overlay for card navigation */}
-              <Link to="/snippets/$id" params={{ id: snippet.id }} className="absolute inset-0 z-0" aria-label={`View ${snippet.title}`} />
-
-              {/* Sync status badge */}
-              {authenticated && <SyncStatusBadge snippet={snippet} />}
-
-              {/* Title */}
-              <h3 className="font-semibold text-base group-hover:text-primary transition-colors pr-12 line-clamp-2 relative z-10">
-                {snippet.title}
-              </h3>
-
-              {/* Timestamp */}
-              <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground relative z-10">
-                <Clock className="h-3 w-3" />
-                <span>{formatRelativeTime(snippet.updated_at)}</span>
-              </div>
-
-              {/* Preview */}
-              <p className="text-sm text-muted-foreground mt-3 line-clamp-3 flex-1 relative z-10">
-                {snippet.body.slice(0, 150)}
-                {snippet.body.length > 150 && '…'}
-              </p>
-
-              {/* Tags */}
-              {snippet.tags.length > 0 && (
-                <div className="flex gap-3 mt-4 flex-wrap relative z-10">
-                  {snippet.tags.slice(0, 3).map(tag => (
-                    <Badge
-                      key={tag}
-                      variant="secondary"
-                      interactive
-                      onClick={() => {
-                        setSelectedTag(tag)
-                      }}
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                  {snippet.tags.length > 3 && (
-                    <Badge variant="secondary" className="text-xs">
-                      +{snippet.tags.length - 3}
-                    </Badge>
-                  )}
-                </div>
-              )}
-
-              {/* Hover indicator */}
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                <FileCode className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </div>
+              snippet={snippet}
+              authenticated={authenticated}
+              onTagClick={setSelectedTag}
+              formatRelativeTime={formatRelativeTime}
+            />
           ))}
         </div>
       ) : (
