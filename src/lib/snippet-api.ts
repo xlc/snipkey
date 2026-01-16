@@ -66,18 +66,6 @@ export async function listSnippets(filters: {
     const serverItems: SnippetListItem[] = result.data.items
     const localUnsynced = listLocalSnippets().filter(s => !s.synced)
 
-    // Create a map of server items by serverId for quick lookup
-    const serverMap = new Map<string, SnippetListItem>()
-    for (const item of serverItems) {
-      serverMap.set(item.id, item)
-    }
-
-    // Create set of local IDs for quick lookup
-    const localIds = new Set<string>()
-    for (const local of localUnsynced) {
-      localIds.add(local.serverId || local.id)
-    }
-
     // Build merged list, prioritizing local unsynced snippets
     const merged: SnippetListItem[] = []
     const processedServerIds = new Set<string>()

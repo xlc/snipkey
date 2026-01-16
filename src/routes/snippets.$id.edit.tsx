@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { SnippetForm } from '~/components/snippets/SnippetForm'
@@ -9,6 +9,7 @@ export const Route = createFileRoute('/snippets/$id/edit')({
 })
 
 function EditSnippet() {
+  const router = useRouter()
   const { id } = Route.useParams()
   const [initialData, setInitialData] = useState<{
     title: string
@@ -47,6 +48,9 @@ function EditSnippet() {
     }
 
     toast.success('Snippet updated!')
+
+    // Navigate back to the snippet page
+    router.navigate({ to: '/snippets/$id', params: { id } })
   }
 
   if (loading || !initialData) {
