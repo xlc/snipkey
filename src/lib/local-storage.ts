@@ -234,23 +234,25 @@ export function renameSnippetId(oldId: string, newId: string): boolean {
     // Save new key FIRST (safer - won't lose data if this fails)
     localStorage.setItem(newKey, newData)
 
-    // Only remove old key after new key is saved
-    localStorage.removeItem(oldKey)
-
-    // Verify the old key was actually removed (prevent local duplication)
-    if (localStorage.getItem(oldKey) !== null) {
-      // Removal failed - attempt to clean up by removing the new key to prevent duplicates
+    // Add ID mapping to prevent zombie snippets
+    // Perform BEFORE removing old key to prevent data loss if mapping fails
+    if (!addIdMapping(oldId, newId)) {
+      // Mapping failed - remove the new key we just created
       localStorage.removeItem(newKey)
       return false
     }
 
-    // Add ID mapping to prevent zombie snippets
-    // This allows UI to resolve old IDs to new IDs after sync
-    // Perform mapping BEFORE removing old key to prevent data loss if mapping fails
-    if (!addIdMapping(oldId, newId)) {
-      // Mapping failed - don't remove old key, keep data safe
-      // Remove the new key we just created to avoid duplication
+    // Only remove old key after new key is saved AND mapping is successful
+    localStorage.removeItem(oldKey)
+
+    // Verify the old key was actually removed (prevent local duplication)
+    if (localStorage.getItem(oldKey) !== null) {
+      // Removal failed - attempt to clean up by removing the new key and mapping
       localStorage.removeItem(newKey)
+      // Attempt to remove the ID mapping as well
+      const map = getIdMap()
+      delete map[oldId]
+      saveIdMap(map)
       return false
     }
 
