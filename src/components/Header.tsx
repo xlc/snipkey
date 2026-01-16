@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '~/components/ui/button'
 import { useMetaState } from '~/lib/hooks/useLocalStorageState'
 import { useAuthSync } from '~/lib/hooks/useStorageListener'
-import { clearLocalSnippets, getDeletedSnippets, getUnsyncedSnippets, setMeta as setMetaImperative } from '~/lib/local-storage'
+import { clearLocalSnippets, getDeletedSnippets, getUnsyncedSnippets } from '~/lib/local-storage'
 import { getAuthStatus } from '~/lib/snippet-api'
 import { authLogout } from '~/server/auth'
 
@@ -58,8 +58,8 @@ export function Header() {
     } finally {
       // Always clear local data, even if authLogout fails
       clearLocalSnippets()
-      setMeta({ userId: null, mode: 'local', lastSyncAt: null }) // Update reactive state
-      setMetaImperative({ userId: null, mode: 'local', lastSyncAt: null }) // Update imperative storage
+      // setMeta (from useMetaState) updates both React state and localStorage
+      setMeta({ userId: null, mode: 'local', lastSyncAt: null })
       setAuthenticated(false)
       toast.info('Logged out. All local data has been cleared.')
       // Redirect immediately (no need to reset isLoggingOut before page reload)

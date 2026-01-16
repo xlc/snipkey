@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 /**
  * Hook to listen for localStorage changes across tabs/windows
@@ -9,6 +9,13 @@ import { useEffect } from 'react'
  * @param deps - Dependencies for the callback (if it references other state)
  */
 export function useStorageListener<T>(key: string, callback: (newValue: T | null) => void, deps: React.DependencyList = []) {
+  // Use ref to store the latest callback without causing effect re-runs
+  const callbackRef = useRef(callback)
+
+  useEffect(() => {
+    callbackRef.current = callback
+  }, [callback])
+
   useEffect(() => {
     if (typeof window === 'undefined') return
 
@@ -26,7 +33,8 @@ export function useStorageListener<T>(key: string, callback: (newValue: T | null
         }
       }
 
-      callback(newValue)
+      // Use the ref to avoid stale closures
+      callbackRef.current(newValue)
     }
 
     // Add event listener
@@ -36,7 +44,7 @@ export function useStorageListener<T>(key: string, callback: (newValue: T | null
     return () => {
       window.removeEventListener('storage', handleStorageChange)
     }
-  }, [key, callback, ...deps])
+  }, [key, ...deps]) // Exclude callback - we use callbackRef instead
 }
 
 /**
