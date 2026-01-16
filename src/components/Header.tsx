@@ -3,15 +3,23 @@ import { Cloud, CloudOff, LogOut, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '~/components/ui/button'
-import { clearLocalSnippets, getDeletedSnippets, getUnsyncedSnippets, setMeta } from '~/lib/local-storage'
+import { useMetaState } from '~/lib/hooks/useLocalStorageState'
+import { useAuthSync } from '~/lib/hooks/useStorageListener'
+import { clearLocalSnippets, getDeletedSnippets, getUnsyncedSnippets, setMeta as setMetaImperative } from '~/lib/local-storage'
 import { getAuthStatus } from '~/lib/snippet-api'
 import { authLogout } from '~/server/auth'
 
 export function Header() {
+  const [_meta, setMeta] = useMetaState()
   const [authenticated, setAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)
   const [_animating, setAnimating] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  // Sync authentication state across tabs
+  useAuthSync(userId => {
+    setAuthenticated(userId !== null)
+  })
 
   useEffect(() => {
     async function checkAuth() {
@@ -50,7 +58,8 @@ export function Header() {
     } finally {
       // Always clear local data, even if authLogout fails
       clearLocalSnippets()
-      setMeta({ userId: null, mode: 'local', lastSyncAt: null })
+      setMeta({ userId: null, mode: 'local', lastSyncAt: null }) // Update reactive state
+      setMetaImperative({ userId: null, mode: 'local', lastSyncAt: null }) // Update imperative storage
       setAuthenticated(false)
       toast.info('Logged out. All local data has been cleared.')
       // Redirect immediately (no need to reset isLoggingOut before page reload)
