@@ -163,8 +163,7 @@ export function deleteLocalSnippet(id: string): boolean {
     updated_at: Date.now(),
   }
 
-  saveLocalSnippet(deleted)
-  return true
+  return saveLocalSnippet(deleted)
 }
 
 export function saveLocalSnippet(snippet: LocalSnippet): boolean {

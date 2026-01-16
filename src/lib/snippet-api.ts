@@ -245,9 +245,15 @@ export async function updateSnippet(id: string, updates: Partial<SnippetData>): 
   }
 
   // Local mode
+  // Check if snippet exists first to distinguish between "not found" and "save failed"
+  const existing = getLocalSnippet(resolvedId)
+  if (!existing) {
+    return { error: 'Snippet not found' }
+  }
+
   const local = updateLocalSnippet(resolvedId, updates)
   if (!local) {
-    return { error: 'Snippet not found' }
+    return { error: 'Failed to save snippet (storage quota exceeded?)' }
   }
 
   return { data: { success: true } }
