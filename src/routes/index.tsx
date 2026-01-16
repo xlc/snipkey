@@ -16,6 +16,7 @@ import { Input } from '~/components/ui/input'
 import { useDebounce } from '~/lib/hooks/useDebounce'
 import { useKeyboardShortcuts } from '~/lib/hooks/useKeyboardShortcuts'
 import { createSnippet, getAuthStatus, listSnippets, syncToServer } from '~/lib/snippet-api'
+import { tagsList } from '~/server/tags'
 
 export const Route = createFileRoute('/')({
   component: Index,
@@ -71,14 +72,20 @@ function Index() {
 
     const items = result.data || []
 
-    // Extract all unique tags from fetched snippets
-    const tags = new Set<string>()
-    for (const item of items) {
-      for (const tag of item.tags) {
-        tags.add(tag)
+    // Load tags from server for accurate counts
+    const tagsResult = await tagsList({})
+    if (!tagsResult.error && tagsResult.data) {
+      setAllTags(tagsResult.data.tags.map(t => t.tag))
+    } else {
+      // Fallback: extract tags from fetched snippets
+      const tags = new Set<string>()
+      for (const item of items) {
+        for (const tag of item.tags) {
+          tags.add(tag)
+        }
       }
+      setAllTags(Array.from(tags).sort())
     }
-    setAllTags(Array.from(tags).sort())
 
     setSnippets(items)
     // Add a small delay for smoother transitions
@@ -356,6 +363,7 @@ function Index() {
                 size="sm"
                 variant="ghost"
                 className="h-7 text-xs"
+                aria-label="Clear all filters"
                 onClick={() => {
                   setSelectedTag(null)
                   setSearchQuery('')

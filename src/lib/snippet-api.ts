@@ -96,6 +96,24 @@ export async function listSnippets(filters: {
       }
     }
 
+    // Sort the merged list according to user preferences
+    const sortColumn = filters.sortBy || 'updated'
+    const sortDirection = filters.sortOrder || 'desc'
+
+    merged.sort((a, b) => {
+      if (sortColumn === 'title') {
+        // For title sorting, use string comparison
+        const comparison = a.title.localeCompare(b.title)
+        return sortDirection === 'asc' ? comparison : -comparison
+      }
+
+      // For created/updated sorting, use timestamp comparison
+      const aValue = sortColumn === 'created' ? a.created_at || 0 : a.updated_at
+      const bValue = sortColumn === 'created' ? b.created_at || 0 : b.updated_at
+
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
+    })
+
     return { data: merged }
   }
 

@@ -159,11 +159,22 @@ export function deleteLocalSnippet(id: string): boolean {
   return true
 }
 
-export function saveLocalSnippet(snippet: LocalSnippet): void {
-  if (typeof window === 'undefined') return
+export function saveLocalSnippet(snippet: LocalSnippet): boolean {
+  if (typeof window === 'undefined') return false
 
   const key = getSnippetKey(snippet.id)
-  localStorage.setItem(key, JSON.stringify(snippet))
+  try {
+    localStorage.setItem(key, JSON.stringify(snippet))
+    return true
+  } catch (error) {
+    // Handle quota exceeded or other localStorage errors
+    if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+      console.error('Local storage quota exceeded, unable to save snippet')
+    } else {
+      console.error('Failed to save snippet to local storage:', error)
+    }
+    return false
+  }
 }
 
 export function markAsSynced(id: string): void {
@@ -288,10 +299,20 @@ export function getIdMap(): IdMap {
   }
 }
 
-export function saveIdMap(map: IdMap): void {
-  if (typeof window === 'undefined') return
+export function saveIdMap(map: IdMap): boolean {
+  if (typeof window === 'undefined') return false
 
-  localStorage.setItem(ID_MAP_KEY, JSON.stringify(map))
+  try {
+    localStorage.setItem(ID_MAP_KEY, JSON.stringify(map))
+    return true
+  } catch (error) {
+    if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+      console.error('Local storage quota exceeded, unable to save ID map')
+    } else {
+      console.error('Failed to save ID map to local storage:', error)
+    }
+    return false
+  }
 }
 
 export function addIdMapping(oldId: string, newId: string): void {

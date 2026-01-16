@@ -95,14 +95,14 @@ export async function authRegisterStart(db: ReturnType<typeof getDb>, env: Cloud
     userName: userId, // Using user ID as username for discoverable passkeys
   })
 
-  // Store challenge
+  // Store challenge (user_id is null until registration completes)
   await db
     .insertInto('auth_challenges')
     .values({
       id: challengeId,
       challenge: options.challenge,
       type: 'registration',
-      user_id: userId,
+      user_id: null, // Will be set after user creation
       expires_at: nowMs() + config.challengeTTLMs,
       created_at: nowMs(),
     })
@@ -164,20 +164,10 @@ export async function authRegisterFinish(
     } satisfies ApiError)
   }
 
-  await db
-    .insertInto('webauthn_credentials')
-    .values({
-      credential_id: credential.id,
-      user_id: challenge.user_id ?? '',
-      public_key: JSON.stringify(credential.publicKey),
-      counter: credential.counter,
-      transports: JSON.stringify(credential.transports || []),
-      created_at: nowMs(),
-    })
-    .execute()
+  // Generate user ID
+  const userId = crypto.randomUUID()
 
-  // Create user row only after successful verification
-  const userId = challenge.user_id ?? ''
+  // Create user record FIRST (required by foreign key constraint)
   await db
     .insertInto('users')
     .values({
@@ -185,6 +175,19 @@ export async function authRegisterFinish(
       created_at: nowMs(),
     })
     .onConflict(db => db.doNothing())
+    .execute()
+
+  // Now insert the credential (foreign key constraint satisfied)
+  await db
+    .insertInto('webauthn_credentials')
+    .values({
+      credential_id: credential.id,
+      user_id: userId,
+      public_key: JSON.stringify(credential.publicKey),
+      counter: credential.counter,
+      transports: JSON.stringify(credential.transports || []),
+      created_at: nowMs(),
+    })
     .execute()
 
   // Delete challenge
