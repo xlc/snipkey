@@ -1,5 +1,4 @@
 import { cva, type VariantProps } from 'class-variance-authority'
-import type * as React from 'react'
 
 import { cn } from '~/lib/utils'
 
@@ -14,7 +13,7 @@ const badgeVariants = cva(
         outline: 'text-foreground',
       },
       interactive: {
-        true: 'cursor-pointer touch-manipulation min-h-[44px] min-w-[44px] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500',
+        true: 'cursor-pointer touch-manipulation min-h-[44px] min-w-[44px] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring',
         false: '',
       },
     },
@@ -25,25 +24,19 @@ const badgeVariants = cva(
   },
 )
 
-export interface BadgeProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onClick'>, VariantProps<typeof badgeVariants> {
+export interface BadgeProps extends VariantProps<typeof badgeVariants> {
   onClick?: () => void
   interactive?: boolean
+  className?: string
+  children?: React.ReactNode
+  [key: string]: unknown // Allow any other HTML attributes
 }
 
 function Badge({ className, variant, interactive, onClick, children, ...props }: BadgeProps) {
   // When interactive, render as button for accessibility
   if (interactive || onClick) {
     return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={cn(badgeVariants({ variant, interactive: true }), className)}
-        // Pass safe attributes
-        style={props.style}
-        title={props.title}
-        id={props.id}
-        aria-label={props['aria-label']}
-      >
+      <button type="button" onClick={onClick} className={cn(badgeVariants({ variant, interactive: true }), className)} {...props}>
         {children}
       </button>
     )
