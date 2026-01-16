@@ -72,8 +72,8 @@ function Login() {
       }
 
       // This shouldn't happen since authRegisterFinish always returns Response
-      toast.success('Account created successfully!')
-      router.navigate({ to: '/' })
+      // If it does, show an error instead of silently navigating
+      toast.error('Registration failed: Unexpected response from server')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Registration failed')
     } finally {
@@ -139,8 +139,8 @@ function Login() {
       }
 
       // This shouldn't happen since authLoginFinish always returns Response
-      toast.success('Welcome back!')
-      router.navigate({ to: '/' })
+      // If it does, show an error instead of silently navigating
+      toast.error('Login failed: Unexpected response from server')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Login failed')
     } finally {

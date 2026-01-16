@@ -62,7 +62,28 @@ export async function listSnippets(filters: {
       return { data: local.map(toListItem) }
     }
 
-    return { data: result.data.items }
+    // Merge server results with local unsynced snippets
+    const serverItems: SnippetListItem[] = result.data.items
+    const localUnsynced = listLocalSnippets().filter(s => !s.synced)
+
+    // Create a map of server items by serverId for quick lookup
+    const serverMap = new Map<string, SnippetListItem>()
+    for (const item of serverItems) {
+      serverMap.set(item.id, item)
+    }
+
+    // Add local unsynced snippets (preferring local over server if duplicate)
+    const merged = [...serverItems]
+    for (const local of localUnsynced) {
+      // If snippet has a serverId and exists on server, skip (server is source of truth)
+      if (local.serverId && serverMap.has(local.serverId)) {
+        continue
+      }
+      // Otherwise, add local snippet to list
+      merged.push(toListItem(local))
+    }
+
+    return { data: merged }
   }
 
   // Local mode: use localStorage

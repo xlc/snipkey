@@ -3,7 +3,7 @@ import { Cloud, CloudOff, LogOut, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '~/components/ui/button'
-import { clearLocalSnippets, getUnsyncedSnippets, setMeta } from '~/lib/local-storage'
+import { clearLocalSnippets, getDeletedSnippets, getUnsyncedSnippets, setMeta } from '~/lib/local-storage'
 import { getAuthStatus } from '~/lib/snippet-api'
 import { authLogout } from '~/server/auth'
 
@@ -27,12 +27,17 @@ export function Header() {
   }, [])
 
   async function handleLogout() {
-    // Check for unsynced changes
+    // Check for unsynced changes and pending deletions
     const unsynced = getUnsyncedSnippets()
-    if (unsynced.length > 0) {
-      const confirmLogout = confirm(
-        `You have ${unsynced.length} unsynced snippet${unsynced.length > 1 ? 's' : ''}. Logging out will permanently delete these local changes. Continue?`,
-      )
+    const deleted = getDeletedSnippets()
+    const unsyncedCount = unsynced.length + deleted.length
+
+    if (unsyncedCount > 0) {
+      const changes = []
+      if (unsynced.length > 0) changes.push(`${unsynced.length} unsynced snippet${unsynced.length > 1 ? 's' : ''}`)
+      if (deleted.length > 0) changes.push(`${deleted.length} pending deletion${deleted.length > 1 ? 's' : ''}`)
+
+      const confirmLogout = confirm(`You have ${changes.join(' and ')}. Logging out will permanently delete these local changes. Continue?`)
       if (!confirmLogout) return
     }
 
