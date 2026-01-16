@@ -246,10 +246,10 @@ function Index() {
     },
   ])
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Re-load when search, tag, or sort changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Re-load when search, tag, sort, sortBy, sortOrder, or auth changes
   useEffect(() => {
     loadSnippets()
-  }, [debouncedSearchQuery, selectedTag, sortBy, sortOrder])
+  }, [debouncedSearchQuery, selectedTag, sortBy, sortOrder, authenticated])
 
   // Format timestamp to relative time
   function formatRelativeTime(timestamp: number): string {

@@ -95,14 +95,14 @@ export async function authRegisterStart(db: ReturnType<typeof getDb>, env: Cloud
     userName: userId, // Using user ID as username for discoverable passkeys
   })
 
-  // Store challenge (user_id is null until registration completes)
+  // Store challenge with userId for reuse in finish phase
   await db
     .insertInto('auth_challenges')
     .values({
       id: challengeId,
       challenge: options.challenge,
       type: 'registration',
-      user_id: null, // Will be set after user creation
+      user_id: userId, // Store userId so authRegisterFinish can reuse it
       expires_at: nowMs() + config.challengeTTLMs,
       created_at: nowMs(),
     })
@@ -164,8 +164,8 @@ export async function authRegisterFinish(
     } satisfies ApiError)
   }
 
-  // Generate user ID
-  const userId = crypto.randomUUID()
+  // Reuse userId from authRegisterStart for consistency
+  const userId = challenge.user_id || crypto.randomUUID()
 
   // Create user record FIRST (required by foreign key constraint)
   await db
