@@ -18,6 +18,7 @@ export interface SnippetData {
 
 const STORAGE_PREFIX = 'snippet_'
 const META_KEY = 'snipkey_meta'
+const ID_MAP_KEY = 'snipkey_id_map'
 
 export interface LocalSnippet extends Snippet {
   synced: boolean
@@ -232,6 +233,10 @@ export function renameSnippetId(oldId: string, newId: string): boolean {
       return false
     }
 
+    // Add ID mapping to prevent zombie snippets
+    // This allows UI to resolve old IDs to new IDs after sync
+    addIdMapping(oldId, newId)
+
     return true
   } catch {
     return false
@@ -263,4 +268,54 @@ export function clearLocalSnippets(): void {
   for (const key of keys) {
     localStorage.removeItem(key)
   }
+}
+
+// ID mapping to handle renames during sync (prevents zombie snippets)
+export interface IdMap {
+  [oldId: string]: string // Maps old ID to new ID
+}
+
+export function getIdMap(): IdMap {
+  if (typeof window === 'undefined') return {}
+
+  const stored = localStorage.getItem(ID_MAP_KEY)
+  if (!stored) return {}
+
+  try {
+    return JSON.parse(stored) as IdMap
+  } catch {
+    return {}
+  }
+}
+
+export function saveIdMap(map: IdMap): void {
+  if (typeof window === 'undefined') return
+
+  localStorage.setItem(ID_MAP_KEY, JSON.stringify(map))
+}
+
+export function addIdMapping(oldId: string, newId: string): void {
+  const map = getIdMap()
+  map[oldId] = newId
+  saveIdMap(map)
+}
+
+export function resolveSnippetId(id: string): string {
+  const map = getIdMap()
+
+  // Check if this ID has been remapped
+  if (id in map) {
+    const newId = map[id]
+    if (newId) {
+      return newId
+    }
+  }
+
+  return id
+}
+
+export function clearIdMap(): void {
+  if (typeof window === 'undefined') return
+
+  localStorage.removeItem(ID_MAP_KEY)
 }

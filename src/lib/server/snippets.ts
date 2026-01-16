@@ -2,6 +2,7 @@ import { type getDb, newId, nowMs, parseJsonArray, stringifyJsonArray } from '@s
 import type { ApiError } from '@shared/types'
 import { err, ok } from '@shared/types'
 import type { SnippetCreateInput, SnippetListInput, SnippetUpdateInput } from '@shared/validation'
+import { sql } from 'kysely'
 
 // List snippets with filtering and pagination
 export async function snippetsList(db: ReturnType<typeof getDb>, userId: string, input: SnippetListInput) {
@@ -24,15 +25,15 @@ export async function snippetsList(db: ReturnType<typeof getDb>, userId: string,
 
   // Apply tag filter using SQLite's json_each for proper array matching
   if (input.tag) {
-    // Use a simpler approach with LIKE that's more reliable than the old JSON string matching
-    // This matches tags in the JSON array format: ["tag1","tag2"]
-    const patterns = [
-      `"${input.tag}"`, // Match as standalone tag
-      `"${input.tag}",`, // Match at start of array
-      `,"${input.tag}"`, // Match in middle of array
-    ]
-
-    query = query.where(eb => eb.or(patterns.map(pattern => eb('tags', 'like', `%${pattern}%`))))
+    // Use raw SQL to properly join with json_each table-valued function
+    // This avoids false positives (e.g., "art" matching "smart")
+    const tag = input.tag
+    query = query.where(
+      sql<boolean>`EXISTS (
+        SELECT 1 FROM json_each(snippets.tags)
+        WHERE json_each.value = ${tag}
+      )`,
+    )
   }
 
   // Apply cursor pagination (works with updated_at sorting)

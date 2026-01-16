@@ -12,6 +12,7 @@ import {
   markAsSynced,
   permanentlyDeleteSnippet,
   renameSnippetId,
+  resolveSnippetId,
   saveLocalSnippet,
   setMeta,
   updateLocalSnippet,
@@ -135,12 +136,15 @@ export async function listSnippets(filters: {
 
 // Get single snippet
 export async function getSnippet(id: string): Promise<ApiResult<Snippet>> {
+  // Resolve any ID mappings from sync (prevents zombie snippets)
+  const resolvedId = resolveSnippetId(id)
+
   // Always check local first for unsynced changes
-  let local = getLocalSnippet(id)
+  let local = getLocalSnippet(resolvedId)
   // If not found by local id, try finding by serverId
   if (!local) {
     const allLocal = listLocalSnippets()
-    local = allLocal.find(s => s.serverId === id) || null
+    local = allLocal.find(s => s.serverId === resolvedId) || null
   }
   const hasLocalUnsynced = local && !local.synced && !local.deleted
 
@@ -155,8 +159,8 @@ export async function getSnippet(id: string): Promise<ApiResult<Snippet>> {
       return { data: fromLocalSnippet(local) }
     }
 
-    // Otherwise fetch from server
-    const result = await snippetGet({ data: { id } })
+    // Otherwise fetch from server using resolved ID
+    const result = await snippetGet({ data: { id: resolvedId } })
 
     if (result.error) {
       // Try local as fallback
@@ -198,12 +202,15 @@ export async function createSnippet(snippet: SnippetData): Promise<ApiResult<{ i
 
 // Update snippet
 export async function updateSnippet(id: string, updates: Partial<SnippetData>): Promise<ApiResult<{ success: boolean }>> {
+  // Resolve any ID mappings from sync (prevents zombie snippets)
+  const resolvedId = resolveSnippetId(id)
+
   if (isAuthenticated()) {
-    const result = await snippetUpdate({ data: { id, ...updates } })
+    const result = await snippetUpdate({ data: { id: resolvedId, ...updates } })
 
     if (result.error) {
       // Try local update
-      const local = updateLocalSnippet(id, updates)
+      const local = updateLocalSnippet(resolvedId, updates)
       if (local) {
         return { data: { success: true } }
       }
@@ -214,7 +221,7 @@ export async function updateSnippet(id: string, updates: Partial<SnippetData>): 
   }
 
   // Local mode
-  const local = updateLocalSnippet(id, updates)
+  const local = updateLocalSnippet(resolvedId, updates)
   if (!local) {
     return { error: 'Snippet not found' }
   }
@@ -224,12 +231,15 @@ export async function updateSnippet(id: string, updates: Partial<SnippetData>): 
 
 // Delete snippet
 export async function deleteSnippet(id: string): Promise<ApiResult<{ success: boolean }>> {
+  // Resolve any ID mappings from sync (prevents zombie snippets)
+  const resolvedId = resolveSnippetId(id)
+
   if (isAuthenticated()) {
-    const result = await snippetDelete({ data: { id } })
+    const result = await snippetDelete({ data: { id: resolvedId } })
 
     if (result.error) {
       // Try local delete
-      const success = deleteLocalSnippet(id)
+      const success = deleteLocalSnippet(resolvedId)
       if (success) {
         return { data: { success: true } }
       }
@@ -240,7 +250,7 @@ export async function deleteSnippet(id: string): Promise<ApiResult<{ success: bo
   }
 
   // Local mode
-  const success = deleteLocalSnippet(id)
+  const success = deleteLocalSnippet(resolvedId)
   if (!success) {
     return { error: 'Snippet not found' }
   }
