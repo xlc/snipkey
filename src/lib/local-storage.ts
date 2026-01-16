@@ -209,19 +209,26 @@ export function renameSnippetId(oldId: string, newId: string): boolean {
 
   if (!data) return false
 
-  // Remove old key
-  localStorage.removeItem(oldKey)
+  try {
+    // Parse and update snippet
+    const snippet = JSON.parse(data) as LocalSnippet
+    snippet.id = newId
+    snippet.serverId = newId // Track server ID
+    snippet.synced = true
 
-  // Save with new key
-  const snippet = JSON.parse(data) as LocalSnippet
-  snippet.id = newId
-  snippet.serverId = newId // Track server ID
-  snippet.synced = true
+    const newKey = getSnippetKey(newId)
+    const newData = JSON.stringify(snippet)
 
-  const newKey = getSnippetKey(newId)
-  localStorage.setItem(newKey, JSON.stringify(snippet))
+    // Save new key FIRST (safer - won't lose data if this fails)
+    localStorage.setItem(newKey, newData)
 
-  return true
+    // Only remove old key after new key is saved
+    localStorage.removeItem(oldKey)
+
+    return true
+  } catch {
+    return false
+  }
 }
 
 export function permanentlyDeleteSnippet(id: string): boolean {

@@ -3,7 +3,7 @@ import { Cloud, CloudOff, LogOut, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '~/components/ui/button'
-import { clearLocalSnippets, setMeta } from '~/lib/local-storage'
+import { clearLocalSnippets, getUnsyncedSnippets, setMeta } from '~/lib/local-storage'
 import { getAuthStatus } from '~/lib/snippet-api'
 import { authLogout } from '~/server/auth'
 
@@ -11,6 +11,7 @@ export function Header() {
   const [authenticated, setAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)
   const [_animating, setAnimating] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   useEffect(() => {
     async function checkAuth() {
@@ -26,13 +27,27 @@ export function Header() {
   }, [])
 
   async function handleLogout() {
-    await authLogout({})
-    // Clear all local data for privacy
-    clearLocalSnippets()
-    setMeta({ userId: null, mode: 'local', lastSyncAt: null })
-    setAuthenticated(false)
-    toast.info('Logged out. All local data has been cleared.')
-    window.location.href = '/'
+    // Check for unsynced changes
+    const unsynced = getUnsyncedSnippets()
+    if (unsynced.length > 0) {
+      const confirmLogout = confirm(
+        `You have ${unsynced.length} unsynced snippet${unsynced.length > 1 ? 's' : ''}. Logging out will permanently delete these local changes. Continue?`,
+      )
+      if (!confirmLogout) return
+    }
+
+    setIsLoggingOut(true)
+    try {
+      await authLogout({})
+      // Clear all local data for privacy
+      clearLocalSnippets()
+      setMeta({ userId: null, mode: 'local', lastSyncAt: null })
+      setAuthenticated(false)
+      toast.info('Logged out. All local data has been cleared.')
+      window.location.href = '/'
+    } finally {
+      setIsLoggingOut(false)
+    }
   }
 
   if (loading) {
@@ -83,13 +98,12 @@ export function Header() {
             <Button
               variant="ghost"
               size="sm"
-              asChild
+              onClick={handleLogout}
+              disabled={isLoggingOut}
               className="touch-manipulation hover:bg-destructive/10 hover:text-destructive transition-colors"
             >
-              <Link to="/login" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Logout</span>
-              </Link>
+              <LogOut className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
             </Button>
           ) : (
             <Button variant="default" size="sm" asChild className="touch-manipulation shadow-sm hover:shadow transition-all duration-200">

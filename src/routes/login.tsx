@@ -120,7 +120,20 @@ function Login() {
         // Update metadata with userId
         setMeta({ userId, mode: 'cloud' })
 
-        toast.success('Welcome back!')
+        // Sync local snippets to server (same as registration)
+        const syncResult = await syncToServer()
+
+        const messages = []
+        if (syncResult.synced > 0) messages.push(`${syncResult.synced} created`)
+        if (syncResult.updated > 0) messages.push(`${syncResult.updated} updated`)
+        if (syncResult.deleted > 0) messages.push(`${syncResult.deleted} deleted`)
+
+        if (messages.length > 0) {
+          toast.success(`Welcome back! Synced ${messages.join(', ')}.`)
+        } else {
+          toast.success('Welcome back!')
+        }
+
         router.navigate({ to: '/' })
         return
       }
