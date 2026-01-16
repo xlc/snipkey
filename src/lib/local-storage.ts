@@ -106,7 +106,7 @@ export function getLocalSnippet(id: string): LocalSnippet | null {
   }
 }
 
-export function createLocalSnippet(snippet: SnippetData): LocalSnippet {
+export function createLocalSnippet(snippet: SnippetData): LocalSnippet | null {
   const now = Date.now()
   const id = crypto.randomUUID()
   const meta = getMeta()
@@ -121,7 +121,11 @@ export function createLocalSnippet(snippet: SnippetData): LocalSnippet {
     deleted: false,
   }
 
-  saveLocalSnippet(localSnippet)
+  // Check if save succeeded - if not, return null to indicate failure
+  if (!saveLocalSnippet(localSnippet)) {
+    return null
+  }
+
   return localSnippet
 }
 
@@ -139,7 +143,11 @@ export function updateLocalSnippet(
     synced: false,
   }
 
-  saveLocalSnippet(updated)
+  // Check if save succeeded - if not, return null to indicate failure
+  if (!saveLocalSnippet(updated)) {
+    return null
+  }
+
   return updated
 }
 

@@ -30,7 +30,7 @@ export interface BadgeProps extends Omit<React.HTMLAttributes<HTMLDivElement>, '
   interactive?: boolean
 }
 
-function Badge({ className, variant, interactive, onClick, ...props }: BadgeProps) {
+function Badge({ className, variant, interactive, onClick, children, ...props }: BadgeProps) {
   // When interactive, render as button for accessibility
   if (interactive || onClick) {
     return (
@@ -38,16 +38,23 @@ function Badge({ className, variant, interactive, onClick, ...props }: BadgeProp
         type="button"
         onClick={onClick}
         className={cn(badgeVariants({ variant, interactive: true }), className)}
-        // Only pass safe attributes to button
+        // Pass safe attributes
         style={props.style}
         title={props.title}
         id={props.id}
-      />
+        aria-label={props['aria-label']}
+      >
+        {children}
+      </button>
     )
   }
 
   // Non-interactive badges remain as divs
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />
+  return (
+    <div className={cn(badgeVariants({ variant }), className)} {...props}>
+      {children}
+    </div>
+  )
 }
 
 export { Badge, badgeVariants }

@@ -207,6 +207,9 @@ export async function createSnippet(snippet: SnippetData): Promise<ApiResult<{ i
     if (result.error) {
       // Fallback to local
       const local = createLocalSnippet(snippet)
+      if (!local) {
+        return { error: 'Failed to create snippet locally' }
+      }
       return { data: { id: local.id } }
     }
 
@@ -215,6 +218,9 @@ export async function createSnippet(snippet: SnippetData): Promise<ApiResult<{ i
 
   // Local mode
   const local = createLocalSnippet(snippet)
+  if (!local) {
+    return { error: 'Failed to create snippet locally' }
+  }
   return { data: { id: local.id } }
 }
 
