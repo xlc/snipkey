@@ -3,6 +3,7 @@ import {
   createLocalSnippet,
   deleteLocalSnippet,
   getDeletedSnippets,
+  getLocalIdByServerId,
   getLocalSnippet,
   getMeta,
   getUnsyncedSnippets,
@@ -159,7 +160,14 @@ export async function getSnippet(id: string): Promise<ApiResult<Snippet>> {
 
   // Always check local first for unsynced changes
   let local = getLocalSnippet(resolvedId)
-  // If not found by local id, try finding by serverId
+  // If not found by local id, try efficient server ID lookup
+  if (!local) {
+    const localId = getLocalIdByServerId(resolvedId)
+    if (localId) {
+      local = getLocalSnippet(localId)
+    }
+  }
+  // Fallback to O(N) scan only if both lookups fail (should be rare)
   if (!local) {
     const allLocal = listLocalSnippets()
     local = allLocal.find(s => s.serverId === resolvedId) || null

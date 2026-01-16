@@ -19,6 +19,7 @@ export interface SnippetData {
 const STORAGE_PREFIX = 'snippet_'
 const META_KEY = 'snipkey_meta'
 const ID_MAP_KEY = 'snipkey_id_map'
+const SERVER_ID_MAP_KEY = 'snipkey_server_id_map'
 
 export interface LocalSnippet extends Snippet {
   synced: boolean
@@ -249,6 +250,11 @@ export function renameSnippetId(oldId: string, newId: string): boolean {
       return false
     }
 
+    // Add server ID mapping for efficient reverse lookups
+    if (!addServerIdMapping(newId, newId)) {
+      // If this fails, it's not critical - continue anyway
+    }
+
     // Only remove old key after new key is saved AND mapping is successful
     localStorage.removeItem(oldKey)
 
@@ -354,4 +360,55 @@ export function clearIdMap(): void {
   if (typeof window === 'undefined') return
 
   localStorage.removeItem(ID_MAP_KEY)
+}
+
+// Server ID mapping for efficient reverse lookups (serverId -> localId)
+export interface ServerIdMap {
+  [serverId: string]: string // Maps server ID to local ID
+}
+
+export function getServerIdMap(): ServerIdMap {
+  if (typeof window === 'undefined') return {}
+
+  const stored = localStorage.getItem(SERVER_ID_MAP_KEY)
+  if (!stored) return {}
+
+  try {
+    return JSON.parse(stored) as ServerIdMap
+  } catch {
+    return {}
+  }
+}
+
+export function saveServerIdMap(map: ServerIdMap): boolean {
+  if (typeof window === 'undefined') return false
+
+  try {
+    localStorage.setItem(SERVER_ID_MAP_KEY, JSON.stringify(map))
+    return true
+  } catch (error) {
+    if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+      console.error('Local storage quota exceeded, unable to save server ID map')
+    } else {
+      console.error('Failed to save server ID map to local storage:', error)
+    }
+    return false
+  }
+}
+
+export function addServerIdMapping(localId: string, serverId: string): boolean {
+  const map = getServerIdMap()
+  map[serverId] = localId
+  return saveServerIdMap(map)
+}
+
+export function getLocalIdByServerId(serverId: string): string | null {
+  const map = getServerIdMap()
+  return map[serverId] || null
+}
+
+export function clearServerIdMap(): void {
+  if (typeof window === 'undefined') return
+
+  localStorage.removeItem(SERVER_ID_MAP_KEY)
 }

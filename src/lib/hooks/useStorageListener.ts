@@ -8,7 +8,7 @@ import { useEffect, useRef } from 'react'
  * @param callback - Function to call when the key changes
  * @param deps - Dependencies for the callback (if it references other state)
  */
-export function useStorageListener<T>(key: string, callback: (newValue: T | null) => void, deps: React.DependencyList = []) {
+export function useStorageListener<T>(key: string, callback: (newValue: T | null) => void, _deps: React.DependencyList = []) {
   // Use ref to store the latest callback without causing effect re-runs
   const callbackRef = useRef(callback)
 
@@ -44,7 +44,7 @@ export function useStorageListener<T>(key: string, callback: (newValue: T | null
     return () => {
       window.removeEventListener('storage', handleStorageChange)
     }
-  }, [key, ...deps]) // Exclude callback - we use callbackRef instead
+  }, [key]) // Exclude callback - we use callbackRef instead
 }
 
 /**
