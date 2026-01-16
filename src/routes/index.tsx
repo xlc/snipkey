@@ -16,6 +16,7 @@ import { Input } from '~/components/ui/input'
 import { useDebounce } from '~/lib/hooks/useDebounce'
 import { useKeyboardShortcuts } from '~/lib/hooks/useKeyboardShortcuts'
 import { useStorageListener } from '~/lib/hooks/useStorageListener'
+import { getUnsyncedSnippets } from '~/lib/local-storage'
 import { createSnippet, getAuthStatus, listSnippets, syncToServer } from '~/lib/snippet-api'
 import { tagsList } from '~/server/tags'
 
@@ -83,7 +84,18 @@ function Index() {
     if (authenticated) {
       const tagsResult = await tagsList({})
       if (!tagsResult.error && tagsResult.data) {
-        setAllTags(tagsResult.data.tags.map(t => t.tag))
+        // Merge server tags with tags from local unsynced snippets
+        const serverTags = new Set(tagsResult.data.tags.map(t => t.tag))
+
+        // Add tags from local unsynced snippets
+        const localUnsynced = getUnsyncedSnippets()
+        for (const local of localUnsynced) {
+          for (const tag of local.tags) {
+            serverTags.add(tag)
+          }
+        }
+
+        setAllTags(Array.from(serverTags).sort())
       } else {
         // Fallback: extract tags from fetched snippets
         const tags = new Set<string>()
