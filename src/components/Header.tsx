@@ -53,7 +53,7 @@ export function Header() {
       setMeta({ userId: null, mode: 'local', lastSyncAt: null })
       setAuthenticated(false)
       toast.info('Logged out. All local data has been cleared.')
-      setIsLoggingOut(false)
+      // Redirect immediately (no need to reset isLoggingOut before page reload)
       window.location.href = '/'
     }
   }

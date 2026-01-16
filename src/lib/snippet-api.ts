@@ -138,12 +138,17 @@ export async function listSnippets(filters: {
 // Get single snippet
 export async function getSnippet(id: string): Promise<ApiResult<Snippet>> {
   // Always check local first for unsynced changes
-  const local = getLocalSnippet(id)
+  let local = getLocalSnippet(id)
+  // If not found by local id, try finding by serverId
+  if (!local) {
+    const allLocal = listLocalSnippets()
+    local = allLocal.find(s => s.serverId === id) || null
+  }
   const hasLocalUnsynced = local && !local.synced && !local.deleted
 
   if (isAuthenticated()) {
     // If we have local unsynced changes, prefer those
-    if (hasLocalUnsynced) {
+    if (hasLocalUnsynced && local) {
       return { data: fromLocalSnippet(local) }
     }
 
