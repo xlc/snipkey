@@ -44,14 +44,17 @@ export function Header() {
     setIsLoggingOut(true)
     try {
       await authLogout({})
-      // Clear all local data for privacy
+    } catch (error) {
+      // Log error but continue with cleanup
+      console.error('Logout failed on server, clearing local data anyway:', error)
+    } finally {
+      // Always clear local data, even if authLogout fails
       clearLocalSnippets()
       setMeta({ userId: null, mode: 'local', lastSyncAt: null })
       setAuthenticated(false)
       toast.info('Logged out. All local data has been cleared.')
-      window.location.href = '/'
-    } finally {
       setIsLoggingOut(false)
+      window.location.href = '/'
     }
   }
 

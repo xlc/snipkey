@@ -72,15 +72,29 @@ export async function listSnippets(filters: {
       serverMap.set(item.id, item)
     }
 
-    // Add local unsynced snippets (preferring local over server if duplicate)
-    const merged = [...serverItems]
+    // Create set of local IDs for quick lookup
+    const localIds = new Set<string>()
     for (const local of localUnsynced) {
-      // If snippet has a serverId and exists on server, skip (server is source of truth)
-      if (local.serverId && serverMap.has(local.serverId)) {
-        continue
-      }
-      // Otherwise, add local snippet to list
+      localIds.add(local.serverId || local.id)
+    }
+
+    // Build merged list, prioritizing local unsynced snippets
+    const merged: SnippetListItem[] = []
+    const processedServerIds = new Set<string>()
+
+    // First, add all local unsynced snippets
+    for (const local of localUnsynced) {
       merged.push(toListItem(local))
+      if (local.serverId) {
+        processedServerIds.add(local.serverId)
+      }
+    }
+
+    // Then, add server items that weren't overridden by local changes
+    for (const server of serverItems) {
+      if (!processedServerIds.has(server.id)) {
+        merged.push(server)
+      }
     }
 
     return { data: merged }
@@ -123,12 +137,21 @@ export async function listSnippets(filters: {
 
 // Get single snippet
 export async function getSnippet(id: string): Promise<ApiResult<Snippet>> {
+  // Always check local first for unsynced changes
+  const local = getLocalSnippet(id)
+  const hasLocalUnsynced = local && !local.synced && !local.deleted
+
   if (isAuthenticated()) {
+    // If we have local unsynced changes, prefer those
+    if (hasLocalUnsynced) {
+      return { data: fromLocalSnippet(local) }
+    }
+
+    // Otherwise fetch from server
     const result = await snippetGet({ data: { id } })
 
     if (result.error) {
       // Try local as fallback
-      const local = getLocalSnippet(id)
       if (local && !local.deleted) {
         return { data: fromLocalSnippet(local) }
       }
@@ -139,7 +162,6 @@ export async function getSnippet(id: string): Promise<ApiResult<Snippet>> {
   }
 
   // Local mode
-  const local = getLocalSnippet(id)
   if (!local || local.deleted) {
     return { error: 'Snippet not found' }
   }
@@ -242,6 +264,9 @@ export async function syncToServer(): Promise<{ synced: number; updated: number;
 
   // Sync new and modified snippets
   for (const snippet of unsynced) {
+    // Capture the timestamp BEFORE the sync request to detect race conditions
+    const snippetTimestamp = snippet.updated_at
+
     // If snippet has a serverId, it's an update, otherwise it's a new snippet
     if (snippet.serverId) {
       // Update existing snippet on server
@@ -257,8 +282,15 @@ export async function syncToServer(): Promise<{ synced: number; updated: number;
       if (result.error) {
         errors++
       } else {
-        markAsSynced(snippet.id)
-        updated++
+        // Only mark as synced if the snippet hasn't been modified during the sync request
+        const current = getLocalSnippet(snippet.id)
+        if (current && current.updated_at === snippetTimestamp) {
+          markAsSynced(snippet.id)
+          updated++
+        } else {
+          // Snippet was modified during sync, leave it as unsynced
+          errors++
+        }
       }
     } else {
       // Create new snippet on server
@@ -275,7 +307,9 @@ export async function syncToServer(): Promise<{ synced: number; updated: number;
       } else if (result.data) {
         // Update local snippet with server ID
         const serverId = result.data.id
-        if (renameSnippetId(snippet.id, serverId)) {
+        // Only rename if the snippet hasn't been modified during the sync request
+        const current = getLocalSnippet(snippet.id)
+        if (current && current.updated_at === snippetTimestamp && renameSnippetId(snippet.id, serverId)) {
           synced++
         } else {
           errors++
