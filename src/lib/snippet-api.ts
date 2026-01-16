@@ -1,5 +1,6 @@
 import type { Snippet, SnippetData } from '~/lib/local-storage'
 import {
+  addServerIdMapping,
   createLocalSnippet,
   deleteLocalSnippet,
   getDeletedSnippets,
@@ -385,6 +386,8 @@ export async function syncToServer(): Promise<{
                 // Saving failed - count as error to prevent duplicate sync
                 errors++
               } else {
+                // Add server ID mapping for efficient lookups
+                addServerIdMapping(snippet.id, serverId)
                 synced++
               }
             } else {
@@ -397,6 +400,8 @@ export async function syncToServer(): Promise<{
           if (updatedSnippet) {
             updatedSnippet.serverId = serverId
             saveLocalSnippet(updatedSnippet)
+            // Add server ID mapping for efficient lookups
+            addServerIdMapping(snippet.id, serverId)
           }
           skipped++
         }
