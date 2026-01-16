@@ -24,7 +24,7 @@ export const tagsList = createServerFn({ method: 'GET' })
       const result = await db
         .selectFrom(sql<string>`snippets, json_each(snippets.tags)`.as('je'))
         .select([sql<string>`json_each.value`.as('tag'), sql<number>`COUNT(*)`.as('count')])
-        .where(sql<boolean>`user_id = ${userId}`)
+        .where(sql<boolean>`snippets.user_id = ${userId}`)
         .groupBy(sql<string>`json_each.value`)
         .orderBy(sql<string>`count`, 'desc')
         .execute()

@@ -72,12 +72,23 @@ function Index() {
 
     const items = result.data || []
 
-    // Load tags from server for accurate counts
-    const tagsResult = await tagsList({})
-    if (!tagsResult.error && tagsResult.data) {
-      setAllTags(tagsResult.data.tags.map(t => t.tag))
+    // Load tags from server for accurate counts (only if authenticated)
+    if (authenticated) {
+      const tagsResult = await tagsList({})
+      if (!tagsResult.error && tagsResult.data) {
+        setAllTags(tagsResult.data.tags.map(t => t.tag))
+      } else {
+        // Fallback: extract tags from fetched snippets
+        const tags = new Set<string>()
+        for (const item of items) {
+          for (const tag of item.tags) {
+            tags.add(tag)
+          }
+        }
+        setAllTags(Array.from(tags).sort())
+      }
     } else {
-      // Fallback: extract tags from fetched snippets
+      // Local mode: extract tags from fetched snippets
       const tags = new Set<string>()
       for (const item of items) {
         for (const tag of item.tags) {

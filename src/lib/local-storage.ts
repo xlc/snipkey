@@ -246,7 +246,13 @@ export function renameSnippetId(oldId: string, newId: string): boolean {
 
     // Add ID mapping to prevent zombie snippets
     // This allows UI to resolve old IDs to new IDs after sync
-    addIdMapping(oldId, newId)
+    // Check if saveIdMap succeeds - if it fails, we should not consider the rename successful
+    if (!addIdMapping(oldId, newId)) {
+      // Mapping failed - attempt rollback
+      localStorage.setItem(oldKey, newData)
+      localStorage.removeItem(newKey)
+      return false
+    }
 
     return true
   } catch {
@@ -315,10 +321,10 @@ export function saveIdMap(map: IdMap): boolean {
   }
 }
 
-export function addIdMapping(oldId: string, newId: string): void {
+export function addIdMapping(oldId: string, newId: string): boolean {
   const map = getIdMap()
   map[oldId] = newId
-  saveIdMap(map)
+  return saveIdMap(map)
 }
 
 export function resolveSnippetId(id: string): string {
