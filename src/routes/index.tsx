@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
-import { Clock, Download, FileCode, Filter, Plus, Search, Tags, Upload, X } from 'lucide-react'
+import { Clock, Download, FileCode, Filter, Folder, FolderPlus, Plus, Search, Tags, Upload, X } from 'lucide-react'
 import { memo, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { FolderDialog } from '~/components/FolderDialog'
+import { FolderTree } from '~/components/FolderTree'
 import { SyncStatusBadge } from '~/components/SyncStatusBadge'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
@@ -19,6 +21,8 @@ import { useStorageListener } from '~/lib/hooks/useStorageListener'
 import { getUnsyncedSnippets } from '~/lib/local-storage'
 import { createSnippet, getAuthStatus, listSnippets, syncToServer } from '~/lib/snippet-api'
 import { tagsList } from '~/server/tags'
+import { foldersTree, folderCreate } from '~/server/folders'
+import type { FolderTreeItem } from '~/lib/server/folders'
 
 export const Route = createFileRoute('/')({
   component: Index,
@@ -44,6 +48,28 @@ const LOADING_SKELETON = (
   </div>
 )
 
+// Color mapping for folder badges
+const COLORS: Record<string, string> = {
+  gray: '#6b7280',
+  red: '#ef4444',
+  orange: '#f97316',
+  amber: '#f59e0b',
+  yellow: '#eab308',
+  lime: '#84cc16',
+  green: '#22c55e',
+  emerald: '#10b981',
+  teal: '#14b8a6',
+  cyan: '#06b6d4',
+  sky: '#0ea5e9',
+  blue: '#3b82f6',
+  indigo: '#6366f1',
+  violet: '#8b5cf6',
+  purple: '#a855f7',
+  fuchsia: '#d946ef',
+  pink: '#ec4899',
+  rose: '#f43f5e',
+}
+
 // Memoized snippet card component to prevent unnecessary re-renders
 interface SnippetCardProps {
   snippet: {
@@ -53,19 +79,29 @@ interface SnippetCardProps {
     tags: string[]
     updated_at: number
     synced?: boolean
+    folder_id?: string | null
   }
+  folders: Map<string, { name: string; color: string }>
   authenticated: boolean
   onTagClick: (tag: string) => void
   formatRelativeTime: (timestamp: number) => string
 }
 
-const SnippetCard = memo(({ snippet, authenticated, onTagClick, formatRelativeTime }: SnippetCardProps) => (
+const SnippetCard = memo(({ snippet, folders, authenticated, onTagClick, formatRelativeTime }: SnippetCardProps) => (
   <div className="relative p-4 border rounded-lg hover:shadow-md hover:border-primary/50 transition-all duration-200 bg-card h-full flex flex-col group animate-in fade-in slide-in-from-bottom-2 duration-300 [content-visibility:auto]">
     {/* Link overlay for card navigation */}
     <Link to="/snippets/$id" params={{ id: snippet.id }} className="absolute inset-0 z-0" aria-label={`View ${snippet.title}`} />
 
     {/* Sync status badge */}
     {authenticated && <SyncStatusBadge snippet={snippet} />}
+
+    {/* Folder badge */}
+    {snippet.folder_id && folders.has(snippet.folder_id) && (
+      <Badge variant="outline" className="absolute top-4 right-4 z-10" style={{ backgroundColor: `${COLORS[folders.get(snippet.folder_id)!.color]}20` }}>
+        <Folder className="h-3 w-3 mr-1" />
+        {folders.get(snippet.folder_id)!.name}
+      </Badge>
+    )}
 
     {/* Title */}
     <h3 className="font-semibold text-base group-hover:text-primary transition-colors pr-12 line-clamp-2 relative z-10">{snippet.title}</h3>
@@ -120,11 +156,15 @@ function Index() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<'updated' | 'created' | 'title'>('updated')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [allTags, setAllTags] = useState<string[]>([])
   const [authenticated, setAuthenticated] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [folderTree, setFolderTree] = useState<FolderTreeItem[]>([])
+  const [showFolderDialog, setShowFolderDialog] = useState(false)
+  const [folderDialogParentId, setFolderDialogParentId] = useState<string | null>(null)
 
   // Debounce search input to reduce API calls
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
@@ -144,20 +184,27 @@ function Index() {
     checkAuth()
   }, [])
 
+  // Reload snippets when filters change
+  useEffect(() => {
+    loadSnippets()
+  }, [debouncedSearchQuery, selectedTag, selectedFolderId, sortBy, sortOrder, authenticated])
+
   async function loadSnippets() {
     setLoading(true)
 
-    // Parallel fetch: start both requests at once (async-parallel rule)
-    const [snippetsResult, tagsResult] = await Promise.all([
+    // Parallel fetch: start all requests at once (async-parallel rule)
+    const [snippetsResult, tagsResult, foldersResult] = await Promise.all([
       listSnippets({
         limit: 20,
         query: debouncedSearchQuery || undefined,
         tag: selectedTag || undefined,
+        folder_id: selectedFolderId || undefined,
         sortBy,
         sortOrder,
       }),
-      // Only fetch tags if authenticated, otherwise resolve immediately
+      // Only fetch tags/folders if authenticated, otherwise resolve immediately
       authenticated ? tagsList({}) : Promise.resolve({ error: null, data: null }),
+      authenticated ? foldersTree() : Promise.resolve({ error: null, data: null }),
     ])
 
     if (snippetsResult.error) {
@@ -191,6 +238,13 @@ function Index() {
         }
       }
       setAllTags(Array.from(tags).sort())
+    }
+
+    // Load folder tree
+    if (authenticated && foldersResult?.data) {
+      setFolderTree(foldersResult.data.tree)
+    } else {
+      setFolderTree([])
     }
 
     setSnippets(items)
@@ -357,7 +411,58 @@ function Index() {
   const unsyncedCount = snippets?.filter(s => s.synced === false).length || 0
 
   return (
-    <div className="space-y-8">
+    <div className="flex gap-6">
+      {/* Folder Sidebar */}
+      <aside className="hidden lg:block w-64 flex-shrink-0">
+        <div className="sticky top-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold">Folders</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFolderDialogParentId(null)
+                setShowFolderDialog(true)
+              }}
+            >
+              <FolderPlus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {folderTree.length > 0 || authenticated ? (
+            <FolderTree
+              tree={folderTree}
+              selectedFolderId={selectedFolderId}
+              onFolderSelect={setSelectedFolderId}
+              onCreateFolder={(parentId) => {
+                setFolderDialogParentId(parentId)
+                setShowFolderDialog(true)
+              }}
+              onEditFolder={() => {}}
+              onDeleteFolder={() => {}}
+            />
+          ) : (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              No folders yet. Create your first folder to organize your snippets!
+            </div>
+          )}
+
+          {/* "All Snippets" option */}
+          {selectedFolderId !== null && (
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => setSelectedFolderId(null)}
+            >
+              <FileCode className="h-4 w-4 mr-2" />
+              All Snippets
+            </Button>
+          )}
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -504,15 +609,28 @@ function Index() {
       ) : snippets && snippets.length > 0 ? (
         // Snippet grid
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {snippets.map(snippet => (
-            <SnippetCard
-              key={snippet.id}
-              snippet={snippet}
-              authenticated={authenticated}
-              onTagClick={setSelectedTag}
-              formatRelativeTime={formatRelativeTime}
-            />
-          ))}
+          {snippets.map(snippet => {
+            // Build a flat map of folders for easy lookup
+            const foldersMap = new Map<string, { name: string; color: string }>()
+            const addToMap = (items: FolderTreeItem[]) => {
+              for (const item of items) {
+                foldersMap.set(item.id, { name: item.name, color: item.color })
+                if (item.children.length > 0) addToMap(item.children)
+              }
+            }
+            addToMap(folderTree)
+
+            return (
+              <SnippetCard
+                key={snippet.id}
+                snippet={snippet}
+                folders={foldersMap}
+                authenticated={authenticated}
+                onTagClick={setSelectedTag}
+                formatRelativeTime={formatRelativeTime}
+              />
+            )
+          })}
         </div>
       ) : (
         // Empty state
@@ -536,6 +654,18 @@ function Index() {
           )}
         </div>
       )}
+      </div>
+
+      {/* Folder Dialog */}
+      <FolderDialog
+        open={showFolderDialog}
+        onOpenChange={setShowFolderDialog}
+        mode="create"
+        parent_id={folderDialogParentId}
+        onSuccess={() => {
+          loadSnippets()
+        }}
+      />
     </div>
   )
 }
