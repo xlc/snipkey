@@ -16,7 +16,19 @@ export function err<E>(error: E): Result<never, E> {
   return { ok: false, error }
 }
 
-export type ErrorCode = 'AUTH_REQUIRED' | 'NOT_FOUND' | 'VALIDATION_ERROR' | 'INTERNAL' | 'UNAUTHORIZED'
+export type ErrorCode =
+  | 'AUTH_REQUIRED'
+  | 'NOT_FOUND'
+  | 'VALIDATION_ERROR'
+  | 'INTERNAL'
+  | 'UNAUTHORIZED'
+  | 'FOLDER_CREATE_FAILED'
+  | 'FOLDER_NOT_FOUND'
+  | 'FOLDER_UPDATE_FAILED'
+  | 'FOLDER_DELETE_FAILED'
+  | 'FOLDERS_LIST_FAILED'
+  | 'FOLDERS_TREE_FAILED'
+  | 'FOLDER_GET_FAILED'
 
 export interface ApiError {
   code: ErrorCode

@@ -17,6 +17,11 @@ export async function snippetsList(db: ReturnType<typeof getDb>, userId: string,
     .orderBy('id', sortDirection) // Secondary sort for consistency
     .limit(input.limit)
 
+  // Apply folder filter
+  if (input.folder_id !== undefined) {
+    query = query.where('folder_id', '=', input.folder_id)
+  }
+
   // Apply search filter (escape SQL wildcards to prevent injection)
   if (input.query) {
     const escapedQuery = input.query.replace(/[%_\\]/g, '\\$&')
@@ -105,6 +110,7 @@ export async function snippetCreate(db: ReturnType<typeof getDb>, userId: string
       title: input.title,
       body: input.body,
       tags: stringifyJsonArray(input.tags),
+      folder_id: input.folder_id ?? null,
       created_at: now,
       updated_at: now,
     })
@@ -128,6 +134,9 @@ export async function snippetUpdate(db: ReturnType<typeof getDb>, userId: string
   }
   if (input.tags !== undefined) {
     updateData.tags = stringifyJsonArray(input.tags)
+  }
+  if (input.folder_id !== undefined) {
+    updateData.folder_id = input.folder_id
   }
 
   const result = await db.updateTable('snippets').set(updateData).where('id', '=', id).where('user_id', '=', userId).executeTakeFirst()
