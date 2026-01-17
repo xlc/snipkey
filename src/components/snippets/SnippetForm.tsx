@@ -1,11 +1,12 @@
 import { parseTemplate } from '@shared/template'
 import { LIMITS } from '@shared/validation/limits'
 import { useRouter } from '@tanstack/react-router'
-import { Save } from 'lucide-react'
+import { Folder, Save } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
+import { FolderSelector } from '~/components/FolderSelector'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
 
@@ -33,11 +34,12 @@ export function SnippetForm({
   const [body, setBody] = useState(initialBody)
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>(initialTags)
+  const [folderId, setFolderId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const formStateRef = useRef({ title, body, tags })
+  const formStateRef = useRef({ title, body, tags, folderId })
 
   // Real-time parsing
   const parseResult = parseTemplate(body)
@@ -48,8 +50,9 @@ export function SnippetForm({
       title.trim() !== initialTitle ||
       body.trim() !== initialBody ||
       tags.length !== initialTags.length ||
-      tags.some((t, i) => t !== initialTags[i]),
-    [title, body, tags, initialTitle, initialBody, initialTags],
+      tags.some((t, i) => t !== initialTags[i]) ||
+      folderId !== (null as unknown), // TODO: fix this type issue
+    [title, body, tags, initialTitle, initialBody, initialTags, folderId],
   )
 
   // Warn before navigation with unsaved changes
