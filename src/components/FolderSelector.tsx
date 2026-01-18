@@ -1,5 +1,6 @@
 import { ChevronDown, Folder } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import {
@@ -9,6 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
+import { getAuthStatus } from '~/lib/snippet-api'
+import { foldersTree } from '~/server/folders'
 
 interface FolderSelectorProps {
   selectedFolderId: string | null
@@ -37,18 +40,66 @@ const COLORS: Record<string, string> = {
   rose: 'bg-rose-500',
 }
 
-export function FolderSelector({ selectedFolderId, onFolderSelect, onCreateFolder }: FolderSelectorProps) {
-  const [folders, _setFolders] = useState<Array<{ id: string; name: string; color: string; snippet_count: number }>>([])
+// Flatten folder tree for dropdown display
+function flattenFolders(tree: Array<{ id: string; name: string; color: string; snippet_count: number; children: unknown[] }>, depth = 0): Array<{
+  id: string
+  name: string
+  color: string
+  snippet_count: number
+}> {
+  const result: Array<{ id: string; name: string; color: string; snippet_count: number }> = []
+  for (const folder of tree) {
+    result.push({
+      id: folder.id,
+      name: folder.name,
+      color: folder.color,
+      snippet_count: folder.snippet_count,
+    })
+    if (folder.children.length > 0) {
+      result.push(...flattenFolders(folder.children as typeof tree, depth + 1))
+    }
+  }
+  return result
+}
 
-  // TODO: Load folders on mount
-  // useEffect(() => { foldersTree().then(...) }, [])
+export function FolderSelector({ selectedFolderId, onFolderSelect, onCreateFolder }: FolderSelectorProps) {
+  const [folders, setFolders] = useState<Array<{ id: string; name: string; color: string; snippet_count: number }>>([])
+  const [loading, setLoading] = useState(false)
+
+  // Load folders on mount
+  useEffect(() => {
+    async function loadFolders() {
+      setLoading(true)
+      try {
+        const authStatus = await getAuthStatus()
+        if (!authStatus.authenticated) {
+          setFolders([])
+          return
+        }
+
+        const result = await foldersTree({})
+        if (result.error) {
+          toast.error('Failed to load folders')
+          setFolders([])
+          return
+        }
+
+        const flat = flattenFolders(result.data.tree)
+        setFolders(flat)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadFolders()
+  }, [])
 
   const selectedFolder = folders.find(f => f.id === selectedFolderId)
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" className="w-full justify-start">
+        <Button type="button" variant="outline" className="w-full justify-start" disabled={loading}>
           {selectedFolder ? (
             <div className="flex items-center gap-2">
               <div className={`w-3 h-3 rounded-full ${COLORS[selectedFolder.color] || 'bg-gray-500'}`} />

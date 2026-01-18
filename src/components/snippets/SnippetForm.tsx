@@ -3,6 +3,8 @@ import { LIMITS } from '@shared/validation/limits'
 import { useRouter } from '@tanstack/react-router'
 import { Save } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { FolderDialog } from '~/components/FolderDialog'
+import { FolderSelector } from '~/components/FolderSelector'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -35,6 +37,7 @@ export function SnippetForm({
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [showFolderDialog, setShowFolderDialog] = useState(false)
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const formStateRef = useRef({ body, tags, folderId })
 
@@ -272,6 +275,15 @@ export function SnippetForm({
         )}
 
         <div className="space-y-2">
+          <label className="text-sm font-medium">Folder (optional)</label>
+          <FolderSelector
+            selectedFolderId={folderId}
+            onFolderSelect={setFolderId}
+            onCreateFolder={() => setShowFolderDialog(true)}
+          />
+        </div>
+
+        <div className="space-y-2">
           <label htmlFor="tags" className="text-sm font-medium">
             Tags (optional)
           </label>
@@ -329,6 +341,18 @@ export function SnippetForm({
           </Button>
         </div>
       </form>
+
+      {/* Folder Dialog */}
+      <FolderDialog
+        open={showFolderDialog}
+        onOpenChange={setShowFolderDialog}
+        mode="create"
+        parent_id={null}
+        onSuccess={() => {
+          // Folder was created successfully
+          setShowFolderDialog(false)
+        }}
+      />
     </div>
   )
 }
