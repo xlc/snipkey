@@ -128,12 +128,12 @@ export async function listSnippets(filters: {
   // Apply filters locally
   if (filters.query) {
     const query = filters.query.toLowerCase()
-    local = local.filter(s => s.body.toLowerCase().includes(query) || s.tags.some(tag => tag.toLowerCase().includes(query)))
+    local = local.filter(s => s.body.toLowerCase().includes(query) || (s.tags ?? []).some(tag => tag.toLowerCase().includes(query)))
   }
 
   if (filters.tag) {
     const tag = filters.tag
-    local = local.filter(s => s.tags.includes(tag))
+    local = local.filter(s => (s.tags ?? []).includes(tag))
   }
 
   // Apply sorting locally
@@ -348,7 +348,7 @@ export async function syncToServer(): Promise<{
         data: {
           id: snippet.serverId,
           body: snippet.body,
-          tags: snippet.tags,
+          tags: snippet.tags ?? [],
         },
       })
 
@@ -370,7 +370,7 @@ export async function syncToServer(): Promise<{
       const result = await snippetCreate({
         data: {
           body: snippet.body,
-          tags: snippet.tags,
+          tags: snippet.tags ?? [],
         },
       })
 
@@ -507,7 +507,7 @@ function fromLocalSnippet(local: LocalSnippet): Snippet {
     id: local.id,
     user_id: getMeta().userId || '',
     body: local.body,
-    tags: local.tags,
+    tags: local.tags ?? [],
     created_at: local.created_at,
     updated_at: local.updated_at,
   }
@@ -518,7 +518,7 @@ function toListItem(local: LocalSnippet): SnippetListItem {
   return {
     id: local.id,
     body: local.body,
-    tags: local.tags,
+    tags: local.tags ?? [],
     updated_at: local.updated_at,
     created_at: local.created_at,
     synced: local.synced,

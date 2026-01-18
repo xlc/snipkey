@@ -100,16 +100,16 @@ const SnippetCard = memo(({ snippet, folders, authenticated, onTagClick, formatR
     </div>
 
     {/* Tags */}
-    {snippet.tags.length > 0 && (
+    {(snippet.tags ?? []).length > 0 && (
       <div className="flex gap-2 mt-3 flex-wrap relative z-10">
-        {snippet.tags.slice(0, 3).map(tag => (
+        {(snippet.tags ?? []).slice(0, 3).map(tag => (
           <Badge key={tag} variant="secondary" interactive onClick={() => onTagClick(tag)}>
             {tag}
           </Badge>
         ))}
-        {snippet.tags.length > 3 && (
+        {(snippet.tags ?? []).length > 3 && (
           <Badge variant="secondary" className="text-xs">
-            +{snippet.tags.length - 3}
+            +{(snippet.tags ?? []).length - 3}
           </Badge>
         )}
       </div>
@@ -211,7 +211,7 @@ function Index() {
       // Add tags from local unsynced snippets
       const localUnsynced = getUnsyncedSnippets()
       for (const local of localUnsynced) {
-        for (const tag of local.tags) {
+        for (const tag of local.tags ?? []) {
           serverTags.add(tag)
         }
       }
@@ -221,7 +221,7 @@ function Index() {
       // Extract tags from fetched snippets (both authenticated fallback and local mode)
       const tags = new Set<string>()
       for (const item of items) {
-        for (const tag of item.tags) {
+        for (const tag of item.tags ?? []) {
           tags.add(tag)
         }
       }
@@ -364,7 +364,7 @@ function Index() {
         for (const snippet of importData.snippets) {
           const result = await createSnippet({
             body: snippet.body,
-            tags: snippet.tags,
+            tags: snippet.tags ?? [],
           })
 
           if (result.error) {
