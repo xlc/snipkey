@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 import { Input } from '~/components/ui/input'
-import { folderCreate } from '~/server/folders'
+import { folderCreate, folderGet, folderUpdate } from '~/server/folders'
 
 const folderFormSchema = z.object({
   name: z.string().min(1, 'Folder name is required').max(100, 'Folder name must be less than 100 characters'),
@@ -45,6 +45,31 @@ export function FolderDialog({ open, onOpenChange, mode, folderId, parent_id = n
   const [name, setName] = useState('')
   const [color, setColor] = useState('gray')
   const [loading, setLoading] = useState(false)
+  const [loadingFolder, setLoadingFolder] = useState(false)
+
+  // Load folder data when editing
+  useEffect(() => {
+    if (mode === 'edit' && folderId && open) {
+      setLoadingFolder(true)
+      folderGet({ data: { id: folderId } })
+        .then(result => {
+          if (result.error) {
+            toast.error('Failed to load folder')
+            onOpenChange(false)
+            return
+          }
+          setName(result.data.name)
+          setColor(result.data.color)
+        })
+        .finally(() => {
+          setLoadingFolder(false)
+        })
+    } else if (mode === 'create' && open) {
+      // Reset form when opening in create mode
+      setName('')
+      setColor('gray')
+    }
+  }, [mode, folderId, open, onOpenChange])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,15 +90,20 @@ export function FolderDialog({ open, onOpenChange, mode, folderId, parent_id = n
         }
         toast.success('Folder created')
       } else if (mode === 'edit' && folderId) {
-        // TODO: Implement folder update
-        toast.info('Folder editing coming soon')
-        return
+        const updateResult = await folderUpdate({ data: { id: folderId, data: { name: result.data.name, color: result.data.color } } })
+        if (updateResult.error) {
+          toast.error(updateResult.error.message)
+          return
+        }
+        toast.success('Folder updated')
       }
 
       onSuccess?.()
       onOpenChange(false)
-      setName('')
-      setColor('gray')
+      if (mode === 'create') {
+        setName('')
+        setColor('gray')
+      }
     } catch {
       toast.error('Failed to save folder')
     } finally {
@@ -84,7 +114,10 @@ export function FolderDialog({ open, onOpenChange, mode, folderId, parent_id = n
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
+        {loadingFolder ? (
+          <div className="py-8 text-center text-muted-foreground">Loading folder...</div>
+        ) : (
+          <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{mode === 'create' ? 'Create Folder' : 'Edit Folder'}</DialogTitle>
             <DialogDescription>
@@ -127,6 +160,7 @@ export function FolderDialog({ open, onOpenChange, mode, folderId, parent_id = n
             </Button>
           </DialogFooter>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   )
