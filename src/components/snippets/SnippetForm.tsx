@@ -3,7 +3,6 @@ import { LIMITS } from '@shared/validation/limits'
 import { useRouter } from '@tanstack/react-router'
 import { Save } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -12,24 +11,14 @@ import { Textarea } from '~/components/ui/textarea'
 export interface SnippetFormProps {
   mode: 'create' | 'edit'
   id?: string
-  initialTitle?: string
   initialBody?: string
   initialTags?: string[]
-  onSubmit: (data: { title: string; body: string; tags: string[]; folder_id?: string | null }) => Promise<void>
+  onSubmit: (data: { body: string; tags: string[]; folder_id?: string | null }) => Promise<void>
   enableAutoSave?: boolean
 }
 
-export function SnippetForm({
-  mode,
-  id,
-  initialTitle = '',
-  initialBody = '',
-  initialTags = [],
-  onSubmit,
-  enableAutoSave = true,
-}: SnippetFormProps) {
+export function SnippetForm({ mode, id, initialBody = '', initialTags = [], onSubmit, enableAutoSave = true }: SnippetFormProps) {
   const router = useRouter()
-  const [title, setTitle] = useState(initialTitle)
   const [body, setBody] = useState(initialBody)
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>(initialTags)
@@ -38,7 +27,7 @@ export function SnippetForm({
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const formStateRef = useRef({ title, body, tags, folderId })
+  const formStateRef = useRef({ body, tags, folderId })
 
   // Real-time parsing
   const parseResult = parseTemplate(body)
@@ -46,12 +35,11 @@ export function SnippetForm({
   // Check if form has unsaved changes (memoized to prevent recomputation)
   const hasUnsavedChanges = useMemo(
     () =>
-      title.trim() !== initialTitle ||
       body.trim() !== initialBody ||
       tags.length !== initialTags.length ||
       tags.some((t, i) => t !== initialTags[i]) ||
       folderId !== (null as unknown), // TODO: fix this type issue
-    [title, body, tags, initialTitle, initialBody, initialTags, folderId],
+    [body, tags, initialBody, initialTags, folderId],
   )
 
   // Warn before navigation with unsaved changes
@@ -72,14 +60,14 @@ export function SnippetForm({
     if (!enableAutoSave) return
 
     const draftKey = mode === 'edit' ? `draft-edit-${id}` : 'draft-new'
-    const formState = { title, body, tags, folderId }
+    const formState = { body, tags, folderId }
 
     // Save to localStorage whenever form changes
     localStorage.setItem(draftKey, JSON.stringify(formState))
 
     // Update ref for auto-save comparison
     formStateRef.current = formState
-  }, [title, body, tags, mode, id, enableAutoSave, folderId])
+  }, [body, tags, mode, id, enableAutoSave, folderId])
 
   // Load draft on mount
   useEffect(() => {
@@ -92,28 +80,15 @@ export function SnippetForm({
       try {
         const draft = JSON.parse(draftJson)
         // Only restore if it's different from initial values
-        if (draft.title !== initialTitle || draft.body !== initialBody || JSON.stringify(draft.tags) !== JSON.stringify(initialTags)) {
-          setTitle(draft.title || '')
+        if (draft.body !== initialBody || JSON.stringify(draft.tags) !== JSON.stringify(initialTags)) {
           setBody(draft.body || '')
           setTags(draft.tags || [])
-          toast.info('Draft restored from local storage', {
-            duration: 3000,
-            action: {
-              label: 'Clear',
-              onClick: () => {
-                localStorage.removeItem(draftKey)
-                setTitle(initialTitle)
-                setBody(initialBody)
-                setTags(initialTags)
-              },
-            },
-          })
         }
       } catch {
         // Invalid draft data in localStorage - continue with empty form
       }
     }
-  }, [mode, id, enableAutoSave, initialTitle, initialBody, initialTags])
+  }, [mode, id, enableAutoSave, initialBody, initialTags])
 
   // Auto-save to server after 2 seconds of inactivity (edit mode only)
   useEffect(() => {
@@ -127,15 +102,10 @@ export function SnippetForm({
     // Set new timeout
     autoSaveTimeoutRef.current = setTimeout(async () => {
       // Only save if something changed and form is valid
-      if (
-        title.trim() &&
-        body.trim() &&
-        (title !== initialTitle || body !== initialBody || JSON.stringify(tags) !== JSON.stringify(initialTags))
-      ) {
+      if (body.trim() && (body !== initialBody || JSON.stringify(tags) !== JSON.stringify(initialTags))) {
         setSaving(true)
         try {
           await onSubmit({
-            title: title.trim(),
             body,
             tags,
           })
@@ -153,7 +123,7 @@ export function SnippetForm({
         clearTimeout(autoSaveTimeoutRef.current)
       }
     }
-  }, [title, body, tags, enableAutoSave, mode, loading, onSubmit, initialTitle, initialBody, initialTags])
+  }, [body, tags, enableAutoSave, mode, loading, onSubmit, initialBody, initialTags])
 
   // Clear draft on successful submit
   useEffect(() => {
@@ -162,10 +132,10 @@ export function SnippetForm({
     const draftKey = mode === 'edit' ? `draft-edit-${id}` : 'draft-new'
 
     // Clear draft if form matches initial values (successful save)
-    if (title === initialTitle && body === initialBody && JSON.stringify(tags) === JSON.stringify(initialTags)) {
+    if (body === initialBody && JSON.stringify(tags) === JSON.stringify(initialTags)) {
       localStorage.removeItem(draftKey)
     }
-  }, [title, body, tags, initialTitle, initialBody, initialTags, mode, id, loading])
+  }, [body, tags, initialBody, initialTags, mode, id, loading])
 
   function handleAddTag() {
     const trimmed = tagInput.trim().toLowerCase()
@@ -182,27 +152,19 @@ export function SnippetForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    if (!title.trim()) {
-      toast.error('Title is required')
-      return
-    }
-
     if (!body.trim()) {
-      toast.error('Body is required')
       return
     }
 
     // Validate placeholder count
     const parseResult = parseTemplate(body)
     if (parseResult.placeholders.length > LIMITS.MAX_PLACEHOLDERS_PER_SNIPPET) {
-      toast.error(`Maximum ${LIMITS.MAX_PLACEHOLDERS_PER_SNIPPET} placeholders allowed`)
       return
     }
 
     setLoading(true)
     try {
       await onSubmit({
-        title: title.trim(),
         body,
         tags,
         folder_id: folderId,
@@ -241,13 +203,6 @@ export function SnippetForm({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <label htmlFor="title" className="text-sm font-medium">
-            Title <span className="text-destructive">*</span>
-          </label>
-          <Input id="title" placeholder="My snippet" value={title} onChange={e => setTitle(e.target.value)} required autoComplete="off" />
-        </div>
-
         <div className="space-y-2">
           <label htmlFor="body" className="text-sm font-medium">
             Body <span className="text-destructive">*</span>

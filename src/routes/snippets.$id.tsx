@@ -1,6 +1,6 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
-import { Copy, Download, FileCode, Trash2, Undo } from 'lucide-react'
+import { Copy, Download, FileCode, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { PlaceholderEditor } from '~/components/PlaceholderEditor'
@@ -35,7 +35,6 @@ function SnippetDetail() {
   const { id } = Route.useParams()
   const [snippet, setSnippet] = useState<{
     id: string
-    title: string
     body: string
     tags: string[]
   } | null>(null)
@@ -58,7 +57,6 @@ function SnippetDetail() {
     const result = await getSnippet(id)
 
     if (result.error || !result.data) {
-      toast.error(result.error || 'Failed to load snippet')
       router.navigate({ to: '/' })
       setLoading(false)
       return
@@ -84,13 +82,11 @@ function SnippetDetail() {
     if (!snippet) return
 
     if (renderErrors) {
-      toast.error('Cannot copy: placeholder values have errors')
       return
     }
 
     try {
       await navigator.clipboard.writeText(rendered)
-      toast.success('Rendered output copied to clipboard!')
     } catch {
       // Clipboard API failed (user denied permission or browser doesn't support it)
       toast.error('Failed to copy to clipboard')
@@ -102,7 +98,6 @@ function SnippetDetail() {
 
     try {
       await navigator.clipboard.writeText(snippet.body)
-      toast.success('Raw template copied to clipboard!')
     } catch {
       // Clipboard API failed (user denied permission or browser doesn't support it)
       toast.error('Failed to copy to clipboard')
@@ -114,7 +109,6 @@ function SnippetDetail() {
 
     try {
       await navigator.clipboard.writeText(rendered || snippet.body)
-      toast.success('Unrendered template copied to clipboard!')
     } catch {
       // Clipboard API failed (user denied permission or browser doesn't support it)
       toast.error('Failed to copy to clipboard')
@@ -129,12 +123,11 @@ function SnippetDetail() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${snippet.title.replace(/[^a-z0-9]/gi, '_')}.txt`
+    a.download = `${snippet.body.slice(0, 30).replace(/[^a-z0-9]/gi, '_')}.txt`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    toast.success('Snippet downloaded!')
   }
 
   async function handleDelete() {
@@ -151,44 +144,11 @@ function SnippetDetail() {
     }
 
     setShowDeleteDialog(false)
-
-    // Store deleted snippet in sessionStorage for undo
-    const deletedSnippet = {
-      ...snippet,
-      deletedAt: Date.now(),
-    }
-    sessionStorage.setItem('deleted_snippet', JSON.stringify(deletedSnippet))
-
-    toast.success('Snippet deleted', {
-      action: {
-        label: (
-          <span className="flex items-center gap-1">
-            <Undo className="h-4 w-4" />
-            Undo
-          </span>
-        ),
-        onClick: () => handleUndo(),
-      },
-      duration: 10000,
-    })
-
     router.navigate({ to: '/' })
   }
 
-  async function handleUndo() {
-    const deletedSnippetJson = sessionStorage.getItem('deleted_snippet')
-    if (!deletedSnippetJson) return
-
-    try {
-      const _deletedSnippet = JSON.parse(deletedSnippetJson)
-
-      // Navigate to edit page with the deleted snippet data
-      // We'll need to implement a restore endpoint or use the create endpoint
-      toast.info('Undo feature coming soon - snippet data preserved in session storage')
-    } catch {
-      // Invalid JSON in sessionStorage - corrupted data
-      toast.error('Failed to undo deletion')
-    }
+  async function _handleUndo() {
+    // Undo feature not implemented
   }
 
   if (loading) {
@@ -229,9 +189,8 @@ function SnippetDetail() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          <h1 className="text-3xl font-bold tracking-tight">{snippet.title}</h1>
           {snippet.tags.length > 0 && (
-            <div className="flex gap-2 mt-3 flex-wrap">
+            <div className="flex gap-2 flex-wrap">
               {snippet.tags.map(tag => (
                 <Badge key={tag} variant="outline" className="hover:bg-accent transition-colors cursor-default">
                   {tag}
@@ -258,9 +217,7 @@ function SnippetDetail() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete snippet?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{snippet.title}"? This action cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Are you sure you want to delete this snippet? This action cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>

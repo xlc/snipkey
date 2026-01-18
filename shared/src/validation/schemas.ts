@@ -2,11 +2,6 @@ import { z } from 'zod'
 import { LIMITS } from './limits'
 
 export const snippetSchema = z.object({
-  title: z
-    .string()
-    .min(1, 'Title is required')
-    .max(LIMITS.MAX_SNIPPET_TITLE_LENGTH, `Title must be less than ${LIMITS.MAX_SNIPPET_TITLE_LENGTH} characters`)
-    .transform(val => val.trim()),
   body: z.string().max(LIMITS.MAX_SNIPPET_BODY_LENGTH, `Body must be less than ${LIMITS.MAX_SNIPPET_BODY_LENGTH} characters`),
   tags: z
     .array(z.string())

@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
 import { Input } from '~/components/ui/input'
+import { Textarea } from '~/components/ui/textarea'
 import { useDebounce } from '~/lib/hooks/useDebounce'
 import { useKeyboardShortcuts } from '~/lib/hooks/useKeyboardShortcuts'
 import { useStorageListener } from '~/lib/hooks/useStorageListener'
@@ -75,7 +76,6 @@ const COLORS: Record<string, string> = {
 interface SnippetCardProps {
   snippet: {
     id: string
-    title: string
     body: string
     tags: string[]
     updated_at: number
@@ -91,7 +91,7 @@ interface SnippetCardProps {
 const SnippetCard = memo(({ snippet, folders, authenticated, onTagClick, formatRelativeTime }: SnippetCardProps) => (
   <div className="relative p-4 border rounded-lg hover:shadow-md hover:border-primary/50 transition-all duration-200 bg-card h-full flex flex-col group animate-in fade-in slide-in-from-bottom-2 duration-300 [content-visibility:auto]">
     {/* Link overlay for card navigation */}
-    <Link to="/snippets/$id" params={{ id: snippet.id }} className="absolute inset-0 z-0" aria-label={`View ${snippet.title}`} />
+    <Link to="/snippets/$id" params={{ id: snippet.id }} className="absolute inset-0 z-0" aria-label={`View snippet`} />
 
     {/* Sync status badge */}
     {authenticated && <SyncStatusBadge snippet={snippet} />}
@@ -108,8 +108,11 @@ const SnippetCard = memo(({ snippet, folders, authenticated, onTagClick, formatR
       </Badge>
     )}
 
-    {/* Title */}
-    <h3 className="font-semibold text-base group-hover:text-primary transition-colors pr-12 line-clamp-2 relative z-10">{snippet.title}</h3>
+    {/* Body preview */}
+    <p className="text-sm font-medium text-foreground line-clamp-3 relative z-10 whitespace-pre-wrap">
+      {snippet.body.slice(0, 150)}
+      {snippet.body.length > 150 && '…'}
+    </p>
 
     {/* Timestamp */}
     <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground relative z-10">
@@ -117,15 +120,9 @@ const SnippetCard = memo(({ snippet, folders, authenticated, onTagClick, formatR
       <span>{formatRelativeTime(snippet.updated_at)}</span>
     </div>
 
-    {/* Preview */}
-    <p className="text-sm text-muted-foreground mt-3 line-clamp-3 flex-1 relative z-10">
-      {snippet.body.slice(0, 150)}
-      {snippet.body.length > 150 && '…'}
-    </p>
-
     {/* Tags */}
-    {snippet.tags.length > 0 ? (
-      <div className="flex gap-3 mt-4 flex-wrap relative z-10">
+    {snippet.tags.length > 0 && (
+      <div className="flex gap-2 mt-3 flex-wrap relative z-10">
         {snippet.tags.slice(0, 3).map(tag => (
           <Badge key={tag} variant="secondary" interactive onClick={() => onTagClick(tag)}>
             {tag}
@@ -137,7 +134,7 @@ const SnippetCard = memo(({ snippet, folders, authenticated, onTagClick, formatR
           </Badge>
         )}
       </div>
-    ) : null}
+    )}
 
     {/* Hover indicator */}
     <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
@@ -152,7 +149,6 @@ function Index() {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [snippets, setSnippets] = useState<Array<{
     id: string
-    title: string
     body: string
     tags: string[]
     updated_at: number
@@ -172,15 +168,11 @@ function Index() {
   const [showFolderDialog, setShowFolderDialog] = useState(false)
   const [folderDialogParentId, setFolderDialogParentId] = useState<string | null>(null)
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
+  const [quickCreateBody, setQuickCreateBody] = useState('')
+  const [quickCreateLoading, setQuickCreateLoading] = useState(false)
 
   // Debounce search input to reduce API calls
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
-
-  // Listen for localStorage changes from other tabs to keep UI in sync
-  useStorageListener('snipkey_meta', () => {
-    // Reload snippets when metadata changes (e.g., authentication, sync status)
-    loadSnippets()
-  })
 
   // Check authentication status
   useEffect(() => {
@@ -226,7 +218,6 @@ function Index() {
     const [snippetsResult, tagsResult, foldersResult] = await Promise.all([snippetsPromise, tagsPromise, loadFolders()])
 
     if (snippetsResult.error) {
-      toast.error('Failed to load snippets')
       setLoading(false)
       return
     }
@@ -270,10 +261,11 @@ function Index() {
     setTimeout(() => setLoading(false), 100)
   }, [authenticated, debouncedSearchQuery, selectedFolderId, selectedTag, sortBy, sortOrder])
 
-  // Reload snippets when filters change
-  useEffect(() => {
+  // Listen for localStorage changes from other tabs to keep UI in sync
+  useStorageListener('snipkey_meta', () => {
+    // Reload snippets when metadata changes (e.g., authentication, sync status)
     loadSnippets()
-  }, [loadSnippets])
+  })
 
   async function handleSync() {
     if (!authenticated) {
@@ -290,13 +282,7 @@ function Index() {
       if (result.deleted > 0) messages.push(`${result.deleted} deleted`)
 
       if (messages.length > 0) {
-        toast.success(`Sync: ${messages.join(', ')}`)
         await loadSnippets()
-      } else {
-        toast.info('Everything is already synced')
-      }
-      if (result.skipped > 0) {
-        toast.info(`${result.skipped} snippets skipped (modified during sync)`)
       }
       if (result.errors > 0) {
         toast.error(`${result.errors} snippets failed to sync`)
@@ -305,6 +291,34 @@ function Index() {
       toast.error('Failed to sync snippets')
     } finally {
       setSyncing(false)
+    }
+  }
+
+  async function handleQuickCreate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!quickCreateBody.trim()) return
+
+    setQuickCreateLoading(true)
+    try {
+      const result = await createSnippet({
+        body: quickCreateBody.trim(),
+        tags: [],
+      })
+
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+
+      setQuickCreateBody('')
+      await loadSnippets()
+
+      // Navigate to the new snippet
+      if (result.data?.id) {
+        router.navigate({ to: '/snippets/$id', params: { id: result.data.id } })
+      }
+    } finally {
+      setQuickCreateLoading(false)
     }
   }
 
@@ -334,9 +348,6 @@ function Index() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-
-    const itemCount = result.data?.length || 0
-    toast.success(`Exported ${itemCount} snippets`)
   }
 
   async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
@@ -351,24 +362,21 @@ function Index() {
         throw new Error('Invalid import file format')
       }
 
-      let imported = 0
-      let skipped = 0
+      let _imported = 0
+      let _skipped = 0
 
       for (const snippet of importData.snippets) {
         const result = await createSnippet({
-          title: snippet.title,
           body: snippet.body,
           tags: snippet.tags,
         })
 
         if (result.error) {
-          skipped++
+          _skipped++
         } else {
-          imported++
+          _imported++
         }
       }
-
-      toast.success(`Imported ${imported} snippets${skipped > 0 ? ` (${skipped} skipped)` : ''}`)
 
       // Reload snippets
       loadSnippets()
@@ -496,16 +504,9 @@ function Index() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setShowKeyboardShortcuts(true)} aria-label="Keyboard shortcuts">
-              <HelpCircle className="h-4 w-4" />
-            </Button>
-            {authenticated ? (
+            {authenticated && (
               <Button variant="outline" onClick={handleSync} disabled={syncing || unsyncedCount === 0}>
                 {syncing ? 'Syncing…' : `Sync${unsyncedCount > 0 ? ` (${unsyncedCount})` : ''}`}
-              </Button>
-            ) : (
-              <Button variant="outline" asChild>
-                <Link to="/login">Sign Up (It's Free)</Link>
               </Button>
             )}
             <Button variant="outline" asChild>
@@ -525,14 +526,40 @@ function Index() {
                 <input id="import-input" type="file" accept=".json" onChange={handleImport} className="hidden" />
               </label>
             </Button>
-            <Button asChild>
-              <Link to="/snippets/new">
-                <Plus className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">New Snippet</span>
-              </Link>
+            <Button variant="ghost" size="icon" onClick={() => setShowKeyboardShortcuts(true)} aria-label="Keyboard shortcuts">
+              <HelpCircle className="h-4 w-4" />
             </Button>
           </div>
         </div>
+
+        {/* Quick Create Input */}
+        <form onSubmit={handleQuickCreate} className="space-y-4">
+          <div className="relative">
+            <Textarea
+              placeholder="Type a snippet here and press Enter to save... (supports {{placeholder:text}} syntax)"
+              value={quickCreateBody}
+              onChange={e => setQuickCreateBody(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleQuickCreate(e)
+                }
+              }}
+              rows={3}
+              className="resize-none pr-12"
+              disabled={quickCreateLoading}
+            />
+            {quickCreateLoading && (
+              <div className="absolute right-3 top-3">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Press <kbd className="px-1 py-0.5 rounded bg-muted border">Enter</kbd> to save •{' '}
+            <kbd className="px-1 py-0.5 rounded bg-muted border">Shift+Enter</kbd> for new line
+          </p>
+        </form>
 
         <div className="space-y-4">
           <div className="flex gap-2">
@@ -540,7 +567,7 @@ function Index() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 ref={searchInputRef}
-                placeholder="Search snippets… (title, content, tags) (/ to focus)"
+                placeholder="Search snippets… (content, tags) (/ to focus)"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="pl-10 pr-10"

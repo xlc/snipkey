@@ -2,7 +2,6 @@
 export interface Snippet {
   id: string
   user_id: string
-  title: string
   body: string
   tags: string[]
   created_at: number
@@ -11,7 +10,6 @@ export interface Snippet {
 
 // Snippet data without user_id (for local creation)
 export interface SnippetData {
-  title: string
   body: string
   tags: string[]
 }

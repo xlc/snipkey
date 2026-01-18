@@ -53,7 +53,6 @@ export interface FoldersTable {
 export interface SnippetsTable {
   id: string
   user_id: string
-  title: string
   body: string
   tags: string
   folder_id: string | null

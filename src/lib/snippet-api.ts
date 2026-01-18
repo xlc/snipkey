@@ -29,7 +29,6 @@ export { setMeta }
 
 export interface SnippetListItem {
   id: string
-  title: string
   body: string
   tags: string[]
   updated_at: number
@@ -108,8 +107,8 @@ export async function listSnippets(filters: {
 
     merged.sort((a, b) => {
       if (sortColumn === 'title') {
-        // For title sorting, use string comparison
-        const comparison = a.title.localeCompare(b.title)
+        // For title sorting, sort by body instead
+        const comparison = a.body.localeCompare(b.body)
         return sortDirection === 'asc' ? comparison : -comparison
       }
 
@@ -129,12 +128,7 @@ export async function listSnippets(filters: {
   // Apply filters locally
   if (filters.query) {
     const query = filters.query.toLowerCase()
-    local = local.filter(
-      s =>
-        s.title.toLowerCase().includes(query) ||
-        s.body.toLowerCase().includes(query) ||
-        s.tags.some(tag => tag.toLowerCase().includes(query)),
-    )
+    local = local.filter(s => s.body.toLowerCase().includes(query) || s.tags.some(tag => tag.toLowerCase().includes(query)))
   }
 
   if (filters.tag) {
@@ -144,7 +138,7 @@ export async function listSnippets(filters: {
 
   // Apply sorting locally
   if (filters.sortBy === 'title') {
-    local.sort((a, b) => (filters.sortOrder === 'asc' ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title)))
+    local.sort((a, b) => (filters.sortOrder === 'asc' ? a.body.localeCompare(b.body) : b.body.localeCompare(a.body)))
   } else {
     const field = filters.sortBy === 'created' ? 'created_at' : 'updated_at'
     local.sort((a, b) => (filters.sortOrder === 'asc' ? a[field] - b[field] : b[field] - a[field]))
@@ -353,7 +347,6 @@ export async function syncToServer(): Promise<{
       const result = await snippetUpdate({
         data: {
           id: snippet.serverId,
-          title: snippet.title,
           body: snippet.body,
           tags: snippet.tags,
         },
@@ -376,7 +369,6 @@ export async function syncToServer(): Promise<{
       // Create new snippet on server
       const result = await snippetCreate({
         data: {
-          title: snippet.title,
           body: snippet.body,
           tags: snippet.tags,
         },
@@ -514,7 +506,6 @@ function fromLocalSnippet(local: LocalSnippet): Snippet {
   return {
     id: local.id,
     user_id: getMeta().userId || '',
-    title: local.title,
     body: local.body,
     tags: local.tags,
     created_at: local.created_at,
@@ -526,7 +517,6 @@ function fromLocalSnippet(local: LocalSnippet): Snippet {
 function toListItem(local: LocalSnippet): SnippetListItem {
   return {
     id: local.id,
-    title: local.title,
     body: local.body,
     tags: local.tags,
     updated_at: local.updated_at,

@@ -6,8 +6,8 @@ import { sql } from 'kysely'
 
 // List snippets with filtering and pagination
 export async function snippetsList(db: ReturnType<typeof getDb>, userId: string, input: SnippetListInput) {
-  // Determine sort column and order
-  const sortColumn = input.sortBy === 'title' ? 'title' : 'updated_at'
+  // Determine sort column and order (title sorting now uses body)
+  const sortColumn = input.sortBy === 'title' ? 'body' : 'updated_at'
   const sortDirection = input.sortOrder === 'asc' ? 'asc' : 'desc'
 
   let query = db
@@ -25,7 +25,7 @@ export async function snippetsList(db: ReturnType<typeof getDb>, userId: string,
   // Apply search filter (escape SQL wildcards to prevent injection)
   if (input.query) {
     const escapedQuery = input.query.replace(/[%_\\]/g, '\\$&')
-    query = query.where(eb => eb.or([eb('title', 'like', `%${escapedQuery}%`), eb('body', 'like', `%${escapedQuery}%`)]))
+    query = query.where('body', 'like', `%${escapedQuery}%`)
   }
 
   // Apply tag filter using SQLite's json_each for proper array matching
@@ -107,7 +107,6 @@ export async function snippetCreate(db: ReturnType<typeof getDb>, userId: string
     .values({
       id,
       user_id: userId,
-      title: input.title,
       body: input.body,
       tags: stringifyJsonArray(input.tags),
       folder_id: input.folder_id ?? null,
@@ -126,9 +125,6 @@ export async function snippetUpdate(db: ReturnType<typeof getDb>, userId: string
   // Build update object dynamically, only including defined fields
   const updateData: Record<string, unknown> = { updated_at: now }
 
-  if (input.title !== undefined) {
-    updateData.title = input.title
-  }
   if (input.body !== undefined) {
     updateData.body = input.body
   }

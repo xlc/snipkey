@@ -126,7 +126,7 @@ export function Header() {
             <Button variant="default" size="sm" asChild className="touch-manipulation shadow-sm hover:shadow transition-all duration-200">
               <Link to="/login">
                 <User className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Sign Up (It's Free)</span>
+                <span className="hidden sm:inline">Sign Up</span>
                 <span className="sm:hidden">Sign Up</span>
               </Link>
             </Button>
