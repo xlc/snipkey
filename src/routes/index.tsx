@@ -607,7 +607,7 @@ function Index() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSortBy('title')}>
                   {sortBy === 'title' && <span className="mr-2">✓</span>}
-                  <span>Title (A-Z)</span>
+                  <span>Content (A-Z)</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}>
