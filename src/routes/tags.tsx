@@ -15,6 +15,8 @@ import {
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
+import { updateSnippet } from '~/lib/snippet-api'
+import { listSnippets } from '~/lib/snippet-api'
 import { tagsList } from '~/server/tags'
 
 export const Route = createFileRoute('/tags')({
@@ -80,10 +82,45 @@ function TagsPage() {
       return
     }
 
-    // Note: This requires implementing bulk update or individual updates
-    toast.info('Tag renaming requires backend updates - coming soon')
+    // Get all snippets with the old tag
+    const result = await listSnippets({ limit: 1000 })
+    if (result.error || !result.data) {
+      toast.error('Failed to load snippets')
+      return
+    }
+
+    // Find all snippets with the old tag
+    const snippetsToUpdate = result.data.filter(s => (s.tags ?? []).includes(oldTag))
+
+    if (snippetsToUpdate.length === 0) {
+      toast.error('No snippets found with this tag')
+      return
+    }
+
+    // Update each snippet
+    let updated = 0
+    let failed = 0
+
+    for (const snippet of snippetsToUpdate) {
+      const newTags = (snippet.tags ?? []).map(t => (t === oldTag ? newTag : t))
+      const updateResult = await updateSnippet(snippet.id, { tags: newTags })
+
+      if (updateResult.error) {
+        failed++
+      } else {
+        updated++
+      }
+    }
+
+    if (failed > 0) {
+      toast.error(`Failed to update ${failed} snippet${failed === 1 ? '' : 's'}`)
+      return
+    }
+
+    toast.success(`Renamed tag in ${updated} snippet${updated === 1 ? '' : 's'}`)
     setEditingTag(null)
     setNewTagName('')
+    loadTags()
   }
 
   async function handleDeleteTag(tag: string) {
@@ -94,10 +131,48 @@ function TagsPage() {
   async function confirmDeleteTag() {
     if (!tagToDelete) return
 
-    // Note: This requires implementing bulk update or individual updates
-    toast.info('Tag deletion requires backend updates - coming soon')
+    // Get all snippets with the tag
+    const result = await listSnippets({ limit: 1000 })
+    if (result.error || !result.data) {
+      toast.error('Failed to load snippets')
+      setShowDeleteDialog(false)
+      return
+    }
+
+    // Find all snippets with the tag
+    const snippetsToUpdate = result.data.filter(s => (s.tags ?? []).includes(tagToDelete))
+
+    if (snippetsToUpdate.length === 0) {
+      toast.error('No snippets found with this tag')
+      setShowDeleteDialog(false)
+      return
+    }
+
+    // Update each snippet to remove the tag
+    let updated = 0
+    let failed = 0
+
+    for (const snippet of snippetsToUpdate) {
+      const newTags = (snippet.tags ?? []).filter(t => t !== tagToDelete)
+      const updateResult = await updateSnippet(snippet.id, { tags: newTags })
+
+      if (updateResult.error) {
+        failed++
+      } else {
+        updated++
+      }
+    }
+
+    if (failed > 0) {
+      toast.error(`Failed to update ${failed} snippet${failed === 1 ? '' : 's'}`)
+      setShowDeleteDialog(false)
+      return
+    }
+
+    toast.success(`Removed tag from ${updated} snippet${updated === 1 ? '' : 's'}`)
     setShowDeleteDialog(false)
     setTagToDelete(null)
+    loadTags()
   }
 
   if (loading) {
