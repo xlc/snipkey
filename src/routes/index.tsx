@@ -505,7 +505,6 @@ function Index() {
             <h2 className="text-3xl font-bold tracking-tight">My Snippets</h2>
             <p className="text-muted-foreground mt-2">
               Your private snippet vault with placeholders
-              {!authenticated && ' • Works Offline'}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

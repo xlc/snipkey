@@ -107,7 +107,7 @@ export function Header() {
             )}
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block mt-0.5">
-            Your private snippet vault{!authenticated && ' • Works Offline'}
+            Your private snippet vault
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
