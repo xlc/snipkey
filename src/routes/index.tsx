@@ -503,9 +503,7 @@ function Index() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">My Snippets</h2>
-            <p className="text-muted-foreground mt-2">
-              Your private snippet vault with placeholders
-            </p>
+            <p className="text-muted-foreground mt-2">Your private snippet vault with placeholders</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {authenticated && (

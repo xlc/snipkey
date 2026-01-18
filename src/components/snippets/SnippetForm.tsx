@@ -275,12 +275,8 @@ export function SnippetForm({
         )}
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Folder (optional)</label>
-          <FolderSelector
-            selectedFolderId={folderId}
-            onFolderSelect={setFolderId}
-            onCreateFolder={() => setShowFolderDialog(true)}
-          />
+          <div className="text-sm font-medium">Folder (optional)</div>
+          <FolderSelector selectedFolderId={folderId} onFolderSelect={setFolderId} onCreateFolder={() => setShowFolderDialog(true)} />
         </div>
 
         <div className="space-y-2">

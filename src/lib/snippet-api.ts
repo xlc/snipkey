@@ -31,6 +31,7 @@ export interface SnippetListItem {
   id: string
   body: string
   tags: string[]
+  folder_id?: string | null
   updated_at: number
   created_at?: number
   synced?: boolean

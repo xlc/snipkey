@@ -1,6 +1,6 @@
-import { sql } from 'kysely'
 import { type getDb, newId, nowMs } from '@shared/db/db'
 import type { ApiError, Result } from '@shared/types/common'
+import { sql } from 'kysely'
 
 export interface Folder {
   id: string
@@ -66,11 +66,20 @@ export async function folderCreate(
 
     // Otherwise, use atomic position calculation via subquery
     // This prevents race conditions by calculating position in a single query
-    await db.executeQuery(
-      sql`INSERT INTO folders (id, user_id, parent_id, name, color, icon, created_at, updated_at, position)
-          VALUES (${folderId}, ${userId}, ${data.parent_id ?? null}, ${data.name}, ${data.color ?? 'gray'}, ${data.icon ?? 'Folder'}, ${now}, ${now},
-            COALESCE((SELECT MAX(position) FROM folders WHERE user_id = ${userId} AND parent_id IS ${data.parent_id ?? null}), -1) + 1)`,
-    )
+    await db
+      .insertInto('folders')
+      .values({
+        id: folderId,
+        user_id: userId,
+        parent_id: data.parent_id ?? null,
+        name: data.name,
+        color: data.color ?? 'gray',
+        icon: data.icon ?? 'Folder',
+        created_at: now,
+        updated_at: now,
+        position: sql<number>`COALESCE((SELECT MAX(position) FROM folders WHERE user_id = ${userId} AND parent_id IS ${data.parent_id ?? null}), -1) + 1`,
+      })
+      .execute()
 
     const folder: Folder = {
       id: folderId,

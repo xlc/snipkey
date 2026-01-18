@@ -41,7 +41,10 @@ const COLORS: Record<string, string> = {
 }
 
 // Flatten folder tree for dropdown display
-function flattenFolders(tree: Array<{ id: string; name: string; color: string; snippet_count: number; children: unknown[] }>, depth = 0): Array<{
+function flattenFolders(
+  tree: Array<{ id: string; name: string; color: string; snippet_count: number; children: unknown[] }>,
+  depth = 0,
+): Array<{
   id: string
   name: string
   color: string

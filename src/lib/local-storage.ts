@@ -21,7 +21,8 @@ const META_KEY = 'snipkey_meta'
 const ID_MAP_KEY = 'snipkey_id_map'
 const SERVER_ID_MAP_KEY = 'snipkey_server_id_map'
 
-export interface LocalSnippet extends Snippet {
+export interface LocalSnippet extends Omit<Snippet, 'folder_id'> {
+  folder_id?: string | null
   synced: boolean
   deleted: boolean
   serverId?: string // Track server ID after sync

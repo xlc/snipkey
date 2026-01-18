@@ -42,7 +42,7 @@ export async function snippetsList(db: ReturnType<typeof getDb>, userId: string,
   }
 
   // Apply cursor pagination (works with updated_at sorting)
-  if (input.cursor && input.sortBy !== 'title') {
+  if (input.cursor && input.sortBy !== 'body') {
     const { updatedAt, id } = input.cursor
     if (sortDirection === 'desc') {
       query = query.where(eb => eb.or([eb('updated_at', '<', updatedAt), eb.and([eb('updated_at', '=', updatedAt), eb('id', '<', id)])]))
@@ -60,7 +60,7 @@ export async function snippetsList(db: ReturnType<typeof getDb>, userId: string,
         id: string
       }
     | undefined
-  if (items.length === input.limit && input.sortBy !== 'title') {
+  if (items.length === input.limit && input.sortBy !== 'body') {
     const lastIndex = items.length - 1
     const lastItem = items[lastIndex]
     if (lastItem) {

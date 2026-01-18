@@ -15,8 +15,7 @@ import {
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
-import { updateSnippet } from '~/lib/snippet-api'
-import { listSnippets } from '~/lib/snippet-api'
+import { listSnippets, updateSnippet } from '~/lib/snippet-api'
 import { tagsList } from '~/server/tags'
 
 export const Route = createFileRoute('/tags')({

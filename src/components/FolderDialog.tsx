@@ -58,8 +58,8 @@ export function FolderDialog({ open, onOpenChange, mode, folderId, parent_id = n
             onOpenChange(false)
             return
           }
-          setName(result.data.name)
-          setColor(result.data.color)
+          setName(result.data.folder.name)
+          setColor(result.data.folder.color)
         })
         .finally(() => {
           setLoadingFolder(false)
@@ -118,48 +118,48 @@ export function FolderDialog({ open, onOpenChange, mode, folderId, parent_id = n
           <div className="py-8 text-center text-muted-foreground">Loading folder...</div>
         ) : (
           <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>{mode === 'create' ? 'Create Folder' : 'Edit Folder'}</DialogTitle>
-            <DialogDescription>
-              {mode === 'create' ? 'Create a new folder to organize your snippets.' : 'Edit folder details.'}
-            </DialogDescription>
-          </DialogHeader>
+            <DialogHeader>
+              <DialogTitle>{mode === 'create' ? 'Create Folder' : 'Edit Folder'}</DialogTitle>
+              <DialogDescription>
+                {mode === 'create' ? 'Create a new folder to organize your snippets.' : 'Edit folder details.'}
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label htmlFor="folder-name" className="text-sm font-medium">
-                Name
-              </label>
-              <Input id="folder-name" placeholder="My Folder" value={name} onChange={e => setName(e.target.value)} required autoFocus />
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label htmlFor="folder-name" className="text-sm font-medium">
+                  Name
+                </label>
+                <Input id="folder-name" placeholder="My Folder" value={name} onChange={e => setName(e.target.value)} required autoFocus />
+              </div>
+
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">Color</legend>
+                <div className="grid grid-cols-9 gap-2">
+                  {AVAILABLE_COLORS.map(colorOption => (
+                    <button
+                      key={colorOption.value}
+                      type="button"
+                      onClick={() => setColor(colorOption.value)}
+                      className={`h-8 w-8 rounded-full ${colorOption.class} ${
+                        color === colorOption.value ? 'ring-2 ring-ring ring-offset-2' : ''
+                      } hover:opacity-80 transition-opacity`}
+                      title={colorOption.label}
+                    />
+                  ))}
+                </div>
+              </fieldset>
             </div>
 
-            <fieldset className="space-y-2">
-              <legend className="text-sm font-medium">Color</legend>
-              <div className="grid grid-cols-9 gap-2">
-                {AVAILABLE_COLORS.map(colorOption => (
-                  <button
-                    key={colorOption.value}
-                    type="button"
-                    onClick={() => setColor(colorOption.value)}
-                    className={`h-8 w-8 rounded-full ${colorOption.class} ${
-                      color === colorOption.value ? 'ring-2 ring-ring ring-offset-2' : ''
-                    } hover:opacity-80 transition-opacity`}
-                    title={colorOption.label}
-                  />
-                ))}
-              </div>
-            </fieldset>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading || !name.trim()}>
-              {loading ? 'Saving…' : mode === 'create' ? 'Create' : 'Save'}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading || !name.trim()}>
+                {loading ? 'Saving…' : mode === 'create' ? 'Create' : 'Save'}
+              </Button>
+            </DialogFooter>
+          </form>
         )}
       </DialogContent>
     </Dialog>
