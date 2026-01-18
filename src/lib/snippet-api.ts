@@ -1,3 +1,4 @@
+import { toast } from 'sonner'
 import type { ServerIdMap, Snippet, SnippetData } from '~/lib/local-storage'
 import {
   createLocalSnippet,
@@ -46,6 +47,7 @@ export async function listSnippets(filters: {
   limit?: number
   query?: string
   tag?: string
+  folder_id?: string | null
   sortBy?: 'updated' | 'created' | 'title'
   sortOrder?: 'asc' | 'desc'
 }): Promise<ApiResult<SnippetListItem[]>> {
@@ -56,6 +58,7 @@ export async function listSnippets(filters: {
         limit: filters.limit || 100,
         query: filters.query,
         tag: filters.tag,
+        folder_id: filters.folder_id,
         sortBy: filters.sortBy,
         sortOrder: filters.sortOrder,
       },
@@ -223,6 +226,9 @@ export async function createSnippet(snippet: SnippetData): Promise<ApiResult<{ i
       return { data: { id: local.id } }
     }
 
+    // Trigger automatic background sync after successful create
+    triggerAutoSync().catch(err => console.error('Auto-sync failed:', err))
+
     return { data: result.data }
   }
 
@@ -250,6 +256,9 @@ export async function updateSnippet(id: string, updates: Partial<SnippetData>): 
       }
       return { error: result.error.message }
     }
+
+    // Trigger automatic background sync after successful update
+    triggerAutoSync().catch(err => console.error('Auto-sync failed:', err))
 
     return { data: result.data }
   }
@@ -285,6 +294,9 @@ export async function deleteSnippet(id: string): Promise<ApiResult<{ success: bo
       }
       return { error: result.error.message }
     }
+
+    // Trigger automatic background sync after successful delete
+    triggerAutoSync().catch(err => console.error('Auto-sync failed:', err))
 
     return { data: result.data }
   }
@@ -447,6 +459,54 @@ export async function syncToServer(): Promise<{
   }
 
   return { synced, updated, deleted: deletedCount, errors, skipped }
+}
+
+// Auto-sync timer to prevent excessive sync calls
+let autoSyncTimer: ReturnType<typeof setTimeout> | null = null
+let autoSyncScheduled = false
+
+// Trigger automatic background sync (debounced to prevent excessive calls)
+async function triggerAutoSync(): Promise<void> {
+  // Only sync if authenticated
+  if (!isAuthenticated()) {
+    return
+  }
+
+  // Clear any existing timer
+  if (autoSyncTimer) {
+    clearTimeout(autoSyncTimer)
+  }
+
+  // If already scheduled, don't schedule again
+  if (autoSyncScheduled) {
+    return
+  }
+
+  // Schedule sync after a short delay (3 seconds) to batch rapid changes
+  autoSyncScheduled = true
+
+  autoSyncTimer = setTimeout(async () => {
+    try {
+      const result = await syncToServer()
+
+      // Only show toast if there were actual changes
+      if (result.synced > 0 || result.updated > 0 || result.deleted > 0) {
+        const totalChanges = result.synced + result.updated + result.deleted
+        if (result.errors > 0) {
+          toast.warning(
+            `Synced ${totalChanges} item${totalChanges !== 1 ? 's' : ''} (${result.errors} error${result.errors !== 1 ? 's' : ''})`,
+          )
+        } else {
+          toast.success(`Synced ${totalChanges} item${totalChanges !== 1 ? 's' : ''} automatically`)
+        }
+      }
+    } catch (error) {
+      console.error('Auto-sync failed:', error)
+    } finally {
+      autoSyncScheduled = false
+      autoSyncTimer = null
+    }
+  }, 3000)
 }
 
 // Convert local snippet to server format

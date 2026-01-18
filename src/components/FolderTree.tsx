@@ -1,12 +1,8 @@
-import { ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '~/components/ui/collapsible'
+import { Collapsible, CollapsibleContent } from '~/components/ui/collapsible'
 import type { FolderTreeItem } from '~/lib/server/folders'
 
 interface FolderTreeProps {
@@ -17,6 +13,7 @@ interface FolderTreeProps {
   onEditFolder: (folderId: string) => void
   onDeleteFolder: (folderId: string) => void
   level?: number
+  loading?: boolean
 }
 
 const COLORS: Record<string, string> = {
@@ -48,7 +45,22 @@ export function FolderTree({
   onEditFolder,
   onDeleteFolder,
   level = 0,
+  loading = false,
 }: FolderTreeProps) {
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="flex items-center gap-2 py-1.5 px-2 animate-pulse">
+            <div className="w-5 h-5 bg-muted rounded" />
+            <div className="flex-1 h-4 bg-muted/50 rounded" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   if (tree.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground text-sm">
@@ -96,7 +108,7 @@ function FolderTreeNode({
 }: FolderTreeNodeProps) {
   const [isOpen, setIsOpen] = useState(true)
   const hasChildren = item.children.length > 0
-  const isSelected = selectedFolderId === item.id
+  const _isSelected = selectedFolderId === item.id
   const indent = level * 16
 
   return (
@@ -104,7 +116,6 @@ function FolderTreeNode({
       <div
         className="group flex items-center gap-1 py-1.5 px-2 rounded-md hover:bg-accent cursor-pointer transition-colors touch-manipulation"
         style={{ paddingLeft: `${indent}px` }}
-        onClick={() => onFolderSelect(item.id)}
       >
         {hasChildren ? (
           <button
@@ -114,6 +125,7 @@ function FolderTreeNode({
               setIsOpen(!isOpen)
             }}
             className="flex-shrink-0 p-0.5 hover:bg-muted rounded transition-colors"
+            aria-label={isOpen ? 'Collapse folder' : 'Expand folder'}
           >
             {isOpen ? (
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
@@ -122,16 +134,23 @@ function FolderTreeNode({
             )}
           </button>
         ) : (
-          <div className="w-5" />
+          <span className="w-5" />
         )}
 
-        <div className={`w-3 h-3 rounded-full ${COLORS[item.color] || 'bg-gray-500'} flex-shrink-0`} />
+        <button
+          type="button"
+          className="flex items-center gap-1 flex-1 min-w-0 text-left"
+          onClick={() => onFolderSelect(item.id)}
+          aria-label={`Select folder: ${item.name}`}
+        >
+          <div className={`w-3 h-3 rounded-full ${COLORS[item.color] || 'bg-gray-500'} flex-shrink-0`} />
 
-        <span className="flex-1 text-sm truncate">{item.name}</span>
+          <span className="flex-1 text-sm truncate">{item.name}</span>
 
-        <Badge variant="secondary" className="text-xs">
-          {item.snippet_count}
-        </Badge>
+          <Badge variant="secondary" className="text-xs">
+            {item.snippet_count}
+          </Badge>
+        </button>
 
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button

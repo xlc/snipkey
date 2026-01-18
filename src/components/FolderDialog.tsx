@@ -1,10 +1,10 @@
-import { z } from 'zod'
 import { useState } from 'react'
-import { folderCreate } from '~/server/folders'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
-import { Button } from '~/components/ui/button'
-import { Input } from '~/components/ui/input'
 import { toast } from 'sonner'
+import { z } from 'zod'
+import { Button } from '~/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
+import { Input } from '~/components/ui/input'
+import { folderCreate } from '~/server/folders'
 
 const folderFormSchema = z.object({
   name: z.string().min(1, 'Folder name is required').max(100, 'Folder name must be less than 100 characters'),
@@ -51,7 +51,7 @@ export function FolderDialog({ open, onOpenChange, mode, folderId, parent_id = n
 
     const result = folderFormSchema.safeParse({ name, color })
     if (!result.success) {
-      toast.error(result.error.errors[0].message)
+      toast.error(result.error.issues?.[0]?.message || 'Invalid input')
       return
     }
 
@@ -97,18 +97,11 @@ export function FolderDialog({ open, onOpenChange, mode, folderId, parent_id = n
               <label htmlFor="folder-name" className="text-sm font-medium">
                 Name
               </label>
-              <Input
-                id="folder-name"
-                placeholder="My Folder"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                required
-                autoFocus
-              />
+              <Input id="folder-name" placeholder="My Folder" value={name} onChange={e => setName(e.target.value)} required autoFocus />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Color</label>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">Color</legend>
               <div className="grid grid-cols-9 gap-2">
                 {AVAILABLE_COLORS.map(colorOption => (
                   <button
@@ -122,7 +115,7 @@ export function FolderDialog({ open, onOpenChange, mode, folderId, parent_id = n
                   />
                 ))}
               </div>
-            </div>
+            </fieldset>
           </div>
 
           <DialogFooter>

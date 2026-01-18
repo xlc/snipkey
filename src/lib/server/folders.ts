@@ -1,9 +1,5 @@
-import type { Database } from '@shared/db/database'
-import { newId, nowMs } from '@shared/db/db'
-import type { ApiError, ErrorCode } from '@shared/types'
-import type { Result } from '@shared/types/common'
-import { err, ok } from '@shared/types/common'
-import type { getDb } from '@shared/db/db'
+import { type getDb, newId, nowMs } from '@shared/db/db'
+import type { ApiError, Result } from '@shared/types/common'
 
 export interface Folder {
   id: string
@@ -34,7 +30,7 @@ export interface FolderTreeItem {
 
 // Create a new folder
 export async function folderCreate(
-  db: ReturnType<import('@shared/db/db').getDb>,
+  db: ReturnType<typeof getDb>,
   userId: string,
   data: {
     name: string
@@ -43,7 +39,7 @@ export async function folderCreate(
     parent_id?: string | null
     position?: number
   },
-): Promise<Result<{ folder: Folder }>> {
+): Promise<Result<{ folder: Folder }, ApiError>> {
   try {
     const now = nowMs()
     const folderId = newId()
@@ -55,7 +51,7 @@ export async function folderCreate(
         .selectFrom('folders')
         .where('user_id', '=', userId)
         .where('parent_id', '=', data.parent_id ?? null)
-        .select((eb) => [eb.fn.max('folders.position').as('max_position')])
+        .select(eb => eb.fn.max('folders.position').as('max_position'))
         .executeTakeFirst()
 
       if (maxPosResult) {
@@ -78,23 +74,21 @@ export async function folderCreate(
 
     await db.insertInto('folders').values(folder).execute()
 
-    return ok({ folder })
+    return { ok: true, data: { folder } }
   } catch (error) {
     return {
+      ok: false,
       error: {
         code: 'FOLDER_CREATE_FAILED',
         message: 'Failed to create folder',
         details: error instanceof Error ? error.message : String(error),
-      } satisfies ApiError,
+      },
     }
   }
 }
 
-// Get all folders for a user (flat list)
-export async function foldersList(
-  db: ReturnType<import('@shared/db/db').getDb>,
-  userId: string,
-): Promise<Result<{ folders: Folder[] }>> {
+// List all folders for a user (flat list)
+export async function foldersList(db: ReturnType<typeof getDb>, userId: string): Promise<Result<{ folders: Folder[] }, ApiError>> {
   try {
     const folders = await db
       .selectFrom('folders')
@@ -104,36 +98,32 @@ export async function foldersList(
       .selectAll()
       .execute()
 
-    return ok({ folders })
+    return { ok: true, data: { folders } }
   } catch (error) {
     return {
+      ok: false,
       error: {
         code: 'FOLDERS_LIST_FAILED',
         message: 'Failed to list folders',
         details: error instanceof Error ? error.message : String(error),
-      } satisfies ApiError,
+      },
     }
   }
 }
 
+// Legacy export for backward compatibility
+export const _foldersList = foldersList
+
 // Get folder tree with snippet counts
-export async function foldersTree(
-  db: ReturnType<import('@shared/db/db').getDb>,
-  userId: string,
-): Promise<Result<{ tree: FolderTreeItem[] }>> {
+export async function foldersTree(db: ReturnType<typeof getDb>, userId: string): Promise<Result<{ tree: FolderTreeItem[] }, ApiError>> {
   try {
     // Get all folders
-    const folders = await db
-      .selectFrom('folders')
-      .where('user_id', '=', userId)
-      .orderBy('position', 'asc')
-      .selectAll()
-      .execute()
+    const folders = await db.selectFrom('folders').where('user_id', '=', userId).orderBy('position', 'asc').selectAll().execute()
 
     // Count snippets in each folder
     const snippetCounts = await db
       .selectFrom('snippets')
-      .select(['folder_id', (eb) => eb.fn.count('id').as('count')])
+      .select(['folder_id', eb => eb.fn.count('id').as('count')])
       .where('user_id', '=', userId)
       .where('folder_id', 'is not', null)
       .groupBy('folder_id')
@@ -149,8 +139,8 @@ export async function foldersTree(
     // Build tree
     const buildTree = (parentId: string | null): FolderTreeItem[] => {
       return folders
-        .filter((f) => f.parent_id === parentId)
-        .map((folder) => ({
+        .filter(f => f.parent_id === parentId)
+        .map(folder => ({
           id: folder.id,
           name: folder.name,
           color: folder.color,
@@ -164,56 +154,60 @@ export async function foldersTree(
 
     const tree = buildTree(null)
 
-    return ok({ tree })
+    return { ok: true, data: { tree } }
   } catch (error) {
     return {
+      ok: false,
       error: {
         code: 'FOLDERS_TREE_FAILED',
         message: 'Failed to build folder tree',
         details: error instanceof Error ? error.message : String(error),
-      } satisfies ApiError,
+      },
     }
   }
 }
 
+// Legacy export for backward compatibility
+export const _foldersTree = foldersTree
+
 // Get a single folder
 export async function folderGet(
-  db: ReturnType<import('@shared/db/db').getDb>,
+  db: ReturnType<typeof getDb>,
   userId: string,
   folderId: string,
-): Promise<Result<{ folder: Folder }>> {
+): Promise<Result<{ folder: Folder }, ApiError>> {
   try {
-    const folder = await db
-      .selectFrom('folders')
-      .where('id', '=', folderId)
-      .where('user_id', '=', userId)
-      .selectAll()
-      .executeTakeFirst()
+    const folder = await db.selectFrom('folders').where('id', '=', folderId).where('user_id', '=', userId).selectAll().executeTakeFirst()
 
     if (!folder) {
       return {
+        ok: false,
         error: {
           code: 'FOLDER_NOT_FOUND',
           message: 'Folder not found',
-        } satisfies ApiError,
+        },
       }
     }
 
-    return ok({ folder })
+    return { ok: true, data: { folder } }
   } catch (error) {
     return {
+      ok: false,
       error: {
         code: 'FOLDER_GET_FAILED',
         message: 'Failed to get folder',
         details: error instanceof Error ? error.message : String(error),
-      } satisfies ApiError,
+      },
     }
   }
 }
 
+// Legacy export for backward compatibility
+export const _folderGet = folderGet
+
 // Update a folder
 export async function folderUpdate(
-  db: ReturnType<import('@shared/db/db').getDb>,
+  db: ReturnType<typeof getDb>,
   userId: string,
   folderId: string,
   data: Partial<{
@@ -223,10 +217,10 @@ export async function folderUpdate(
     parent_id: string | null
     position: number
   }>,
-): Promise<Result<{ folder: Folder }>> {
+): Promise<Result<{ folder: Folder }, ApiError>> {
   try {
     // Check if folder exists and belongs to user
-    const existing = await folderGet(db, userId, folderId)
+    const existing = await _folderGet(db, userId, folderId)
     if (!existing.ok) {
       return existing
     }
@@ -239,54 +233,54 @@ export async function folderUpdate(
 
     await db.updateTable('folders').set(updates).where('id', '=', folderId).execute()
 
-    const updated = await folderGet(db, userId, folderId)
+    const updated = await _folderGet(db, userId, folderId)
     if (!updated.ok) {
       return updated
     }
 
-    return ok({ folder: updated.data.folder })
+    return { ok: true, data: { folder: updated.data.folder } }
   } catch (error) {
     return {
+      ok: false,
       error: {
         code: 'FOLDER_UPDATE_FAILED',
         message: 'Failed to update folder',
         details: error instanceof Error ? error.message : String(error),
-      } satisfies ApiError,
+      },
     }
   }
 }
 
+// Legacy export for backward compatibility
+export const _folderUpdate = folderUpdate
+
 // Delete a folder
-export async function folderDelete(
-  db: ReturnType<import('@shared/db/db').getDb>,
-  userId: string,
-  folderId: string,
-): Promise<Result<void>> {
+export async function folderDelete(db: ReturnType<typeof getDb>, userId: string, folderId: string): Promise<Result<void, ApiError>> {
   try {
     // Check if folder exists and belongs to user
-    const existing = await folderGet(db, userId, folderId)
+    const existing = await _folderGet(db, userId, folderId)
     if (!existing.ok) {
       return existing
     }
 
     // Unassign all snippets in this folder
-    await db
-      .updateTable('snippets')
-      .set({ folder_id: null })
-      .where('folder_id', '=', folderId)
-      .execute()
+    await db.updateTable('snippets').set({ folder_id: null }).where('folder_id', '=', folderId).execute()
 
     // Delete the folder (cascade will delete children)
     await db.deleteFrom('folders').where('id', '=', folderId).execute()
 
-    return ok(undefined)
+    return { ok: true, data: undefined }
   } catch (error) {
     return {
+      ok: false,
       error: {
         code: 'FOLDER_DELETE_FAILED',
         message: 'Failed to delete folder',
         details: error instanceof Error ? error.message : String(error),
-      } satisfies ApiError,
+      },
     }
   }
 }
+
+// Legacy export for backward compatibility
+export const _folderDelete = folderDelete

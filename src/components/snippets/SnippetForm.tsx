@@ -1,12 +1,11 @@
 import { parseTemplate } from '@shared/template'
 import { LIMITS } from '@shared/validation/limits'
 import { useRouter } from '@tanstack/react-router'
-import { Folder, Save } from 'lucide-react'
+import { Save } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
-import { FolderSelector } from '~/components/FolderSelector'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
 
@@ -16,7 +15,7 @@ export interface SnippetFormProps {
   initialTitle?: string
   initialBody?: string
   initialTags?: string[]
-  onSubmit: (data: { title: string; body: string; tags: string[] }) => Promise<void>
+  onSubmit: (data: { title: string; body: string; tags: string[]; folder_id?: string | null }) => Promise<void>
   enableAutoSave?: boolean
 }
 
@@ -34,7 +33,7 @@ export function SnippetForm({
   const [body, setBody] = useState(initialBody)
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>(initialTags)
-  const [folderId, setFolderId] = useState<string | null>(null)
+  const [folderId, _setFolderId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
@@ -73,14 +72,14 @@ export function SnippetForm({
     if (!enableAutoSave) return
 
     const draftKey = mode === 'edit' ? `draft-edit-${id}` : 'draft-new'
-    const formState = { title, body, tags }
+    const formState = { title, body, tags, folderId }
 
     // Save to localStorage whenever form changes
     localStorage.setItem(draftKey, JSON.stringify(formState))
 
     // Update ref for auto-save comparison
     formStateRef.current = formState
-  }, [title, body, tags, mode, id, enableAutoSave])
+  }, [title, body, tags, mode, id, enableAutoSave, folderId])
 
   // Load draft on mount
   useEffect(() => {
@@ -206,6 +205,7 @@ export function SnippetForm({
         title: title.trim(),
         body,
         tags,
+        folder_id: folderId,
       })
     } finally {
       setLoading(false)

@@ -1,6 +1,5 @@
 import { ChevronDown, Folder } from 'lucide-react'
 import { useState } from 'react'
-import { foldersTree } from '~/server/folders'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import {
@@ -39,7 +38,7 @@ const COLORS: Record<string, string> = {
 }
 
 export function FolderSelector({ selectedFolderId, onFolderSelect, onCreateFolder }: FolderSelectorProps) {
-  const [folders, setFolders] = useState<Array<{ id: string; name: string; color: string; snippet_count: number }>>([])
+  const [folders, _setFolders] = useState<Array<{ id: string; name: string; color: string; snippet_count: number }>>([])
 
   // TODO: Load folders on mount
   // useEffect(() => { foldersTree().then(...) }, [])
