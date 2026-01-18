@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import { Clock, Download, FileCode, Filter, Folder, FolderPlus, HelpCircle, Plus, Search, Tags, Upload, X } from 'lucide-react'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { FolderDialog } from '~/components/FolderDialog'
 import { FolderTree } from '~/components/FolderTree'
@@ -17,6 +17,7 @@ import {
 } from '~/components/ui/dropdown-menu'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
+import { COLORS } from '~/lib/constants/colors'
 import { useDebounce } from '~/lib/hooks/useDebounce'
 import { useKeyboardShortcuts } from '~/lib/hooks/useKeyboardShortcuts'
 import { useStorageListener } from '~/lib/hooks/useStorageListener'
@@ -49,28 +50,6 @@ const LOADING_SKELETON = (
     ))}
   </div>
 )
-
-// Color mapping for folder badges
-const COLORS: Record<string, string> = {
-  gray: '#6b7280',
-  red: '#ef4444',
-  orange: '#f97316',
-  amber: '#f59e0b',
-  yellow: '#eab308',
-  lime: '#84cc16',
-  green: '#22c55e',
-  emerald: '#10b981',
-  teal: '#14b8a6',
-  cyan: '#06b6d4',
-  sky: '#0ea5e9',
-  blue: '#3b82f6',
-  indigo: '#6366f1',
-  violet: '#8b5cf6',
-  purple: '#a855f7',
-  fuchsia: '#d946ef',
-  pink: '#ec4899',
-  rose: '#f43f5e',
-}
 
 // Memoized snippet card component to prevent unnecessary re-renders
 interface SnippetCardProps {
@@ -267,7 +246,20 @@ function Index() {
     loadSnippets()
   })
 
-  async function handleSync() {
+  // Build folder map once for efficient lookup (memoized to prevent rebuilding on every render)
+  const foldersMap = useMemo(() => {
+    const map = new Map<string, { name: string; color: string }>()
+    const addToMap = (items: FolderTreeItem[]) => {
+      for (const item of items) {
+        map.set(item.id, { name: item.name, color: item.color })
+        if (item.children.length > 0) addToMap(item.children)
+      }
+    }
+    addToMap(folderTree)
+    return map
+  }, [folderTree])
+
+  const handleSync = useCallback(async () => {
     if (!authenticated) {
       toast.error('Please sign up to sync your snippets')
       return
@@ -292,37 +284,40 @@ function Index() {
     } finally {
       setSyncing(false)
     }
-  }
+  }, [authenticated, loadSnippets])
 
-  async function handleQuickCreate(e: React.FormEvent) {
-    e.preventDefault()
-    if (!quickCreateBody.trim()) return
+  const handleQuickCreate = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      if (!quickCreateBody.trim()) return
 
-    setQuickCreateLoading(true)
-    try {
-      const result = await createSnippet({
-        body: quickCreateBody.trim(),
-        tags: [],
-      })
+      setQuickCreateLoading(true)
+      try {
+        const result = await createSnippet({
+          body: quickCreateBody.trim(),
+          tags: [],
+        })
 
-      if (result.error) {
-        toast.error(result.error)
-        return
+        if (result.error) {
+          toast.error(result.error)
+          return
+        }
+
+        setQuickCreateBody('')
+        await loadSnippets()
+
+        // Navigate to the new snippet
+        if (result.data?.id) {
+          router.navigate({ to: '/snippets/$id', params: { id: result.data.id } })
+        }
+      } finally {
+        setQuickCreateLoading(false)
       }
+    },
+    [quickCreateBody, loadSnippets, router],
+  )
 
-      setQuickCreateBody('')
-      await loadSnippets()
-
-      // Navigate to the new snippet
-      if (result.data?.id) {
-        router.navigate({ to: '/snippets/$id', params: { id: result.data.id } })
-      }
-    } finally {
-      setQuickCreateLoading(false)
-    }
-  }
-
-  async function handleExport() {
+  const handleExport = useCallback(async () => {
     // Export all snippets
     const result = await listSnippets({ limit: 1000 })
 
@@ -348,45 +343,55 @@ function Index() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  }
+  }, [])
 
-  async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const handleImport = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      if (!file) return
 
-    try {
-      const text = await file.text()
-      const importData = JSON.parse(text)
+      try {
+        const text = await file.text()
+        const importData = JSON.parse(text)
 
-      if (!importData.snippets || !Array.isArray(importData.snippets)) {
-        throw new Error('Invalid import file format')
-      }
-
-      let _imported = 0
-      let _skipped = 0
-
-      for (const snippet of importData.snippets) {
-        const result = await createSnippet({
-          body: snippet.body,
-          tags: snippet.tags,
-        })
-
-        if (result.error) {
-          _skipped++
-        } else {
-          _imported++
+        if (!importData.snippets || !Array.isArray(importData.snippets)) {
+          throw new Error('Invalid import file format')
         }
+
+        let imported = 0
+        let skipped = 0
+
+        for (const snippet of importData.snippets) {
+          const result = await createSnippet({
+            body: snippet.body,
+            tags: snippet.tags,
+          })
+
+          if (result.error) {
+            skipped++
+          } else {
+            imported++
+          }
+        }
+
+        // Reload snippets
+        loadSnippets()
+
+        // Show feedback
+        if (skipped > 0) {
+          toast.info(`Imported ${imported} snippet${imported === 1 ? '' : 's'}${skipped > 0 ? ` (${skipped} skipped)` : ''}`)
+        } else {
+          toast.success(`Imported ${imported} snippet${imported === 1 ? '' : 's'}`)
+        }
+      } catch (error) {
+        toast.error(`Failed to import snippets: ${(error as Error).message}`)
       }
 
-      // Reload snippets
-      loadSnippets()
-    } catch (error) {
-      toast.error(`Failed to import snippets: ${(error as Error).message}`)
-    }
-
-    // Reset file input
-    event.target.value = ''
-  }
+      // Reset file input
+      event.target.value = ''
+    },
+    [loadSnippets],
+  )
 
   // Keyboard shortcuts
   useKeyboardShortcuts([
@@ -666,28 +671,16 @@ function Index() {
         ) : snippets && snippets.length > 0 ? (
           // Snippet grid
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {snippets.map(snippet => {
-              // Build a flat map of folders for easy lookup
-              const foldersMap = new Map<string, { name: string; color: string }>()
-              const addToMap = (items: FolderTreeItem[]) => {
-                for (const item of items) {
-                  foldersMap.set(item.id, { name: item.name, color: item.color })
-                  if (item.children.length > 0) addToMap(item.children)
-                }
-              }
-              addToMap(folderTree)
-
-              return (
-                <SnippetCard
-                  key={snippet.id}
-                  snippet={snippet}
-                  folders={foldersMap}
-                  authenticated={authenticated}
-                  onTagClick={setSelectedTag}
-                  formatRelativeTime={formatRelativeTime}
-                />
-              )
-            })}
+            {snippets.map(snippet => (
+              <SnippetCard
+                key={snippet.id}
+                snippet={snippet}
+                folders={foldersMap}
+                authenticated={authenticated}
+                onTagClick={setSelectedTag}
+                formatRelativeTime={formatRelativeTime}
+              />
+            ))}
           </div>
         ) : (
           // Empty state

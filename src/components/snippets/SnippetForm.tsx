@@ -13,16 +13,25 @@ export interface SnippetFormProps {
   id?: string
   initialBody?: string
   initialTags?: string[]
+  initialFolderId?: string | null
   onSubmit: (data: { body: string; tags: string[]; folder_id?: string | null }) => Promise<void>
   enableAutoSave?: boolean
 }
 
-export function SnippetForm({ mode, id, initialBody = '', initialTags = [], onSubmit, enableAutoSave = true }: SnippetFormProps) {
+export function SnippetForm({
+  mode,
+  id,
+  initialBody = '',
+  initialTags = [],
+  initialFolderId = null,
+  onSubmit,
+  enableAutoSave = true,
+}: SnippetFormProps) {
   const router = useRouter()
   const [body, setBody] = useState(initialBody)
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>(initialTags)
-  const [folderId, _setFolderId] = useState<string | null>(null)
+  const [folderId, setFolderId] = useState<string | null>(initialFolderId)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
@@ -38,8 +47,8 @@ export function SnippetForm({ mode, id, initialBody = '', initialTags = [], onSu
       body.trim() !== initialBody ||
       tags.length !== initialTags.length ||
       tags.some((t, i) => t !== initialTags[i]) ||
-      folderId !== (null as unknown), // TODO: fix this type issue
-    [body, tags, initialBody, initialTags, folderId],
+      folderId !== initialFolderId,
+    [body, tags, initialBody, initialTags, initialFolderId, folderId],
   )
 
   // Warn before navigation with unsaved changes
@@ -80,15 +89,20 @@ export function SnippetForm({ mode, id, initialBody = '', initialTags = [], onSu
       try {
         const draft = JSON.parse(draftJson)
         // Only restore if it's different from initial values
-        if (draft.body !== initialBody || JSON.stringify(draft.tags) !== JSON.stringify(initialTags)) {
+        if (
+          draft.body !== initialBody ||
+          JSON.stringify(draft.tags) !== JSON.stringify(initialTags) ||
+          draft.folderId !== initialFolderId
+        ) {
           setBody(draft.body || '')
           setTags(draft.tags || [])
+          setFolderId(draft.folderId || null)
         }
       } catch {
         // Invalid draft data in localStorage - continue with empty form
       }
     }
-  }, [mode, id, enableAutoSave, initialBody, initialTags])
+  }, [mode, id, enableAutoSave, initialBody, initialTags, initialFolderId])
 
   // Auto-save to server after 2 seconds of inactivity (edit mode only)
   useEffect(() => {
@@ -132,10 +146,10 @@ export function SnippetForm({ mode, id, initialBody = '', initialTags = [], onSu
     const draftKey = mode === 'edit' ? `draft-edit-${id}` : 'draft-new'
 
     // Clear draft if form matches initial values (successful save)
-    if (body === initialBody && JSON.stringify(tags) === JSON.stringify(initialTags)) {
+    if (body === initialBody && JSON.stringify(tags) === JSON.stringify(initialTags) && folderId === initialFolderId) {
       localStorage.removeItem(draftKey)
     }
-  }, [body, tags, initialBody, initialTags, mode, id, loading])
+  }, [body, tags, folderId, initialBody, initialTags, initialFolderId, mode, id, loading])
 
   function handleAddTag() {
     const trimmed = tagInput.trim().toLowerCase()
