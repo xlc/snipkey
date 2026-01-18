@@ -116,12 +116,13 @@ export function SnippetForm({
     // Set new timeout
     autoSaveTimeoutRef.current = setTimeout(async () => {
       // Only save if something changed and form is valid
-      if (body.trim() && (body !== initialBody || JSON.stringify(tags) !== JSON.stringify(initialTags))) {
+      if (body.trim() && (body !== initialBody || JSON.stringify(tags) !== JSON.stringify(initialTags) || folderId !== initialFolderId)) {
         setSaving(true)
         try {
           await onSubmit({
             body,
             tags,
+            folder_id: folderId,
           })
           setLastSaved(new Date())
         } catch {
@@ -137,7 +138,7 @@ export function SnippetForm({
         clearTimeout(autoSaveTimeoutRef.current)
       }
     }
-  }, [body, tags, enableAutoSave, mode, loading, onSubmit, initialBody, initialTags])
+  }, [body, tags, folderId, enableAutoSave, mode, loading, onSubmit, initialBody, initialTags, initialFolderId])
 
   // Clear draft on successful submit
   useEffect(() => {

@@ -9,7 +9,7 @@ export const Route = createFileRoute('/snippets/new')({
 function NewSnippet() {
   const router = useRouter()
 
-  const handleSubmit = async (data: { body: string; tags: string[] }) => {
+  const handleSubmit = async (data: { body: string; tags: string[]; folder_id?: string | null }) => {
     const result = await createSnippet(data)
 
     if (result.error) {

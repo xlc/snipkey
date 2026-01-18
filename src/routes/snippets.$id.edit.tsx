@@ -13,6 +13,7 @@ function EditSnippet() {
   const [initialData, setInitialData] = useState<{
     body: string
     tags: string[]
+    folder_id: string | null
   } | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -28,6 +29,7 @@ function EditSnippet() {
       setInitialData({
         body: result.data.body,
         tags: result.data.tags,
+        folder_id: result.data.folder_id,
       })
       setLoading(false)
     }
@@ -35,7 +37,7 @@ function EditSnippet() {
     loadSnippet()
   }, [id])
 
-  const handleSubmit = async (data: { body: string; tags: string[] }) => {
+  const handleSubmit = async (data: { body: string; tags: string[]; folder_id?: string | null }) => {
     const result = await updateSnippet(id, data)
 
     if (result.error) {
@@ -50,5 +52,14 @@ function EditSnippet() {
     return <div className="text-center py-12 text-muted-foreground">Loading snippet...</div>
   }
 
-  return <SnippetForm mode="edit" id={id} initialBody={initialData.body} initialTags={initialData.tags} onSubmit={handleSubmit} />
+  return (
+    <SnippetForm
+      mode="edit"
+      id={id}
+      initialBody={initialData.body}
+      initialTags={initialData.tags}
+      initialFolderId={initialData.folder_id}
+      onSubmit={handleSubmit}
+    />
+  )
 }
