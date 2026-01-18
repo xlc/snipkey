@@ -1,0 +1,1 @@
+- cleanup UI. the home page is too cluttered. needs to be simplified and improve the layout.
