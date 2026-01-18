@@ -47,7 +47,7 @@ export async function listSnippets(filters: {
   query?: string
   tag?: string
   folder_id?: string | null
-  sortBy?: 'updated' | 'created' | 'title'
+  sortBy?: 'updated' | 'created' | 'body'
   sortOrder?: 'asc' | 'desc'
 }): Promise<ApiResult<SnippetListItem[]>> {
   if (isAuthenticated()) {
@@ -106,8 +106,7 @@ export async function listSnippets(filters: {
     const sortDirection = filters.sortOrder || 'desc'
 
     merged.sort((a, b) => {
-      if (sortColumn === 'title') {
-        // For title sorting, sort by body instead
+      if (sortColumn === 'body') {
         const comparison = a.body.localeCompare(b.body)
         return sortDirection === 'asc' ? comparison : -comparison
       }
@@ -137,7 +136,7 @@ export async function listSnippets(filters: {
   }
 
   // Apply sorting locally
-  if (filters.sortBy === 'title') {
+  if (filters.sortBy === 'body') {
     local.sort((a, b) => (filters.sortOrder === 'asc' ? a.body.localeCompare(b.body) : b.body.localeCompare(a.body)))
   } else {
     const field = filters.sortBy === 'created' ? 'created_at' : 'updated_at'
@@ -344,11 +343,19 @@ export async function syncToServer(): Promise<{
     // If snippet has a serverId, it's an update, otherwise it's a new snippet
     if (snippet.serverId) {
       // Update existing snippet on server
+      const updateData: { body: string; tags: string[]; folder_id?: string | null } = {
+        body: snippet.body,
+        tags: snippet.tags ?? [],
+      }
+      // Only include folder_id if it's defined (not undefined)
+      if (snippet.folder_id !== undefined) {
+        updateData.folder_id = snippet.folder_id
+      }
+
       const result = await snippetUpdate({
         data: {
           id: snippet.serverId,
-          body: snippet.body,
-          tags: snippet.tags ?? [],
+          ...updateData,
         },
       })
 
@@ -367,11 +374,17 @@ export async function syncToServer(): Promise<{
       }
     } else {
       // Create new snippet on server
+      const createData: { body: string; tags: string[]; folder_id?: string | null } = {
+        body: snippet.body,
+        tags: snippet.tags ?? [],
+      }
+      // Only include folder_id if it's defined (not undefined)
+      if (snippet.folder_id !== undefined) {
+        createData.folder_id = snippet.folder_id
+      }
+
       const result = await snippetCreate({
-        data: {
-          body: snippet.body,
-          tags: snippet.tags ?? [],
-        },
+        data: createData,
       })
 
       if (result.error) {
@@ -508,6 +521,7 @@ function fromLocalSnippet(local: LocalSnippet): Snippet {
     user_id: getMeta().userId || '',
     body: local.body,
     tags: local.tags ?? [],
+    folder_id: local.folder_id ?? null,
     created_at: local.created_at,
     updated_at: local.updated_at,
   }
@@ -519,6 +533,7 @@ function toListItem(local: LocalSnippet): SnippetListItem {
     id: local.id,
     body: local.body,
     tags: local.tags ?? [],
+    folder_id: local.folder_id ?? null,
     updated_at: local.updated_at,
     created_at: local.created_at,
     synced: local.synced,

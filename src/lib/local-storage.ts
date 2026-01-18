@@ -4,6 +4,7 @@ export interface Snippet {
   user_id: string
   body: string
   tags: string[]
+  folder_id: string | null
   created_at: number
   updated_at: number
 }
@@ -12,6 +13,7 @@ export interface Snippet {
 export interface SnippetData {
   body: string
   tags: string[]
+  folder_id?: string | null
 }
 
 const STORAGE_PREFIX = 'snippet_'

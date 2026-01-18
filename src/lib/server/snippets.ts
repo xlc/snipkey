@@ -6,8 +6,8 @@ import { sql } from 'kysely'
 
 // List snippets with filtering and pagination
 export async function snippetsList(db: ReturnType<typeof getDb>, userId: string, input: SnippetListInput) {
-  // Determine sort column and order (title sorting now uses body)
-  const sortColumn = input.sortBy === 'title' ? 'body' : 'updated_at'
+  // Determine sort column and order
+  const sortColumn = input.sortBy === 'body' ? 'body' : 'updated_at'
   const sortDirection = input.sortOrder === 'asc' ? 'asc' : 'desc'
 
   let query = db

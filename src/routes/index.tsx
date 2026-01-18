@@ -137,7 +137,7 @@ function Index() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
-  const [sortBy, setSortBy] = useState<'updated' | 'created' | 'title'>('updated')
+  const [sortBy, setSortBy] = useState<'updated' | 'created' | 'body'>('updated')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [allTags, setAllTags] = useState<string[]>([])
   const [authenticated, setAuthenticated] = useState(false)
@@ -605,8 +605,8 @@ function Index() {
                   {sortBy === 'created' && <span className="mr-2">✓</span>}
                   <span>Date Created</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortBy('title')}>
-                  {sortBy === 'title' && <span className="mr-2">✓</span>}
+                <DropdownMenuItem onClick={() => setSortBy('body')}>
+                  {sortBy === 'body' && <span className="mr-2">✓</span>}
                   <span>Content (A-Z)</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

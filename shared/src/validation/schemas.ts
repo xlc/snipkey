@@ -32,7 +32,7 @@ export const snippetListInput = z.object({
       id: z.string(),
     })
     .optional(),
-  sortBy: z.enum(['updated', 'created', 'title']).default('updated'),
+  sortBy: z.enum(['updated', 'created', 'body']).default('updated'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 })
 
