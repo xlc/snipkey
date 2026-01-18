@@ -1,3 +1,4 @@
+import { sql } from 'kysely'
 import { type getDb, newId, nowMs } from '@shared/db/db'
 import type { ApiError, Result } from '@shared/types/common'
 
@@ -44,21 +45,32 @@ export async function folderCreate(
     const now = nowMs()
     const folderId = newId()
 
-    // Get max position if not provided
-    let position = data.position ?? 0
-    if (data.position === undefined) {
-      const maxPosResult = await db
-        .selectFrom('folders')
-        .where('user_id', '=', userId)
-        .where('parent_id', '=', data.parent_id ?? null)
-        .select(eb => eb.fn.max('folders.position').as('max_position'))
-        .executeTakeFirst()
-
-      if (maxPosResult) {
-        const maxPosition = maxPosResult.max_position as number | null
-        position = (maxPosition ?? -1) + 1
+    // If position is provided, use it directly
+    if (data.position !== undefined) {
+      const folder: Folder = {
+        id: folderId,
+        user_id: userId,
+        parent_id: data.parent_id ?? null,
+        name: data.name,
+        color: data.color ?? 'gray',
+        icon: data.icon ?? 'Folder',
+        created_at: now,
+        updated_at: now,
+        position: data.position,
       }
+
+      await db.insertInto('folders').values(folder).execute()
+
+      return { ok: true, data: { folder } }
     }
+
+    // Otherwise, use atomic position calculation via subquery
+    // This prevents race conditions by calculating position in a single query
+    await db.executeQuery(
+      sql`INSERT INTO folders (id, user_id, parent_id, name, color, icon, created_at, updated_at, position)
+          VALUES (${folderId}, ${userId}, ${data.parent_id ?? null}, ${data.name}, ${data.color ?? 'gray'}, ${data.icon ?? 'Folder'}, ${now}, ${now},
+            COALESCE((SELECT MAX(position) FROM folders WHERE user_id = ${userId} AND parent_id IS ${data.parent_id ?? null}), -1) + 1)`,
+    )
 
     const folder: Folder = {
       id: folderId,
@@ -69,10 +81,8 @@ export async function folderCreate(
       icon: data.icon ?? 'Folder',
       created_at: now,
       updated_at: now,
-      position,
+      position: 0, // Will be set by the trigger/subquery
     }
-
-    await db.insertInto('folders').values(folder).execute()
 
     return { ok: true, data: { folder } }
   } catch (error) {
