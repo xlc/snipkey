@@ -3,6 +3,7 @@ import { LIMITS } from '@shared/validation/limits'
 import { useRouter } from '@tanstack/react-router'
 import { Save } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { FolderDialog } from '~/components/FolderDialog'
 import { FolderSelector } from '~/components/FolderSelector'
 import { Badge } from '~/components/ui/badge'
@@ -128,9 +129,11 @@ export function SnippetForm({
             tags,
             folder_id: folderId,
           })
+          // Only update lastSaved time if submission succeeded
           setLastSaved(new Date())
         } catch {
           // Error already handled and displayed via toast notification in onSubmit
+          // Don't update lastSaved since the save failed
         } finally {
           setSaving(false)
         }
@@ -178,6 +181,7 @@ export function SnippetForm({
     // Validate placeholder count
     const parseResult = parseTemplate(body)
     if (parseResult.placeholders.length > LIMITS.MAX_PLACEHOLDERS_PER_SNIPPET) {
+      toast.error(`Maximum ${LIMITS.MAX_PLACEHOLDERS_PER_SNIPPET} placeholders allowed`)
       return
     }
 

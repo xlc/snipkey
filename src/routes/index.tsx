@@ -38,7 +38,7 @@ import { COLORS } from '~/lib/constants/colors'
 import { useDebounce } from '~/lib/hooks/useDebounce'
 import { useKeyboardShortcuts } from '~/lib/hooks/useKeyboardShortcuts'
 import { useStorageListener } from '~/lib/hooks/useStorageListener'
-import { getUnsyncedSnippets } from '~/lib/local-storage'
+import { getUnsyncedSnippets, listLocalSnippets } from '~/lib/local-storage'
 import type { FolderTreeItem } from '~/lib/server/folders'
 import {
   createSnippet,
@@ -433,10 +433,11 @@ function Index() {
 
       setAllTags(Array.from(serverTags).sort())
     } else {
-      // Extract tags from fetched snippets (both authenticated fallback and local mode)
+      // Extract tags from all local snippets (not just paginated results)
+      const localSnippets = listLocalSnippets()
       const tags = new Set<string>()
-      for (const item of items) {
-        for (const tag of item.tags ?? []) {
+      for (const snippet of localSnippets) {
+        for (const tag of snippet.tags ?? []) {
           tags.add(tag)
         }
       }
