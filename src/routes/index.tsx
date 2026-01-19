@@ -89,8 +89,8 @@ const SnippetCard = memo(({ snippet, folders, authenticated, onTagClick, formatR
 
     {/* Body preview */}
     <p className="text-sm font-medium text-foreground line-clamp-3 relative z-10 whitespace-pre-wrap">
-      {snippet.body.slice(0, 150)}
-      {snippet.body.length > 150 && '…'}
+      {snippet.body ? snippet.body.slice(0, 150) : 'No content'}
+      {snippet.body && snippet.body.length > 150 && '…'}
     </p>
 
     {/* Timestamp */}
