@@ -1,5 +1,26 @@
+import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
-import { Clock, Download, FileCode, Filter, Folder, FolderPlus, HelpCircle, Plus, Search, Tags, Upload, X } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Copy,
+  Download,
+  Eye,
+  FileCode,
+  Filter,
+  Folder,
+  FolderPlus,
+  HelpCircle,
+  Plus,
+  Search,
+  Tags,
+  Text,
+  ToggleLeft,
+  ToggleRight,
+  Upload,
+  X,
+} from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { FolderDialog } from '~/components/FolderDialog'
@@ -77,62 +98,300 @@ interface SnippetCardProps {
   authenticated: boolean
   onTagClick: (tag: string) => void
   formatRelativeTime: (timestamp: number) => string
+  expandedCardId: string | null
+  onExpandChange: (id: string | null) => void
 }
 
-const SnippetCard = memo(({ snippet, folders, authenticated, onTagClick, formatRelativeTime }: SnippetCardProps) => (
-  <div className="relative p-4 border rounded-lg hover:shadow-md hover:border-primary/50 transition-all duration-200 bg-card h-full flex flex-col group animate-in fade-in slide-in-from-bottom-2 duration-300 [content-visibility:auto]">
-    {/* Link overlay for card navigation */}
-    <Link to="/snippets/$id" params={{ id: snippet.id }} className="absolute inset-0 z-0" aria-label={`View snippet`} />
+const SnippetCard = memo(
+  ({ snippet, folders, authenticated, onTagClick, formatRelativeTime, expandedCardId, onExpandChange }: SnippetCardProps) => {
+    const isExpanded = expandedCardId === snippet.id
+    const parseResult = useMemo(() => parseTemplate(snippet.body), [snippet.body])
+    const hasPlaceholders = parseResult.placeholders.length > 0
+    const [placeholderValues, setPlaceholderValues] = useState<Record<string, string>>({})
+    const [renderErrors, setRenderErrors] = useState(false)
 
-    {/* Sync status badge */}
-    {authenticated && <SyncStatusBadge snippet={snippet} />}
+    // Compute rendered output
+    const rendered = useMemo(() => {
+      const renderResult = renderTemplate(parseResult.segments, placeholderValues)
+      setRenderErrors(!!renderResult.errors)
+      return renderResult.rendered
+    }, [parseResult.segments, placeholderValues])
 
-    {/* Folder badge */}
-    {snippet.folder_id && folders.has(snippet.folder_id) && (
-      <Badge
-        variant="outline"
-        className="absolute top-4 right-4 z-10"
-        style={{ backgroundColor: `${COLORS[folders.get(snippet.folder_id)?.color ?? 'gray']}20` }}
+    const handleCopy = useCallback(
+      async (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+
+        try {
+          await navigator.clipboard.writeText(rendered)
+          toast.success('Copied to clipboard')
+        } catch {
+          toast.error('Failed to copy to clipboard')
+        }
+      },
+      [rendered],
+    )
+
+    const handleCopyRaw = useCallback(
+      async (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+
+        try {
+          await navigator.clipboard.writeText(snippet.body)
+          toast.success('Copied raw template to clipboard')
+        } catch {
+          toast.error('Failed to copy to clipboard')
+        }
+      },
+      [snippet.body],
+    )
+
+    const handleCardClick = useCallback(
+      (e: React.MouseEvent) => {
+        // Don't expand if clicking on interactive elements
+        if ((e.target as HTMLElement).closest('button, a, input, textarea, [role="button"]')) {
+          return
+        }
+        onExpandChange(isExpanded ? null : snippet.id)
+      },
+      [isExpanded, snippet.id, onExpandChange],
+    )
+
+    const handleKeyDown = useCallback(
+      (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onExpandChange(isExpanded ? null : snippet.id)
+        }
+      },
+      [isExpanded, snippet.id, onExpandChange],
+    )
+
+    const updatePlaceholderValue = useCallback((name: string, value: string) => {
+      setPlaceholderValues(prev => ({ ...prev, [name]: value }))
+    }, [])
+
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        className={`relative border rounded-lg hover:shadow-md hover:border-primary/50 transition-all duration-200 bg-card flex flex-col group animate-in fade-in slide-in-from-bottom-2 duration-300 [content-visibility:auto] ${
+          isExpanded ? 'p-6 col-span-full md:col-span-2 lg:col-span-3' : 'p-4 h-full'
+        }`}
+        onClick={handleCardClick}
+        onKeyDown={handleKeyDown}
+        aria-expanded={isExpanded}
       >
-        <Folder className="h-3 w-3 mr-1" />
-        {folders.get(snippet.folder_id)?.name}
-      </Badge>
-    )}
+        {/* Sync status badge */}
+        {authenticated && <SyncStatusBadge snippet={snippet} />}
 
-    {/* Body preview */}
-    <p className="text-sm font-medium text-foreground line-clamp-3 relative z-10 whitespace-pre-wrap">
-      {snippet.body.slice(0, 150)}
-      {snippet.body.length > 150 && '…'}
-    </p>
-
-    {/* Timestamp */}
-    <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground relative z-10">
-      <Clock className="h-3 w-3" />
-      <span>{formatRelativeTime(snippet.updated_at)}</span>
-    </div>
-
-    {/* Tags */}
-    {snippet.tags.length > 0 && (
-      <div className="flex gap-2 mt-3 flex-wrap relative z-10">
-        {snippet.tags.slice(0, 3).map(tag => (
-          <Badge key={tag} variant="secondary" interactive onClick={() => onTagClick(tag)}>
-            {tag}
-          </Badge>
-        ))}
-        {snippet.tags.length > 3 && (
-          <Badge variant="secondary" className="text-xs">
-            +{snippet.tags.length - 3}
+        {/* Folder badge */}
+        {snippet.folder_id && folders.has(snippet.folder_id) && (
+          <Badge
+            variant="outline"
+            className="absolute top-4 right-4 z-10"
+            style={{ backgroundColor: `${COLORS[folders.get(snippet.folder_id)?.color ?? 'gray']}20` }}
+          >
+            <Folder className="h-3 w-3 mr-1" />
+            {folders.get(snippet.folder_id)?.name}
           </Badge>
         )}
-      </div>
-    )}
 
-    {/* Hover indicator */}
-    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-      <FileCode className="h-5 w-5 text-muted-foreground" />
-    </div>
-  </div>
-))
+        {/* Header section - always visible */}
+        <div className="relative z-10">
+          {/* Expand/collapse button */}
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation()
+              onExpandChange(isExpanded ? null : snippet.id)
+            }}
+            className="absolute -top-2 -left-2 z-20 p-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            aria-label={isExpanded ? 'Collapse' : 'Expand'}
+          >
+            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+
+          {/* Body preview */}
+          <p className="text-sm font-medium text-foreground whitespace-pre-wrap">
+            {isExpanded ? snippet.body : `${snippet.body.slice(0, 150)}${snippet.body.length > 150 ? '…' : ''}`}
+          </p>
+
+          {/* Timestamp */}
+          <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>{formatRelativeTime(snippet.updated_at)}</span>
+          </div>
+
+          {/* Tags */}
+          {snippet.tags.length > 0 && (
+            <div className="flex gap-2 mt-3 flex-wrap">
+              {snippet.tags.slice(0, 3).map(tag => (
+                <Badge
+                  key={tag}
+                  variant="secondary"
+                  interactive
+                  onClick={e => {
+                    e.stopPropagation()
+                    onTagClick(tag)
+                  }}
+                >
+                  {tag}
+                </Badge>
+              ))}
+              {snippet.tags.length > 3 && (
+                <Badge variant="secondary" className="text-xs">
+                  +{snippet.tags.length - 3}
+                </Badge>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Expanded section */}
+        {isExpanded && (
+          <div className="mt-6 space-y-6 relative z-10">
+            {/* Placeholders section */}
+            {hasPlaceholders && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium">Fill in placeholders</h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {parseResult.placeholders.map(ph => (
+                    <div key={ph.name} className="space-y-2">
+                      <label htmlFor={`placeholder-${snippet.id}-${ph.name}`} className="text-sm font-medium flex items-center gap-2">
+                        {ph.name}
+                        <Badge variant="outline" className="text-xs">
+                          {ph.phType}
+                        </Badge>
+                        {ph.defaultValue !== undefined && (
+                          <span className="text-xs text-muted-foreground">(default: "{ph.defaultValue}")</span>
+                        )}
+                      </label>
+                      {ph.phType === 'text' && (
+                        <Textarea
+                          id={`placeholder-${snippet.id}-${ph.name}`}
+                          placeholder={ph.defaultValue ?? ''}
+                          value={placeholderValues[ph.name] ?? ''}
+                          onChange={e => updatePlaceholderValue(ph.name, e.target.value)}
+                          rows={2}
+                        />
+                      )}
+                      {ph.phType === 'number' && (
+                        <Input
+                          id={`placeholder-${snippet.id}-${ph.name}`}
+                          type="number"
+                          placeholder={ph.defaultValue ?? ''}
+                          value={placeholderValues[ph.name] ?? ''}
+                          onChange={e => updatePlaceholderValue(ph.name, e.target.value)}
+                        />
+                      )}
+                      {ph.phType === 'enum' && (
+                        <div className="flex gap-2 flex-wrap">
+                          {ph.options?.map(option => (
+                            <Button
+                              key={option}
+                              type="button"
+                              variant={(placeholderValues[ph.name] ?? ph.defaultValue) === option ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => updatePlaceholderValue(ph.name, option)}
+                            >
+                              {option}
+                              {option === ph.defaultValue && ' (default)'}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Rendered preview */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium">Rendered output</h3>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCopy} disabled={renderErrors}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleCopyRaw}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy raw
+                  </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/snippets/$id/edit" params={{ id: snippet.id }}>
+                      Edit
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+              <div className="p-4 bg-muted rounded-lg border">
+                <pre className="whitespace-pre-wrap font-mono text-sm break-words">{rendered}</pre>
+              </div>
+              {renderErrors && (
+                <p className="text-sm text-destructive flex items-center gap-2">
+                  <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
+                  Some placeholder values have errors.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Copy button (visible on hover when collapsed) */}
+        {!isExpanded && (
+          <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-background"
+              onClick={handleCopy}
+              aria-label="Copy rendered snippet"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-background"
+                  onClick={e => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
+                  aria-label="More options"
+                >
+                  <FileCode className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleCopy} className="touch-manipulation cursor-pointer">
+                  <Copy className="h-4 w-4 mr-2" />
+                  <span>Copy rendered</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopyRaw} className="touch-manipulation cursor-pointer">
+                  <Copy className="h-4 w-4 mr-2" />
+                  <span>Copy raw template</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild className="touch-manipulation cursor-pointer">
+                  <Link to="/snippets/$id" params={{ id: snippet.id }} className="flex items-center">
+                    <FileCode className="h-4 w-4 mr-2" />
+                    <span>View details</span>
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+      </div>
+    )
+  },
+)
 SnippetCard.displayName = 'SnippetCard'
 
 function Index() {
@@ -155,6 +414,12 @@ function Index() {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [quickCreateBody, setQuickCreateBody] = useState('')
   const [quickCreateLoading, setQuickCreateLoading] = useState(false)
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null)
+  const [quickCreateTags, setQuickCreateTags] = useState<string[]>([])
+  const [quickCreateTagInput, setQuickCreateTagInput] = useState('')
+  const [quickCreateFolderId, setQuickCreateFolderId] = useState<string | null>(null)
+  const [showQuickCreateOptions, setShowQuickCreateOptions] = useState(false)
+  const [quickCreateTab, setQuickCreateTab] = useState<'edit' | 'preview'>('edit')
 
   // Debounce search input to reduce API calls
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
@@ -301,7 +566,8 @@ function Index() {
       try {
         const result = await createSnippet({
           body: quickCreateBody.trim(),
-          tags: [],
+          tags: quickCreateTags,
+          folder_id: quickCreateFolderId,
         })
 
         if (result.error) {
@@ -309,7 +575,12 @@ function Index() {
           return
         }
 
+        // Reset form
         setQuickCreateBody('')
+        setQuickCreateTags([])
+        setQuickCreateTagInput('')
+        setQuickCreateFolderId(null)
+        setShowQuickCreateOptions(false)
         await loadSnippets()
 
         // Navigate to the new snippet
@@ -320,8 +591,31 @@ function Index() {
         setQuickCreateLoading(false)
       }
     },
-    [quickCreateBody, loadSnippets, router],
+    [quickCreateBody, quickCreateTags, quickCreateFolderId, loadSnippets, router],
   )
+
+  const handleAddQuickCreateTag = useCallback(
+    (e?: React.KeyboardEvent) => {
+      const tag = quickCreateTagInput.trim()
+      if (!tag) return
+      if (e && e.key !== 'Enter') return
+      if (quickCreateTags.includes(tag)) {
+        toast.error('Tag already exists')
+        return
+      }
+      if (quickCreateTags.length >= 10) {
+        toast.error('Maximum 10 tags allowed')
+        return
+      }
+      setQuickCreateTags(prev => [...prev, tag])
+      setQuickCreateTagInput('')
+    },
+    [quickCreateTagInput, quickCreateTags],
+  )
+
+  const handleRemoveQuickCreateTag = useCallback((tag: string) => {
+    setQuickCreateTags(prev => prev.filter(t => t !== tag))
+  }, [])
 
   const handleExport = useCallback(async () => {
     // Export all snippets
@@ -531,31 +825,149 @@ function Index() {
 
         {/* Quick Create Input */}
         <form onSubmit={handleQuickCreate} className="space-y-4">
-          <div className="relative">
-            <Textarea
-              placeholder="Type a snippet here and press Enter to save... (supports {{placeholder:text}} syntax)"
-              value={quickCreateBody}
-              onChange={e => setQuickCreateBody(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleQuickCreate(e)
-                }
-              }}
-              rows={3}
-              className="resize-none pr-12"
-              disabled={quickCreateLoading}
-            />
-            {quickCreateLoading && (
-              <div className="absolute right-3 top-3">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              </div>
-            )}
+          {/* Tabs */}
+          <div className="flex items-center gap-4 border-b">
+            <button
+              type="button"
+              onClick={() => setQuickCreateTab('edit')}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                quickCreateTab === 'edit' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Text className="h-4 w-4" />
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => setQuickCreateTab('preview')}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                quickCreateTab === 'preview'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+              disabled={!quickCreateBody.trim()}
+            >
+              <Eye className="h-4 w-4" />
+              Preview
+            </button>
+            <div className="flex-1" />
+            <button
+              type="button"
+              onClick={() => setShowQuickCreateOptions(!showQuickCreateOptions)}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {showQuickCreateOptions ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
+              Options
+            </button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Press <kbd className="px-1 py-0.5 rounded bg-muted border">Enter</kbd> to save •{' '}
-            <kbd className="px-1 py-0.5 rounded bg-muted border">Shift+Enter</kbd> for new line
-          </p>
+
+          {quickCreateTab === 'edit' ? (
+            <div className="space-y-4">
+              <div className="relative">
+                <Textarea
+                  placeholder="Type a snippet here and press Enter to save... (supports {{placeholder:text}} syntax)"
+                  value={quickCreateBody}
+                  onChange={e => setQuickCreateBody(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleQuickCreate(e)
+                    }
+                  }}
+                  rows={3}
+                  className="resize-none pr-12"
+                  disabled={quickCreateLoading}
+                />
+                {quickCreateLoading && (
+                  <div className="absolute right-3 top-3">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  </div>
+                )}
+              </div>
+
+              {/* Optional options */}
+              {showQuickCreateOptions && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                  {/* Tags */}
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium flex items-center gap-2">
+                      <Tags className="h-4 w-4" />
+                      Tags
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      {quickCreateTags.map(tag => (
+                        <Badge key={tag} variant="secondary" interactive onClick={() => handleRemoveQuickCreateTag(tag)}>
+                          {tag}
+                          <X className="h-3 w-3 ml-1" />
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Add a tag..."
+                        value={quickCreateTagInput}
+                        onChange={e => setQuickCreateTagInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleAddQuickCreateTag(e)
+                          }
+                        }}
+                      />
+                      <Button type="button" variant="outline" onClick={() => handleAddQuickCreateTag()}>
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Folder */}
+                  {authenticated && folderTree.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        <Folder className="h-4 w-4" />
+                        Folder
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start">
+                            {quickCreateFolderId ? (foldersMap.get(quickCreateFolderId)?.name ?? 'Select folder') : 'No folder'}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-48">
+                          <DropdownMenuItem onClick={() => setQuickCreateFolderId(null)}>No folder</DropdownMenuItem>
+                          {folderTree.map(folder => (
+                            <DropdownMenuItem key={folder.id} onClick={() => setQuickCreateFolderId(folder.id)}>
+                              <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: folder.color }} />
+                              {folder.name}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                Press <kbd className="px-1 py-0.5 rounded bg-muted border">Enter</kbd> to save •{' '}
+                <kbd className="px-1 py-0.5 rounded bg-muted border">Shift+Enter</kbd> for new line •{' '}
+                <kbd className="px-1 py-0.5 rounded bg-muted border">Ctrl+N</kbd> for full editor
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="p-4 bg-muted rounded-lg border">
+                <pre className="whitespace-pre-wrap font-mono text-sm break-words">
+                  {(() => {
+                    const parseResult = parseTemplate(quickCreateBody)
+                    const renderResult = renderTemplate(parseResult.segments, {})
+                    return renderResult.rendered || quickCreateBody || 'Preview will appear here...'
+                  })()}
+                </pre>
+              </div>
+              <p className="text-xs text-muted-foreground">This is how your snippet will appear with default placeholder values.</p>
+            </div>
+          )}
         </form>
 
         <div className="space-y-4">
@@ -672,6 +1084,8 @@ function Index() {
                 authenticated={authenticated}
                 onTagClick={setSelectedTag}
                 formatRelativeTime={formatRelativeTime}
+                expandedCardId={expandedCardId}
+                onExpandChange={setExpandedCardId}
               />
             ))}
           </div>
