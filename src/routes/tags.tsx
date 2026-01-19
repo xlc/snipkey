@@ -90,9 +90,7 @@ function TagsPage() {
 
     // Check if we hit the limit
     if (result.data.length >= 10000) {
-      toast.warning(
-        'You have a large number of snippets with this tag. Some snippets may not have been processed. Consider using server-side bulk operations for better performance.',
-      )
+      toast.warning('You have a large number of snippets with this tag. Processing may take a moment.')
     }
 
     const snippetsToUpdate = result.data
@@ -155,9 +153,7 @@ function TagsPage() {
 
     // Check if we hit the limit
     if (result.data.length >= 10000) {
-      toast.warning(
-        'You have a large number of snippets with this tag. Some snippets may not have been processed. Consider using server-side bulk operations for better performance.',
-      )
+      toast.warning('You have a large number of snippets with this tag. Processing may take a moment.')
     }
 
     const snippetsToUpdate = result.data

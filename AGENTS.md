@@ -19,25 +19,30 @@ This document contains project-specific rules and instructions for AI agents wor
 ```
 snipkey/
 ├── src/
-│   ├── app/              # App-level providers and layouts
 │   ├── components/       # React components
 │   │   └── ui/           # shadcn/ui base components
 │   ├── lib/
-│   │   ├── server/       # Server-side utilities (auth, middleware, db)
+│   │   ├── auth/         # Client-side auth utilities
+│   │   ├── constants/    # App constants
 │   │   ├── hooks/        # Custom React hooks
-│   │   └── auth/         # Client-side auth utilities
+│   │   └── server/       # Server-side utilities (auth, middleware, db)
 │   ├── routes/           # TanStack Start file-based routes
 │   ├── server/           # TanStack Start server functions
-│   └── styles/           # Global styles
+│   ├── styles/           # Global styles
+│   ├── main.tsx          # App entry
+│   ├── router.tsx        # Router setup
+│   └── routeTree.gen.ts  # Route tree (generated)
 ├── shared/
 │   └── src/
 │       ├── db/           # Database schema and utilities
 │       ├── template/     # Placeholder parsing and rendering
 │       ├── types/        # Shared TypeScript types
+│       ├── utils/        # Shared utilities
 │       └── validation/   # Zod schemas and validation limits
 ├── migrations/           # D1 database migrations
-├── routes/               # Legacy routes directory (unused)
-├── wrangler.json         # Cloudflare Workers configuration
+├── wrangler.jsonc        # Cloudflare Workers configuration
+├── worker-configuration.d.ts # Wrangler env type generation
+├── worker-runtime.d.ts   # Wrangler runtime type generation
 ├── biome.json            # Biome linting/formatting config
 ├── vite.config.ts        # Vite configuration
 └── package.json          # Single package at root
@@ -133,7 +138,7 @@ Placeholders use `{{name:type}}` or `{{name:type=default}}` syntax:
 ## Important Files
 
 ### Configuration
-- `wrangler.json` - Cloudflare Workers config (D1 binding, env vars)
+- `wrangler.jsonc` - Cloudflare Workers config (D1 binding, env vars)
 - `biome.json` - Code style rules
 - `vite.config.ts` - Vite bundler config
 - `tsconfig.json` - TypeScript config
@@ -155,7 +160,8 @@ bun run check        # Run Biome linter/formatter (fixes issues)
 bun run typecheck    # TypeScript type checking
 bun run lint         # Biome lint only
 bun run format       # Biome format only
-bun run db:migrate   # Apply pending D1 migrations (local)
+bun run db:migrate   # Apply pending D1 migrations (wrangler default target)
+bun run generate     # Regenerate Wrangler type definitions
 ```
 
 ## Database Migrations
@@ -169,7 +175,7 @@ bun run db:migration:create <name>
 # List pending migrations
 bun run db:migration:list
 
-# Apply pending migrations (local)
+# Apply pending migrations (wrangler default target)
 bun run db:migrate
 
 # Apply pending migrations (production)
@@ -180,13 +186,13 @@ wrangler d1 migrations apply snipkey-db --remote
 
 ## Environment Variables
 
-Development uses defaults from `wrangler.json`:
+Development uses defaults from `wrangler.jsonc`:
 - `RP_ID=localhost`
 - `ORIGIN=http://localhost:5173`
 - `CHALLENGE_TTL_MS=300000` (5 minutes)
 - `SESSION_TTL_MS=604800000` (7 days)
 
-**Production must update** `RP_ID` and `ORIGIN` in `wrangler.json`.
+**Production must update** `RP_ID` and `ORIGIN` in `wrangler.jsonc`.
 
 ## Common Tasks
 
@@ -214,11 +220,11 @@ Development uses defaults from `wrangler.json`:
 
 ## Deployment
 
-1. Update `wrangler.json` with production `database_id` and env vars
+1. Update `wrangler.jsonc` with production `database_id` and env vars
 2. Run all migrations against production D1
 3. Deploy with `wrangler deploy`
 
-See `DEPLOYMENT.md` for detailed instructions.
+See `README.md` for detailed instructions.
 
 ## Security Rules
 
