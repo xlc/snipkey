@@ -99,25 +99,8 @@ export async function listSnippets(filters: {
 
     // Merge server results with local unsynced snippets
     const serverItems: SnippetListItem[] = result.data.items
-    let localUnsynced = listLocalSnippets().filter(s => !s.synced)
+    const localUnsynced = listLocalSnippets().filter(s => !s.synced)
     const localDeleted = getDeletedSnippets()
-
-    // Apply filters to local unsynced snippets before merging
-    if (filters.query) {
-      const query = filters.query.toLowerCase()
-      localUnsynced = localUnsynced.filter(
-        s => (s.body ?? '').toLowerCase().includes(query) || (s.tags ?? []).some(tag => tag.toLowerCase().includes(query)),
-      )
-    }
-
-    if (filters.tag) {
-      const tag = filters.tag
-      localUnsynced = localUnsynced.filter(s => (s.tags ?? []).includes(tag))
-    }
-
-    if (filters.folder_id !== undefined) {
-      localUnsynced = localUnsynced.filter(s => s.folder_id === filters.folder_id)
-    }
 
     // Build merged list, prioritizing local unsynced snippets
     const merged: SnippetListItem[] = []
@@ -131,12 +114,35 @@ export async function listSnippets(filters: {
       }
     }
 
-    // First, add all local unsynced snippets (already filtered)
+    // First, populate processedServerIds from ALL local unsynced snippets
+    // This prevents ghost items when a local change excludes a snippet from the filter
     for (const local of localUnsynced) {
-      merged.push(toListItem(local))
       if (local.serverId) {
         processedServerIds.add(local.serverId)
       }
+    }
+
+    // Apply filters to local unsynced snippets before adding to merged result
+    let filteredLocal = localUnsynced
+    if (filters.query) {
+      const query = filters.query.toLowerCase()
+      filteredLocal = filteredLocal.filter(
+        s => (s.body ?? '').toLowerCase().includes(query) || (s.tags ?? []).some(tag => tag.toLowerCase().includes(query)),
+      )
+    }
+
+    if (filters.tag) {
+      const tag = filters.tag
+      filteredLocal = filteredLocal.filter(s => (s.tags ?? []).includes(tag))
+    }
+
+    if (filters.folder_id !== undefined) {
+      filteredLocal = filteredLocal.filter(s => s.folder_id === filters.folder_id)
+    }
+
+    // Add filtered local unsynced snippets to merged list
+    for (const local of filteredLocal) {
+      merged.push(toListItem(local))
     }
 
     // Then, add server items that weren't overridden by local changes or deletions
