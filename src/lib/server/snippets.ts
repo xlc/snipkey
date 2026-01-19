@@ -46,7 +46,11 @@ export async function snippetsList(db: ReturnType<typeof getDb>, userId: string,
 
   // Apply folder filter
   if (input.folder_id !== undefined) {
-    query = query.where('folder_id', '=', input.folder_id)
+    if (input.folder_id === null) {
+      query = query.where('folder_id', 'is', null)
+    } else {
+      query = query.where('folder_id', '=', input.folder_id)
+    }
   }
 
   // Apply search filter (escape SQL wildcards to prevent injection)

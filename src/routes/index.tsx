@@ -131,8 +131,9 @@ const SnippetCard = memo(
 
     const handleCardClick = useCallback(
       (e: React.MouseEvent) => {
-        // Don't expand if clicking on interactive elements
-        if ((e.target as HTMLElement).closest('button, a, input, textarea, [role="button"]')) {
+        // Don't expand if clicking on interactive elements (but allow clicking the card itself)
+        const closestInteractive = (e.target as HTMLElement).closest('button, a, input, textarea, [role="button"]')
+        if (closestInteractive && closestInteractive !== e.currentTarget) {
           return
         }
         onExpandChange(isExpanded ? null : snippet.id)
