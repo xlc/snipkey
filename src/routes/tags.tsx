@@ -90,7 +90,9 @@ function TagsPage() {
 
     // Check if we hit the limit
     if (result.data.length >= 10000) {
-      toast.warning('You have a large number of snippets. Some snippets may not have been processed. Consider using server-side bulk operations for better performance.')
+      toast.warning(
+        'You have a large number of snippets. Some snippets may not have been processed. Consider using server-side bulk operations for better performance.',
+      )
     }
 
     // Find all snippets with the old tag
@@ -145,7 +147,9 @@ function TagsPage() {
 
     // Check if we hit the limit
     if (result.data.length >= 10000) {
-      toast.warning('You have a large number of snippets. Some snippets may not have been processed. Consider using server-side bulk operations for better performance.')
+      toast.warning(
+        'You have a large number of snippets. Some snippets may not have been processed. Consider using server-side bulk operations for better performance.',
+      )
     }
 
     // Find all snippets with the tag

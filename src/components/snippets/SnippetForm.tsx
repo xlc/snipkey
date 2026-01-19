@@ -38,6 +38,7 @@ export function SnippetForm({
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [showFolderDialog, setShowFolderDialog] = useState(false)
+  const [folderListKey, setFolderListKey] = useState(0) // Used to force FolderSelector reload
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const formStateRef = useRef({ body, tags, folderId })
 
@@ -276,7 +277,12 @@ export function SnippetForm({
 
         <div className="space-y-2">
           <div className="text-sm font-medium">Folder (optional)</div>
-          <FolderSelector selectedFolderId={folderId} onFolderSelect={setFolderId} onCreateFolder={() => setShowFolderDialog(true)} />
+          <FolderSelector
+            key={folderListKey}
+            selectedFolderId={folderId}
+            onFolderSelect={setFolderId}
+            onCreateFolder={() => setShowFolderDialog(true)}
+          />
         </div>
 
         <div className="space-y-2">
@@ -345,7 +351,8 @@ export function SnippetForm({
         mode="create"
         parent_id={null}
         onSuccess={() => {
-          // Folder was created successfully
+          // Folder was created successfully, force FolderSelector to reload
+          setFolderListKey(prev => prev + 1)
           setShowFolderDialog(false)
         }}
       />
