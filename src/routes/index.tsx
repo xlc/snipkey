@@ -104,13 +104,14 @@ const SnippetCard = memo(
     const parseResult = useMemo(() => parseTemplate(snippet.body), [snippet.body])
     const hasPlaceholders = parseResult.placeholders.length > 0
     const [placeholderValues, setPlaceholderValues] = useState<Record<string, string>>({})
-    const [renderErrors, setRenderErrors] = useState(false)
 
-    // Compute rendered output
-    const rendered = useMemo(() => {
+    // Compute rendered output and errors
+    const { rendered, renderErrors } = useMemo(() => {
       const renderResult = renderTemplate(parseResult.segments, placeholderValues)
-      setRenderErrors(!!renderResult.errors)
-      return renderResult.rendered
+      return {
+        rendered: renderResult.rendered,
+        renderErrors: !!renderResult.errors,
+      }
     }, [parseResult.segments, placeholderValues])
 
     const handleCopy = useCallback(
@@ -399,7 +400,7 @@ function Index() {
       }
       setFolderTreeLoading(true)
       try {
-        const result = await foldersTree()
+        const result = await foldersTree({})
         setFolderTreeLoading(false)
         return { error: null, data: result.data }
       } catch {
