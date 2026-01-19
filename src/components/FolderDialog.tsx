@@ -4,33 +4,13 @@ import { z } from 'zod'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 import { Input } from '~/components/ui/input'
+import { COLORS } from '~/lib/constants/colors'
 import { folderCreate, folderGet, folderUpdate } from '~/server/folders'
 
 const folderFormSchema = z.object({
   name: z.string().min(1, 'Folder name is required').max(100, 'Folder name must be less than 100 characters'),
   color: z.string().default('gray'),
 })
-
-const AVAILABLE_COLORS = [
-  { value: 'gray', label: 'Gray', class: 'bg-gray-500' },
-  { value: 'red', label: 'Red', class: 'bg-red-500' },
-  { value: 'orange', label: 'Orange', class: 'bg-orange-500' },
-  { value: 'amber', label: 'Amber', class: 'bg-amber-500' },
-  { value: 'yellow', label: 'Yellow', class: 'bg-yellow-500' },
-  { value: 'lime', label: 'Lime', class: 'bg-lime-500' },
-  { value: 'green', label: 'Green', class: 'bg-green-500' },
-  { value: 'emerald', label: 'Emerald', class: 'bg-emerald-500' },
-  { value: 'teal', label: 'Teal', class: 'bg-teal-500' },
-  { value: 'cyan', label: 'Cyan', class: 'bg-cyan-500' },
-  { value: 'sky', label: 'Sky', class: 'bg-sky-500' },
-  { value: 'blue', label: 'Blue', class: 'bg-blue-500' },
-  { value: 'indigo', label: 'Indigo', class: 'bg-indigo-500' },
-  { value: 'violet', label: 'Violet', class: 'bg-violet-500' },
-  { value: 'purple', label: 'Purple', class: 'bg-purple-500' },
-  { value: 'fuchsia', label: 'Fuchsia', class: 'bg-fuchsia-500' },
-  { value: 'pink', label: 'Pink', class: 'bg-pink-500' },
-  { value: 'rose', label: 'Rose', class: 'bg-rose-500' },
-]
 
 interface FolderDialogProps {
   open: boolean
@@ -136,15 +116,17 @@ export function FolderDialog({ open, onOpenChange, mode, folderId, parent_id = n
               <fieldset className="space-y-2">
                 <legend className="text-sm font-medium">Color</legend>
                 <div className="grid grid-cols-9 gap-2">
-                  {AVAILABLE_COLORS.map(colorOption => (
+                  {Object.keys(COLORS).map(colorValue => (
                     <button
-                      key={colorOption.value}
+                      key={colorValue}
                       type="button"
-                      onClick={() => setColor(colorOption.value)}
-                      className={`h-8 w-8 rounded-full ${colorOption.class} ${
-                        color === colorOption.value ? 'ring-2 ring-ring ring-offset-2' : ''
-                      } hover:opacity-80 transition-opacity`}
-                      title={colorOption.label}
+                      onClick={() => setColor(colorValue)}
+                      className="h-8 w-8 rounded-full hover:opacity-80 transition-opacity"
+                      style={{
+                        backgroundColor: COLORS[colorValue as keyof typeof COLORS],
+                        boxShadow: color === colorValue ? '0 0 0 2px var(--ring), 0 0 0 4px var(--background)' : 'none',
+                      }}
+                      title={colorValue.charAt(0).toUpperCase() + colorValue.slice(1)}
                     />
                   ))}
                 </div>

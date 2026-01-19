@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
+import { COLORS } from '~/lib/constants/colors'
 import { getAuthStatus } from '~/lib/snippet-api'
 import { foldersTree } from '~/server/folders'
 
@@ -19,28 +20,6 @@ interface FolderSelectorProps {
   onCreateFolder: () => void
 }
 
-const COLORS: Record<string, string> = {
-  gray: 'bg-gray-500',
-  red: 'bg-red-500',
-  orange: 'bg-orange-500',
-  amber: 'bg-amber-500',
-  yellow: 'bg-yellow-500',
-  lime: 'bg-lime-500',
-  green: 'bg-green-500',
-  emerald: 'bg-emerald-500',
-  teal: 'bg-teal-500',
-  cyan: 'bg-cyan-500',
-  sky: 'bg-sky-500',
-  blue: 'bg-blue-500',
-  indigo: 'bg-indigo-500',
-  violet: 'bg-violet-500',
-  purple: 'bg-purple-500',
-  fuchsia: 'bg-fuchsia-500',
-  pink: 'bg-pink-500',
-  rose: 'bg-rose-500',
-}
-
-// Flatten folder tree for dropdown display
 function flattenFolders(
   tree: Array<{ id: string; name: string; color: string; snippet_count: number; children: unknown[] }>,
   depth = 0,
@@ -107,7 +86,7 @@ export function FolderSelector({ selectedFolderId, onFolderSelect, onCreateFolde
         <Button type="button" variant="outline" className="w-full justify-start" disabled={loading}>
           {selectedFolder ? (
             <div className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${COLORS[selectedFolder.color] || 'bg-gray-500'}`} />
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[selectedFolder.color] || COLORS.gray }} />
               <span className="flex-1 text-left truncate">{selectedFolder.name}</span>
               <span className="text-xs text-muted-foreground">({selectedFolder.snippet_count})</span>
             </div>
@@ -135,7 +114,7 @@ export function FolderSelector({ selectedFolderId, onFolderSelect, onCreateFolde
             className={selectedFolderId === folder.id ? 'bg-accent' : ''}
           >
             <div className="flex items-center gap-2 w-full" style={{ paddingLeft: `${folder.depth * 16}px` }}>
-              <div className={`w-3 h-3 rounded-full ${COLORS[folder.color] || 'bg-gray-500'}`} />
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[folder.color] || COLORS.gray }} />
               <span className="flex-1 truncate">{folder.name}</span>
               <Badge variant="secondary" className="text-xs">
                 {folder.snippet_count}
