@@ -81,21 +81,20 @@ function TagsPage() {
       return
     }
 
-    // Get all snippets with the old tag (server-side filtering)
-    // Note: limit is hardcoded to 10000 - this is a known limitation of the current API
-    // The client-side listSnippets doesn't expose cursor pagination, so we fetch in one batch
-    const result = await listSnippets({ tag: oldTag, limit: 10000 })
+    // Get snippets with the old tag (check for more than 100)
+    const result = await listSnippets({ tag: oldTag, limit: 101 })
     if (result.error || !result.data) {
       toast.error('Failed to load snippets')
       return
     }
 
-    // Check if we hit the limit
-    if (result.data.length >= 10000) {
-      toast.warning('You have a large number of snippets with this tag. Processing may take a moment.')
-    }
+    const hasMore = result.data.length > 100
+    const snippetsToUpdate = hasMore ? result.data.slice(0, 100) : result.data
 
-    const snippetsToUpdate = result.data
+    // Check if there are more snippets to process
+    if (hasMore) {
+      toast.warning('This tag has many snippets. Only the first 100 will be processed. Run the operation again to process remaining items.')
+    }
 
     if (snippetsToUpdate.length === 0) {
       toast.error('No snippets found with this tag')
@@ -145,22 +144,21 @@ function TagsPage() {
   async function confirmDeleteTag() {
     if (!tagToDelete) return
 
-    // Get all snippets with the tag (server-side filtering)
-    // Note: limit is hardcoded to 10000 - this is a known limitation of the current API
-    // The client-side listSnippets doesn't expose cursor pagination, so we fetch in one batch
-    const result = await listSnippets({ tag: tagToDelete, limit: 10000 })
+    // Get snippets with the tag (check for more than 100)
+    const result = await listSnippets({ tag: tagToDelete, limit: 101 })
     if (result.error || !result.data) {
       toast.error('Failed to load snippets')
       setShowDeleteDialog(false)
       return
     }
 
-    // Check if we hit the limit
-    if (result.data.length >= 10000) {
-      toast.warning('You have a large number of snippets with this tag. Processing may take a moment.')
-    }
+    const hasMore = result.data.length > 100
+    const snippetsToUpdate = hasMore ? result.data.slice(0, 100) : result.data
 
-    const snippetsToUpdate = result.data
+    // Check if there are more snippets to process
+    if (hasMore) {
+      toast.warning('This tag has many snippets. Only the first 100 will be processed. Run the operation again to process remaining items.')
+    }
 
     if (snippetsToUpdate.length === 0) {
       toast.error('No snippets found with this tag')

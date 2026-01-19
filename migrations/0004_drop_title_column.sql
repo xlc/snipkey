@@ -1,7 +1,7 @@
 -- Migration number: 0004 	 2026-01-18T20:32:28.949Z
 
 -- Remove title column by recreating the table (SQLite limitation)
--- Note: folder_id column may or may not exist depending on migration 0002 status
+-- Note: folder_id was dropped in migration 0003, so we need to re-add it
 
 CREATE TABLE snippets_new (
 	id TEXT PRIMARY KEY,
@@ -15,13 +15,14 @@ CREATE TABLE snippets_new (
 );
 
 -- Copy data from old table to new table (excluding title)
+-- Note: folder_id doesn't exist in the current table (dropped in 0003), so we set it to NULL
 INSERT INTO snippets_new (id, user_id, body, tags, folder_id, created_at, updated_at)
 SELECT
 	id,
 	user_id,
 	body,
 	tags,
-	folder_id,
+	NULL AS folder_id,
 	created_at,
 	updated_at
 FROM snippets;

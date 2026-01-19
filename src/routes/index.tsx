@@ -161,6 +161,7 @@ const SnippetRow = memo(({ snippet, folders, authenticated, onTagClick, formatRe
             className="h-8 w-8"
             onClick={() => router.navigate({ to: '/snippets/$id/edit', params: { id: snippet.id } })}
             title="Edit"
+            disabled={snippet.id.startsWith('temp-')}
           >
             <Edit2 className="h-4 w-4" />
           </Button>
@@ -441,10 +442,12 @@ function Index() {
           return
         }
 
-        // Replace optimistic snippet with real one
+        // Replace optimistic snippet with real one (synced only if authenticated)
         if (result.data?.id) {
           const realId = result.data.id
-          setSnippets(prev => prev?.map(s => (s.id === tempId ? ({ ...s, id: realId, synced: false } as PartialSnippet) : s)) ?? null)
+          setSnippets(
+            prev => prev?.map(s => (s.id === tempId ? ({ ...s, id: realId, synced: authenticated } as PartialSnippet) : s)) ?? null,
+          )
         }
       } catch {
         // Remove optimistic snippet on error
@@ -456,7 +459,7 @@ function Index() {
         setQuickCreateFolderId(optimisticSnippet.folder_id)
       }
     },
-    [quickCreateBody, quickCreateTags, quickCreateFolderId],
+    [quickCreateBody, quickCreateTags, quickCreateFolderId, authenticated],
   )
 
   const handleAddQuickCreateTag = useCallback(
