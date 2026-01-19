@@ -482,6 +482,10 @@ function Index() {
     setQuickCreateTags(prev => prev.filter(t => t !== tag))
   }, [])
 
+  const handleDeleteSnippet = useCallback((id: string) => {
+    setSnippets(prev => prev?.filter((s: PartialSnippet) => s.id !== id) ?? null)
+  }, [])
+
   // Keyboard shortcuts
   useKeyboardShortcuts([
     {
@@ -775,9 +779,7 @@ function Index() {
                 authenticated={authenticated}
                 onTagClick={setSelectedTag}
                 formatRelativeTime={formatRelativeTime}
-                onDelete={id => {
-                  setSnippets(prev => prev?.filter(s => s.id !== id) ?? null)
-                }}
+                onDelete={handleDeleteSnippet}
               />
             ))}
           </div>

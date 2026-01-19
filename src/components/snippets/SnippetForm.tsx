@@ -118,6 +118,14 @@ export function SnippetForm({
     }
   }, [])
 
+  // Track latest onSubmit handler using ref to avoid useEffect dependency issues
+  const onSubmitRef = useRef(onSubmit)
+
+  // Update ref when onSubmit changes
+  useEffect(() => {
+    onSubmitRef.current = onSubmit
+  }, [onSubmit])
+
   // Auto-save to server after 2 seconds of inactivity (edit mode only)
   useEffect(() => {
     if (!enableAutoSave || mode !== 'edit' || loading) return
@@ -133,7 +141,7 @@ export function SnippetForm({
       if (body.trim() && (body !== initialBody || JSON.stringify(tags) !== JSON.stringify(initialTags) || folderId !== initialFolderId)) {
         setSaving(true)
         try {
-          await onSubmit({
+          await onSubmitRef.current({
             body,
             tags,
             folder_id: folderId,
@@ -159,7 +167,7 @@ export function SnippetForm({
         clearTimeout(autoSaveTimeoutRef.current)
       }
     }
-  }, [body, tags, folderId, enableAutoSave, mode, loading, onSubmit, initialBody, initialTags, initialFolderId])
+  }, [body, tags, folderId, enableAutoSave, mode, loading, initialBody, initialTags, initialFolderId])
 
   // Clear draft on successful submit
   useEffect(() => {
