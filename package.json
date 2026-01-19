@@ -8,6 +8,7 @@
 		"preview": "vite preview",
 		"typecheck": "tsc --noEmit",
 		"deploy": "bun run build && wrangler deploy",
+		"fix": "biome check . --write --unsafe",
 		"lint": "biome lint .",
 		"format": "biome format . --write",
 		"check": "biome check . --write --unsafe && tsc --noEmit",

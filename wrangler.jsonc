@@ -3,6 +3,12 @@
 	"name": "snipkey",
 	"compatibility_date": "2025-09-24",
 	"compatibility_flags": ["nodejs_compat"],
+	"routes": [
+		{
+			"pattern": "snipkey.polka.codes",
+			"custom_domain": true
+		}
+	],
 	"main": "@tanstack/react-start/server-entry",
 	"d1_databases": [
 		{
@@ -12,8 +18,8 @@
 		}
 	],
 	"vars": {
-		"RP_ID": "localhost",
-		"ORIGIN": "http://localhost:5173",
+		"RP_ID": "snipkey.polka.codes",
+		"ORIGIN": "https://snipkey.polka.codes",
 		"CHALLENGE_TTL_MS": "300000",
 		"SESSION_TTL_MS": "604800000"
 	}
