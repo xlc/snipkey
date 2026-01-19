@@ -102,19 +102,28 @@ function TagsPage() {
       return
     }
 
-    // Update each snippet
+    // Update each snippet in parallel batches
     let updated = 0
     let failed = 0
 
-    for (const snippet of snippetsToUpdate) {
-      const newTags = (snippet.tags ?? []).map(t => (t === oldTag ? newTag : t))
-      const updateResult = await updateSnippet(snippet.id, { tags: newTags })
+    // Process in batches of 10 to avoid overwhelming the server
+    const batchSize = 10
+    for (let i = 0; i < snippetsToUpdate.length; i += batchSize) {
+      const batch = snippetsToUpdate.slice(i, i + batchSize)
+      const results = await Promise.all(
+        batch.map(snippet => {
+          const newTags = (snippet.tags ?? []).map(t => (t === oldTag ? newTag : t))
+          return updateSnippet(snippet.id, { tags: newTags })
+        }),
+      )
 
-      if (updateResult.error) {
-        failed++
-      } else {
-        updated++
-      }
+      results.forEach(result => {
+        if (result.error) {
+          failed++
+        } else {
+          updated++
+        }
+      })
     }
 
     if (failed > 0) {

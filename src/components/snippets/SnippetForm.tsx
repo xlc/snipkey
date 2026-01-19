@@ -42,6 +42,7 @@ export function SnippetForm({
   const [folderListKey, setFolderListKey] = useState(0) // Used to force FolderSelector reload
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const formStateRef = useRef({ body, tags, folderId })
+  const mountedRef = useRef(true) // Track if component is mounted
 
   // Real-time parsing
   const parseResult = parseTemplate(body)
@@ -109,6 +110,14 @@ export function SnippetForm({
     }
   }, [mode, id, enableAutoSave, initialBody, initialTags, initialFolderId])
 
+  // Cleanup on unmount
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
   // Auto-save to server after 2 seconds of inactivity (edit mode only)
   useEffect(() => {
     if (!enableAutoSave || mode !== 'edit' || loading) return
@@ -129,13 +138,18 @@ export function SnippetForm({
             tags,
             folder_id: folderId,
           })
-          // Only update lastSaved time if submission succeeded
-          setLastSaved(new Date())
+          // Only update lastSaved time if submission succeeded and component is still mounted
+          if (mountedRef.current) {
+            setLastSaved(new Date())
+          }
         } catch {
           // Error already handled and displayed via toast notification in onSubmit
           // Don't update lastSaved since the save failed
         } finally {
-          setSaving(false)
+          // Only set saving to false if component is still mounted
+          if (mountedRef.current) {
+            setSaving(false)
+          }
         }
       }
     }, 2000)
