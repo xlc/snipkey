@@ -104,7 +104,7 @@ const SnippetRow = memo(({ snippet, folders, authenticated, onTagClick, formatRe
   )
 
   return (
-    <div className="group relative border rounded-lg hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 bg-card">
+    <div className="group relative border rounded-lg hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 bg-card animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="p-4 space-y-2">
         {/* Sync status badge */}
         {authenticated && <SyncStatusBadge snippet={snippet} />}
@@ -201,7 +201,6 @@ function Index() {
   const [folderDialogParentId, setFolderDialogParentId] = useState<string | null>(null)
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [quickCreateBody, setQuickCreateBody] = useState('')
-  const [quickCreateLoading, setQuickCreateLoading] = useState(false)
   const [quickCreateTags, setQuickCreateTags] = useState<string[]>([])
   const [quickCreateTagInput, setQuickCreateTagInput] = useState('')
   const [quickCreateFolderId, setQuickCreateFolderId] = useState<string | null>(null)
@@ -349,37 +348,62 @@ function Index() {
       e.preventDefault()
       if (!quickCreateBody.trim()) return
 
-      setQuickCreateLoading(true)
+      // Create optimistic snippet
+      const tempId = `temp-${Date.now()}`
+      const optimisticSnippet: ValidatedSnippet = {
+        id: tempId,
+        body: quickCreateBody.trim(),
+        tags: quickCreateTags,
+        folder_id: quickCreateFolderId,
+        created_at: Date.now(),
+        updated_at: Date.now(),
+        synced: false,
+      }
+
+      // Reset form immediately
+      setQuickCreateBody('')
+      setQuickCreateTags([])
+      setQuickCreateTagInput('')
+      setQuickCreateFolderId(null)
+      setShowQuickCreateOptions(false)
+
+      // Optimistically add to list
+      setSnippets(prev => [optimisticSnippet, ...(prev ?? [])])
+
       try {
         const result = await createSnippet({
-          body: quickCreateBody.trim(),
-          tags: quickCreateTags,
-          folder_id: quickCreateFolderId,
+          body: optimisticSnippet.body,
+          tags: optimisticSnippet.tags,
+          folder_id: optimisticSnippet.folder_id,
         })
 
         if (result.error) {
+          // Remove optimistic snippet and show error
+          setSnippets(prev => prev?.filter(s => s.id !== tempId) ?? null)
           toast.error(result.error)
+          // Restore form
+          setQuickCreateBody(optimisticSnippet.body)
+          setQuickCreateTags(optimisticSnippet.tags)
+          setQuickCreateFolderId(optimisticSnippet.folder_id)
           return
         }
 
-        toast.success('Snippet created!')
-
-        // Reset form for next snippet
-        setQuickCreateBody('')
-        setQuickCreateTags([])
-        setQuickCreateTagInput('')
-        setQuickCreateFolderId(null)
-        setShowQuickCreateOptions(false)
-
-        // Reload snippets to show the new one
-        await loadSnippets()
-
-        // Don't navigate - stay on this screen to create more snippets
-      } finally {
-        setQuickCreateLoading(false)
+        // Replace optimistic snippet with real one
+        if (result.data?.id) {
+          const realId = result.data.id
+          setSnippets(prev => prev?.map(s => (s.id === tempId ? ({ ...s, id: realId, synced: false } as PartialSnippet) : s)) ?? null)
+        }
+      } catch {
+        // Remove optimistic snippet on error
+        setSnippets(prev => prev?.filter(s => s.id !== tempId) ?? null)
+        toast.error('Failed to create snippet')
+        // Restore form
+        setQuickCreateBody(optimisticSnippet.body)
+        setQuickCreateTags(optimisticSnippet.tags)
+        setQuickCreateFolderId(optimisticSnippet.folder_id)
       }
     },
-    [quickCreateBody, quickCreateTags, quickCreateFolderId, loadSnippets],
+    [quickCreateBody, quickCreateTags, quickCreateFolderId],
   )
 
   const handleAddQuickCreateTag = useCallback(
@@ -522,28 +546,20 @@ function Index() {
             {/* Title and Add button */}
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Create Snippet</h3>
-              <Button type="submit" disabled={quickCreateLoading || !quickCreateBody.trim()}>
-                {quickCreateLoading ? 'Adding...' : 'Add Snippet'}
+              <Button type="submit" disabled={!quickCreateBody.trim()}>
+                Add Snippet
                 <Plus className="h-4 w-4 ml-2" />
               </Button>
             </div>
 
             {/* Body input */}
-            <div className="relative">
-              <Textarea
-                placeholder="Type your snippet here... (supports {{placeholder:text}} syntax)"
-                value={quickCreateBody}
-                onChange={e => setQuickCreateBody(e.target.value)}
-                rows={4}
-                className="resize-none"
-                disabled={quickCreateLoading}
-              />
-              {quickCreateLoading && (
-                <div className="absolute right-3 top-3">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                </div>
-              )}
-            </div>
+            <Textarea
+              placeholder="Type your snippet here... (supports {{placeholder:text}} syntax)"
+              value={quickCreateBody}
+              onChange={e => setQuickCreateBody(e.target.value)}
+              rows={4}
+              className="resize-none"
+            />
 
             {/* Options toggle */}
             <button
