@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
 import { COLORS } from '~/lib/constants/colors'
+import type { FolderTreeItem } from '~/lib/server/folders'
 import { getAuthStatus } from '~/lib/snippet-api'
 import { foldersTree } from '~/server/folders'
 
@@ -20,34 +21,19 @@ interface FolderSelectorProps {
   onCreateFolder: () => void
 }
 
-function flattenFolders(
-  tree: Array<{ id: string; name: string; color: string; snippet_count: number; children: unknown[] }>,
-  depth = 0,
-): Array<{
-  id: string
-  name: string
-  color: string
-  snippet_count: number
-  depth: number
-}> {
-  const result: Array<{ id: string; name: string; color: string; snippet_count: number; depth: number }> = []
+function flattenFolders(tree: FolderTreeItem[], depth = 0): Array<FolderTreeItem & { depth: number }> {
+  const result: Array<FolderTreeItem & { depth: number }> = []
   for (const folder of tree) {
-    result.push({
-      id: folder.id,
-      name: folder.name,
-      color: folder.color,
-      snippet_count: folder.snippet_count,
-      depth,
-    })
+    result.push({ ...folder, depth })
     if (folder.children.length > 0) {
-      result.push(...flattenFolders(folder.children as typeof tree, depth + 1))
+      result.push(...flattenFolders(folder.children, depth + 1))
     }
   }
   return result
 }
 
 export function FolderSelector({ selectedFolderId, onFolderSelect, onCreateFolder }: FolderSelectorProps) {
-  const [folders, setFolders] = useState<Array<{ id: string; name: string; color: string; snippet_count: number; depth: number }>>([])
+  const [folders, setFolders] = useState<Array<FolderTreeItem & { depth: number }>>([])
   const [loading, setLoading] = useState(false)
 
   // Load folders on mount
