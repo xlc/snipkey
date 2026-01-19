@@ -137,7 +137,7 @@ export async function listSnippets(filters: {
     }
 
     if (filters.folder_id !== undefined) {
-      filteredLocal = filteredLocal.filter(s => s.folder_id === filters.folder_id || s.folder_id === undefined)
+      filteredLocal = filteredLocal.filter(s => (s.folder_id ?? null) === filters.folder_id)
     }
 
     // Add filtered local unsynced snippets to merged list
@@ -190,7 +190,7 @@ export async function listSnippets(filters: {
   }
 
   if (filters.folder_id !== undefined) {
-    local = local.filter(s => s.folder_id === filters.folder_id || s.folder_id === undefined)
+    local = local.filter(s => (s.folder_id ?? null) === filters.folder_id)
   }
 
   // Apply sorting locally
