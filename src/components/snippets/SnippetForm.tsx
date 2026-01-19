@@ -50,7 +50,7 @@ export function SnippetForm({
   // Check if form has unsaved changes (memoized to prevent recomputation)
   const hasUnsavedChanges = useMemo(
     () =>
-      body.trim() !== initialBody ||
+      body !== initialBody ||
       tags.length !== initialTags.length ||
       tags.some((t, i) => t !== initialTags[i]) ||
       folderId !== initialFolderId,
