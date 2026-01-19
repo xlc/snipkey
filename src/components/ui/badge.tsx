@@ -1,19 +1,20 @@
 import { cva, type VariantProps } from 'class-variance-authority'
+import type * as React from 'react'
 
 import { cn } from '~/lib/utils'
 
 const badgeVariants = cva(
-  'inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+  'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
   {
     variants: {
       variant: {
-        default: 'border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80',
+        default: 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80',
         secondary: 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        destructive: 'border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80',
+        destructive: 'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80',
         outline: 'text-foreground',
       },
       interactive: {
-        true: 'cursor-pointer touch-manipulation focus:ring-0 relative before:absolute before:inset-[-12px] before:content-[""]',
+        true: 'cursor-pointer hover:opacity-80',
         false: '',
       },
     },
@@ -24,16 +25,12 @@ const badgeVariants = cva(
   },
 )
 
-export interface BadgeProps extends VariantProps<typeof badgeVariants> {
-  onClick?: (e: React.MouseEvent | React.KeyboardEvent) => void
+export interface BadgeProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof badgeVariants> {
   interactive?: boolean
-  className?: string
-  children?: React.ReactNode
-  [key: string]: unknown // Allow any other HTML attributes
 }
 
 function Badge({ className, variant, interactive, onClick, children, ...props }: BadgeProps) {
-  // When interactive, render as button for accessibility
+  // When interactive or onClick is provided, render as button for accessibility
   if (interactive || onClick) {
     return (
       <button
@@ -57,7 +54,7 @@ function Badge({ className, variant, interactive, onClick, children, ...props }:
 
   // Non-interactive badges remain as divs
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props}>
+    <div className={cn(badgeVariants({ variant }), className)} {...(props as React.HTMLAttributes<HTMLDivElement>)}>
       {children}
     </div>
   )
