@@ -1,6 +1,22 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { Clock, FileCode, Filter, Folder, FolderPlus, HelpCircle, Plus, Search, Tags, ToggleLeft, ToggleRight, X } from 'lucide-react'
+import {
+  Clock,
+  Copy,
+  Edit2,
+  FileCode,
+  Filter,
+  Folder,
+  FolderPlus,
+  HelpCircle,
+  Plus,
+  Search,
+  Tags,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { FolderDialog } from '~/components/FolderDialog'
@@ -74,11 +90,13 @@ interface SnippetRowProps {
   authenticated: boolean
   onTagClick: (tag: string) => void
   formatRelativeTime: (timestamp: number) => string
+  onDelete?: (id: string) => void
 }
 
-const SnippetRow = memo(({ snippet, folders, authenticated, onTagClick, formatRelativeTime }: SnippetRowProps) => {
+const SnippetRow = memo(({ snippet, folders, authenticated, onTagClick, formatRelativeTime, onDelete }: SnippetRowProps) => {
   const parseResult = useMemo(() => parseTemplate(snippet.body), [snippet.body])
   const [copying, setCopying] = useState(false)
+  const router = useRouter()
 
   // Get rendered output (with default empty placeholder values)
   const rendered = useMemo(() => {
@@ -103,17 +121,56 @@ const SnippetRow = memo(({ snippet, folders, authenticated, onTagClick, formatRe
     [rendered],
   )
 
+  const handleDelete = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+
+      if (!confirm('Are you sure you want to delete this snippet?')) return
+
+      // For now, just call the delete callback
+      // TODO: Implement actual delete API call
+      onDelete?.(snippet.id)
+    },
+    [snippet.id, onDelete],
+  )
+
   return (
     <div className="group relative border rounded-lg hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 bg-card animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="p-4 space-y-2">
         {/* Sync status badge */}
         {authenticated && <SyncStatusBadge snippet={snippet} />}
 
+        {/* Action buttons - top right */}
+        <div className="absolute top-4 right-4 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} title="Copy">
+            <Copy className={`h-4 w-4 ${copying ? 'text-green-500' : ''}`} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => router.navigate({ to: '/snippets/$id/edit', params: { id: snippet.id } })}
+            title="Edit"
+          >
+            <Edit2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive hover:text-destructive"
+            onClick={handleDelete}
+            title="Delete"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+
         {/* Folder badge */}
         {snippet.folder_id && folders.has(snippet.folder_id) && (
           <Badge
             variant="outline"
-            className="absolute top-4 right-4 z-10"
+            className="absolute top-4 right-20 z-10"
             style={{ backgroundColor: `${COLORS[folders.get(snippet.folder_id)?.color ?? 'gray']}20` }}
           >
             <Folder className="h-3 w-3 mr-1" />
@@ -125,56 +182,43 @@ const SnippetRow = memo(({ snippet, folders, authenticated, onTagClick, formatRe
         <button
           type="button"
           onClick={handleCopy}
-          className="text-left w-full cursor-pointer hover:bg-muted/100 rounded p-2 -m-2 transition-colors"
+          className="text-left w-full cursor-pointer hover:bg-muted/100 rounded p-2 -m-2 transition-colors pr-20"
           title="Click to copy"
         >
           <p className="text-sm text-foreground whitespace-pre-wrap font-mono break-words">{snippet.body}</p>
         </button>
 
         {/* Metadata row */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 flex-1">
-            {/* Timestamp */}
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              <span>{formatRelativeTime(snippet.updated_at)}</span>
-            </div>
-
-            {/* Tags */}
-            {snippet.tags.length > 0 && (
-              <div className="flex gap-2 flex-wrap">
-                {snippet.tags.slice(0, 3).map(tag => (
-                  <Badge
-                    key={tag}
-                    variant="secondary"
-                    interactive
-                    onClick={e => {
-                      e.stopPropagation()
-                      onTagClick(tag)
-                    }}
-                  >
-                    {tag}
-                  </Badge>
-                ))}
-                {snippet.tags.length > 3 && (
-                  <Badge variant="secondary" className="text-xs">
-                    +{snippet.tags.length - 3}
-                  </Badge>
-                )}
-              </div>
-            )}
+        <div className="flex items-center gap-4">
+          {/* Timestamp */}
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>{formatRelativeTime(snippet.updated_at)}</span>
           </div>
 
-          {/* Copy button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCopy}
-            disabled={copying}
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            {copying ? 'Copied!' : 'Copy'}
-          </Button>
+          {/* Tags */}
+          {snippet.tags.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {snippet.tags.slice(0, 3).map(tag => (
+                <Badge
+                  key={tag}
+                  variant="secondary"
+                  interactive
+                  onClick={e => {
+                    e.stopPropagation()
+                    onTagClick(tag)
+                  }}
+                >
+                  {tag}
+                </Badge>
+              ))}
+              {snippet.tags.length > 3 && (
+                <Badge variant="secondary" className="text-xs">
+                  +{snippet.tags.length - 3}
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -723,6 +767,9 @@ function Index() {
                 authenticated={authenticated}
                 onTagClick={setSelectedTag}
                 formatRelativeTime={formatRelativeTime}
+                onDelete={id => {
+                  setSnippets(prev => prev?.filter(s => s.id !== id) ?? null)
+                }}
               />
             ))}
           </div>
