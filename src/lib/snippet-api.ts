@@ -99,8 +99,25 @@ export async function listSnippets(filters: {
 
     // Merge server results with local unsynced snippets
     const serverItems: SnippetListItem[] = result.data.items
-    const localUnsynced = listLocalSnippets().filter(s => !s.synced)
+    let localUnsynced = listLocalSnippets().filter(s => !s.synced)
     const localDeleted = getDeletedSnippets()
+
+    // Apply filters to local unsynced snippets before merging
+    if (filters.query) {
+      const query = filters.query.toLowerCase()
+      localUnsynced = localUnsynced.filter(
+        s => (s.body ?? '').toLowerCase().includes(query) || (s.tags ?? []).some(tag => tag.toLowerCase().includes(query)),
+      )
+    }
+
+    if (filters.tag) {
+      const tag = filters.tag
+      localUnsynced = localUnsynced.filter(s => (s.tags ?? []).includes(tag))
+    }
+
+    if (filters.folder_id !== undefined) {
+      localUnsynced = localUnsynced.filter(s => s.folder_id === filters.folder_id)
+    }
 
     // Build merged list, prioritizing local unsynced snippets
     const merged: SnippetListItem[] = []
@@ -114,7 +131,7 @@ export async function listSnippets(filters: {
       }
     }
 
-    // First, add all local unsynced snippets
+    // First, add all local unsynced snippets (already filtered)
     for (const local of localUnsynced) {
       merged.push(toListItem(local))
       if (local.serverId) {
@@ -164,6 +181,10 @@ export async function listSnippets(filters: {
   if (filters.tag) {
     const tag = filters.tag
     local = local.filter(s => (s.tags ?? []).includes(tag))
+  }
+
+  if (filters.folder_id !== undefined) {
+    local = local.filter(s => s.folder_id === filters.folder_id)
   }
 
   // Apply sorting locally

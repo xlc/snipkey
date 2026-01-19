@@ -81,8 +81,8 @@ function TagsPage() {
       return
     }
 
-    // Get all snippets with the old tag
-    const result = await listSnippets({ limit: 10000 }) // Increased limit to handle large datasets
+    // Get all snippets with the old tag (server-side filtering)
+    const result = await listSnippets({ tag: oldTag, limit: 10000 })
     if (result.error || !result.data) {
       toast.error('Failed to load snippets')
       return
@@ -91,12 +91,11 @@ function TagsPage() {
     // Check if we hit the limit
     if (result.data.length >= 10000) {
       toast.warning(
-        'You have a large number of snippets. Some snippets may not have been processed. Consider using server-side bulk operations for better performance.',
+        'You have a large number of snippets with this tag. Some snippets may not have been processed. Consider using server-side bulk operations for better performance.',
       )
     }
 
-    // Find all snippets with the old tag
-    const snippetsToUpdate = result.data.filter(s => (s.tags ?? []).includes(oldTag))
+    const snippetsToUpdate = result.data
 
     if (snippetsToUpdate.length === 0) {
       toast.error('No snippets found with this tag')
@@ -137,8 +136,8 @@ function TagsPage() {
   async function confirmDeleteTag() {
     if (!tagToDelete) return
 
-    // Get all snippets with the tag
-    const result = await listSnippets({ limit: 10000 }) // Increased limit to handle large datasets
+    // Get all snippets with the tag (server-side filtering)
+    const result = await listSnippets({ tag: tagToDelete, limit: 10000 })
     if (result.error || !result.data) {
       toast.error('Failed to load snippets')
       setShowDeleteDialog(false)
@@ -148,12 +147,11 @@ function TagsPage() {
     // Check if we hit the limit
     if (result.data.length >= 10000) {
       toast.warning(
-        'You have a large number of snippets. Some snippets may not have been processed. Consider using server-side bulk operations for better performance.',
+        'You have a large number of snippets with this tag. Some snippets may not have been processed. Consider using server-side bulk operations for better performance.',
       )
     }
 
-    // Find all snippets with the tag
-    const snippetsToUpdate = result.data.filter(s => (s.tags ?? []).includes(tagToDelete))
+    const snippetsToUpdate = result.data
 
     if (snippetsToUpdate.length === 0) {
       toast.error('No snippets found with this tag')
