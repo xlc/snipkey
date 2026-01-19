@@ -82,10 +82,15 @@ function TagsPage() {
     }
 
     // Get all snippets with the old tag
-    const result = await listSnippets({ limit: 1000 })
+    const result = await listSnippets({ limit: 10000 }) // Increased limit to handle large datasets
     if (result.error || !result.data) {
       toast.error('Failed to load snippets')
       return
+    }
+
+    // Check if we hit the limit
+    if (result.data.length >= 10000) {
+      toast.warning('You have a large number of snippets. Some snippets may not have been processed. Consider using server-side bulk operations for better performance.')
     }
 
     // Find all snippets with the old tag
@@ -131,11 +136,16 @@ function TagsPage() {
     if (!tagToDelete) return
 
     // Get all snippets with the tag
-    const result = await listSnippets({ limit: 1000 })
+    const result = await listSnippets({ limit: 10000 }) // Increased limit to handle large datasets
     if (result.error || !result.data) {
       toast.error('Failed to load snippets')
       setShowDeleteDialog(false)
       return
+    }
+
+    // Check if we hit the limit
+    if (result.data.length >= 10000) {
+      toast.warning('You have a large number of snippets. Some snippets may not have been processed. Consider using server-side bulk operations for better performance.')
     }
 
     // Find all snippets with the tag

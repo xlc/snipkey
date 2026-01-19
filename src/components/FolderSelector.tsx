@@ -49,14 +49,16 @@ function flattenFolders(
   name: string
   color: string
   snippet_count: number
+  depth: number
 }> {
-  const result: Array<{ id: string; name: string; color: string; snippet_count: number }> = []
+  const result: Array<{ id: string; name: string; color: string; snippet_count: number; depth: number }> = []
   for (const folder of tree) {
     result.push({
       id: folder.id,
       name: folder.name,
       color: folder.color,
       snippet_count: folder.snippet_count,
+      depth,
     })
     if (folder.children.length > 0) {
       result.push(...flattenFolders(folder.children as typeof tree, depth + 1))
@@ -66,7 +68,7 @@ function flattenFolders(
 }
 
 export function FolderSelector({ selectedFolderId, onFolderSelect, onCreateFolder }: FolderSelectorProps) {
-  const [folders, setFolders] = useState<Array<{ id: string; name: string; color: string; snippet_count: number }>>([])
+  const [folders, setFolders] = useState<Array<{ id: string; name: string; color: string; snippet_count: number; depth: number }>>([])
   const [loading, setLoading] = useState(false)
 
   // Load folders on mount
@@ -132,7 +134,7 @@ export function FolderSelector({ selectedFolderId, onFolderSelect, onCreateFolde
             onClick={() => onFolderSelect(folder.id)}
             className={selectedFolderId === folder.id ? 'bg-accent' : ''}
           >
-            <div className="flex items-center gap-2 w-full">
+            <div className="flex items-center gap-2 w-full" style={{ paddingLeft: `${folder.depth * 16}px` }}>
               <div className={`w-3 h-3 rounded-full ${COLORS[folder.color] || 'bg-gray-500'}`} />
               <span className="flex-1 truncate">{folder.name}</span>
               <Badge variant="secondary" className="text-xs">
