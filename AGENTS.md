@@ -13,6 +13,7 @@ This document contains project-specific rules and instructions for AI agents wor
 - **Authentication**: WebAuthn passkeys via SimpleWebAuthn
 - **Styling**: Tailwind CSS + shadcn/ui components
 - **Linting/Formatting**: Biome
+- **UI Components**: Prefer shadcn/ui components (`src/components/ui`) for new UI work
 
 ## Project Structure
 
