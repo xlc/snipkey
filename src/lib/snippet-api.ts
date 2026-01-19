@@ -27,19 +27,46 @@ import { snippetCreate, snippetDelete, snippetGet, snippetsList, snippetUpdate }
 export type { SnippetData }
 export { setMeta }
 
-export interface SnippetListItem {
+// Raw snippet data from API/local storage - fields can be undefined
+export interface PartialSnippet {
   id: string
-  body: string
-  tags: string[]
+  body?: string
+  tags?: string[]
   folder_id?: string | null
-  updated_at: number
+  updated_at?: number
   created_at?: number
   synced?: boolean
 }
 
+// Validated snippet with all required fields present
+export interface ValidatedSnippet {
+  id: string
+  body: string
+  tags: string[]
+  folder_id: string | null
+  updated_at: number
+  created_at: number
+  synced?: boolean
+}
+
+// Legacy export for backward compatibility
+export type SnippetListItem = PartialSnippet
+
 export interface ApiResult<T> {
   data?: T
   error?: string
+}
+
+// Type guard to validate snippet has all required fields
+export function isValidSnippet(snippet: PartialSnippet): snippet is ValidatedSnippet {
+  return (
+    snippet.id !== undefined &&
+    snippet.body !== undefined &&
+    snippet.tags !== undefined &&
+    snippet.updated_at !== undefined &&
+    snippet.created_at !== undefined &&
+    snippet.folder_id !== undefined
+  )
 }
 
 // List snippets (unified API)
@@ -108,13 +135,16 @@ export async function listSnippets(filters: {
 
     merged.sort((a, b) => {
       if (sortColumn === 'body') {
-        const comparison = a.body.localeCompare(b.body)
+        // Handle undefined body values by sorting them last
+        const aBody = a.body ?? ''
+        const bBody = b.body ?? ''
+        const comparison = aBody.localeCompare(bBody)
         return sortDirection === 'asc' ? comparison : -comparison
       }
 
       // For created/updated sorting, use timestamp comparison
-      const aValue = sortColumn === 'created' ? a.created_at || 0 : a.updated_at
-      const bValue = sortColumn === 'created' ? b.created_at || 0 : b.updated_at
+      const aValue = sortColumn === 'created' ? (a.created_at ?? 0) : (a.updated_at ?? 0)
+      const bValue = sortColumn === 'created' ? (b.created_at ?? 0) : (b.updated_at ?? 0)
 
       return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
     })
@@ -138,10 +168,20 @@ export async function listSnippets(filters: {
 
   // Apply sorting locally
   if (filters.sortBy === 'body') {
-    local.sort((a, b) => (filters.sortOrder === 'asc' ? a.body.localeCompare(b.body) : b.body.localeCompare(a.body)))
+    local.sort((a, b) => {
+      // Handle undefined body values by sorting them last
+      const aBody = a.body ?? ''
+      const bBody = b.body ?? ''
+      return filters.sortOrder === 'asc' ? aBody.localeCompare(bBody) : bBody.localeCompare(aBody)
+    })
   } else {
     const field = filters.sortBy === 'created' ? 'created_at' : 'updated_at'
-    local.sort((a, b) => (filters.sortOrder === 'asc' ? a[field] - b[field] : b[field] - a[field]))
+    local.sort((a, b) => {
+      // Handle undefined timestamps by sorting them last
+      const aValue = a[field] ?? 0
+      const bValue = b[field] ?? 0
+      return filters.sortOrder === 'asc' ? aValue - bValue : bValue - aValue
+    })
   }
 
   // Apply limit
@@ -528,8 +568,8 @@ function fromLocalSnippet(local: LocalSnippet): Snippet {
   }
 }
 
-// Convert to list item format
-function toListItem(local: LocalSnippet): SnippetListItem {
+// Convert to list item format (returns PartialSnippet since data might be incomplete)
+function toListItem(local: LocalSnippet): PartialSnippet {
   return {
     id: local.id,
     body: local.body,

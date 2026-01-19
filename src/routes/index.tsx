@@ -23,7 +23,15 @@ import { useKeyboardShortcuts } from '~/lib/hooks/useKeyboardShortcuts'
 import { useStorageListener } from '~/lib/hooks/useStorageListener'
 import { getUnsyncedSnippets } from '~/lib/local-storage'
 import type { FolderTreeItem } from '~/lib/server/folders'
-import { createSnippet, getAuthStatus, listSnippets, syncToServer } from '~/lib/snippet-api'
+import {
+  createSnippet,
+  getAuthStatus,
+  isValidSnippet,
+  listSnippets,
+  type PartialSnippet,
+  syncToServer,
+  type ValidatedSnippet,
+} from '~/lib/snippet-api'
 import { foldersTree } from '~/server/folders'
 import { tagsList } from '~/server/tags'
 
@@ -53,14 +61,7 @@ const LOADING_SKELETON = (
 
 // Memoized snippet card component to prevent unnecessary re-renders
 interface SnippetCardProps {
-  snippet: {
-    id: string
-    body: string
-    tags: string[]
-    updated_at: number
-    synced?: boolean
-    folder_id?: string | null
-  }
+  snippet: ValidatedSnippet
   folders: Map<string, { name: string; color: string }>
   authenticated: boolean
   onTagClick: (tag: string) => void
@@ -89,8 +90,8 @@ const SnippetCard = memo(({ snippet, folders, authenticated, onTagClick, formatR
 
     {/* Body preview */}
     <p className="text-sm font-medium text-foreground line-clamp-3 relative z-10 whitespace-pre-wrap">
-      {snippet.body ? snippet.body.slice(0, 150) : 'No content'}
-      {snippet.body && snippet.body.length > 150 && '…'}
+      {snippet.body.slice(0, 150)}
+      {snippet.body.length > 150 && '…'}
     </p>
 
     {/* Timestamp */}
@@ -100,16 +101,16 @@ const SnippetCard = memo(({ snippet, folders, authenticated, onTagClick, formatR
     </div>
 
     {/* Tags */}
-    {(snippet.tags ?? []).length > 0 && (
+    {snippet.tags.length > 0 && (
       <div className="flex gap-2 mt-3 flex-wrap relative z-10">
-        {(snippet.tags ?? []).slice(0, 3).map(tag => (
+        {snippet.tags.slice(0, 3).map(tag => (
           <Badge key={tag} variant="secondary" interactive onClick={() => onTagClick(tag)}>
             {tag}
           </Badge>
         ))}
-        {(snippet.tags ?? []).length > 3 && (
+        {snippet.tags.length > 3 && (
           <Badge variant="secondary" className="text-xs">
-            +{(snippet.tags ?? []).length - 3}
+            +{snippet.tags.length - 3}
           </Badge>
         )}
       </div>
@@ -126,13 +127,7 @@ SnippetCard.displayName = 'SnippetCard'
 function Index() {
   const router = useRouter()
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const [snippets, setSnippets] = useState<Array<{
-    id: string
-    body: string
-    tags: string[]
-    updated_at: number
-    synced?: boolean
-  }> | null>(null)
+  const [snippets, setSnippets] = useState<Array<PartialSnippet> | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
@@ -667,8 +662,9 @@ function Index() {
           LOADING_SKELETON
         ) : snippets && snippets.length > 0 ? (
           // Snippet grid
+          // Filter to only render validated snippets (compile-time type safety)
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {snippets.map(snippet => (
+            {snippets.filter(isValidSnippet).map(snippet => (
               <SnippetCard
                 key={snippet.id}
                 snippet={snippet}
