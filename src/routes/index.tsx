@@ -5,8 +5,6 @@ import {
   ChevronUp,
   Clock,
   Copy,
-  Download,
-  Eye,
   FileCode,
   Filter,
   Folder,
@@ -15,10 +13,8 @@ import {
   Plus,
   Search,
   Tags,
-  Text,
   ToggleLeft,
   ToggleRight,
-  Upload,
   X,
 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -130,21 +126,6 @@ const SnippetCard = memo(
         }
       },
       [rendered],
-    )
-
-    const handleCopyRaw = useCallback(
-      async (e: React.MouseEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-
-        try {
-          await navigator.clipboard.writeText(snippet.body)
-          toast.success('Copied raw template to clipboard')
-        } catch {
-          toast.error('Failed to copy to clipboard')
-        }
-      },
-      [snippet.body],
     )
 
     const handleCardClick = useCallback(
@@ -317,10 +298,6 @@ const SnippetCard = memo(
                     <Copy className="h-4 w-4 mr-2" />
                     Copy
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleCopyRaw}>
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copy raw
-                  </Button>
                   <Button variant="outline" size="sm" asChild>
                     <Link to="/snippets/$id/edit" params={{ id: snippet.id }}>
                       Edit
@@ -341,9 +318,9 @@ const SnippetCard = memo(
           </div>
         )}
 
-        {/* Copy button (visible on hover when collapsed) */}
+        {/* Copy button (always visible when collapsed) */}
         {!isExpanded && (
-          <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-1">
+          <div className="absolute top-4 right-4 z-10">
             <Button
               variant="ghost"
               size="icon"
@@ -353,39 +330,6 @@ const SnippetCard = memo(
             >
               <Copy className="h-4 w-4" />
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-background"
-                  onClick={e => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                  }}
-                  aria-label="More options"
-                >
-                  <FileCode className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={handleCopy} className="touch-manipulation cursor-pointer">
-                  <Copy className="h-4 w-4 mr-2" />
-                  <span>Copy rendered</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleCopyRaw} className="touch-manipulation cursor-pointer">
-                  <Copy className="h-4 w-4 mr-2" />
-                  <span>Copy raw template</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild className="touch-manipulation cursor-pointer">
-                  <Link to="/snippets/$id" params={{ id: snippet.id }} className="flex items-center">
-                    <FileCode className="h-4 w-4 mr-2" />
-                    <span>View details</span>
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         )}
       </div>
@@ -404,7 +348,7 @@ function Index() {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<'updated' | 'created' | 'body'>('updated')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [allTags, setAllTags] = useState<string[]>([])
+  const [_allTags, setAllTags] = useState<string[]>([])
   const [authenticated, setAuthenticated] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [folderTree, setFolderTree] = useState<FolderTreeItem[]>([])
@@ -419,7 +363,6 @@ function Index() {
   const [quickCreateTagInput, setQuickCreateTagInput] = useState('')
   const [quickCreateFolderId, setQuickCreateFolderId] = useState<string | null>(null)
   const [showQuickCreateOptions, setShowQuickCreateOptions] = useState(false)
-  const [quickCreateTab, setQuickCreateTab] = useState<'edit' | 'preview'>('edit')
 
   // Debounce search input to reduce API calls
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
@@ -617,82 +560,6 @@ function Index() {
     setQuickCreateTags(prev => prev.filter(t => t !== tag))
   }, [])
 
-  const handleExport = useCallback(async () => {
-    // Export all snippets
-    const result = await listSnippets({ limit: 1000 })
-
-    if (result.error) {
-      toast.error('Failed to export snippets')
-      return
-    }
-
-    const exportData = {
-      version: '1.0',
-      exportedAt: new Date().toISOString(),
-      snippets: result.data || [],
-    }
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: 'application/json',
-    })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `snipkey-export-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }, [])
-
-  const handleImport = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0]
-      if (!file) return
-
-      try {
-        const text = await file.text()
-        const importData = JSON.parse(text)
-
-        if (!importData.snippets || !Array.isArray(importData.snippets)) {
-          throw new Error('Invalid import file format')
-        }
-
-        let imported = 0
-        let skipped = 0
-
-        for (const snippet of importData.snippets) {
-          const result = await createSnippet({
-            body: snippet.body,
-            tags: snippet.tags ?? [],
-          })
-
-          if (result.error) {
-            skipped++
-          } else {
-            imported++
-          }
-        }
-
-        // Reload snippets
-        loadSnippets()
-
-        // Show feedback
-        if (skipped > 0) {
-          toast.info(`Imported ${imported} snippet${imported === 1 ? '' : 's'}${skipped > 0 ? ` (${skipped} skipped)` : ''}`)
-        } else {
-          toast.success(`Imported ${imported} snippet${imported === 1 ? '' : 's'}`)
-        }
-      } catch (error) {
-        toast.error(`Failed to import snippets: ${(error as Error).message}`)
-      }
-
-      // Reset file input
-      event.target.value = ''
-    },
-    [loadSnippets],
-  )
-
   // Keyboard shortcuts
   useKeyboardShortcuts([
     {
@@ -718,12 +585,6 @@ function Index() {
         }
       },
       description: 'Clear filters',
-    },
-    {
-      key: 'e',
-      ctrlKey: true,
-      handler: handleExport,
-      description: 'Export snippets',
     },
   ])
 
@@ -795,28 +656,11 @@ function Index() {
             <p className="text-muted-foreground mt-2">Your private snippet vault with placeholders</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {authenticated && (
-              <Button variant="outline" onClick={handleSync} disabled={syncing || unsyncedCount === 0}>
-                {syncing ? 'Syncing…' : `Sync${unsyncedCount > 0 ? ` (${unsyncedCount})` : ''}`}
+            {authenticated && unsyncedCount > 0 && (
+              <Button variant="outline" onClick={handleSync} disabled={syncing}>
+                {syncing ? 'Syncing…' : `Sync (${unsyncedCount})`}
               </Button>
             )}
-            <Button variant="outline" asChild>
-              <Link to="/tags">
-                <Tags className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Manage Tags</span>
-              </Link>
-            </Button>
-            <Button variant="outline" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Export</span>
-            </Button>
-            <Button variant="outline" asChild className="relative">
-              <label htmlFor="import-input" className="cursor-pointer">
-                <Upload className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Import</span>
-                <input id="import-input" type="file" accept=".json" onChange={handleImport} className="hidden" />
-              </label>
-            </Button>
             <Button variant="ghost" size="icon" onClick={() => setShowKeyboardShortcuts(true)} aria-label="Keyboard shortcuts">
               <HelpCircle className="h-4 w-4" />
             </Button>
@@ -825,43 +669,8 @@ function Index() {
 
         {/* Quick Create Input */}
         <form onSubmit={handleQuickCreate} className="space-y-4">
-          {/* Tabs */}
-          <div className="flex items-center gap-4 border-b">
-            <button
-              type="button"
-              onClick={() => setQuickCreateTab('edit')}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                quickCreateTab === 'edit' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Text className="h-4 w-4" />
-              Edit
-            </button>
-            <button
-              type="button"
-              onClick={() => setQuickCreateTab('preview')}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                quickCreateTab === 'preview'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-              disabled={!quickCreateBody.trim()}
-            >
-              <Eye className="h-4 w-4" />
-              Preview
-            </button>
-            <div className="flex-1" />
-            <button
-              type="button"
-              onClick={() => setShowQuickCreateOptions(!showQuickCreateOptions)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {showQuickCreateOptions ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
-              Options
-            </button>
-          </div>
-
-          {quickCreateTab === 'edit' ? (
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Left: Edit area */}
             <div className="space-y-4">
               <div className="relative">
                 <Textarea
@@ -874,7 +683,7 @@ function Index() {
                       handleQuickCreate(e)
                     }
                   }}
-                  rows={3}
+                  rows={6}
                   className="resize-none pr-12"
                   disabled={quickCreateLoading}
                 />
@@ -884,6 +693,16 @@ function Index() {
                   </div>
                 )}
               </div>
+
+              {/* Options toggle */}
+              <button
+                type="button"
+                onClick={() => setShowQuickCreateOptions(!showQuickCreateOptions)}
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showQuickCreateOptions ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
+                {showQuickCreateOptions ? 'Hide' : 'Show'} options
+              </button>
 
               {/* Optional options */}
               {showQuickCreateOptions && (
@@ -947,16 +766,11 @@ function Index() {
                   )}
                 </div>
               )}
-
-              <p className="text-xs text-muted-foreground">
-                Press <kbd className="px-1 py-0.5 rounded bg-muted border">Enter</kbd> to save •{' '}
-                <kbd className="px-1 py-0.5 rounded bg-muted border">Shift+Enter</kbd> for new line •{' '}
-                <kbd className="px-1 py-0.5 rounded bg-muted border">Ctrl+N</kbd> for full editor
-              </p>
             </div>
-          ) : (
-            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="p-4 bg-muted rounded-lg border">
+
+            {/* Right: Live preview */}
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg border h-full min-h-[160px]">
                 <pre className="whitespace-pre-wrap font-mono text-sm break-words">
                   {(() => {
                     const parseResult = parseTemplate(quickCreateBody)
@@ -965,9 +779,9 @@ function Index() {
                   })()}
                 </pre>
               </div>
-              <p className="text-xs text-muted-foreground">This is how your snippet will appear with default placeholder values.</p>
+              <p className="text-xs text-muted-foreground">Live preview with default placeholder values.</p>
             </div>
-          )}
+          </div>
         </form>
 
         <div className="space-y-4">
@@ -1039,33 +853,6 @@ function Index() {
                   <X className="h-3 w-3 ml-1" />
                 </Badge>
               )}
-              {(selectedTag || searchQuery) && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs"
-                  aria-label="Clear all filters"
-                  onClick={() => {
-                    setSelectedTag(null)
-                    setSearchQuery('')
-                  }}
-                >
-                  Clear all
-                </Button>
-              )}
-            </div>
-          )}
-
-          {allTags.length > 0 && !selectedTag && (
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Popular tags:</p>
-              <div className="flex gap-2 flex-wrap">
-                {allTags.slice(0, 10).map(tag => (
-                  <Badge key={tag} variant="outline" interactive className="hover:bg-accent" onClick={() => setSelectedTag(tag)}>
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
             </div>
           )}
         </div>
