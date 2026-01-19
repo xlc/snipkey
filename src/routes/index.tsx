@@ -42,6 +42,7 @@ import { getUnsyncedSnippets, listLocalSnippets } from '~/lib/local-storage'
 import type { FolderTreeItem } from '~/lib/server/folders'
 import {
   createSnippet,
+  deleteSnippet,
   getAuthStatus,
   isValidSnippet,
   listSnippets,
@@ -128,9 +129,17 @@ const SnippetRow = memo(({ snippet, folders, authenticated, onTagClick, formatRe
 
       if (!confirm('Are you sure you want to delete this snippet?')) return
 
-      // For now, just call the delete callback
-      // TODO: Implement actual delete API call
-      onDelete?.(snippet.id)
+      try {
+        const result = await deleteSnippet(snippet.id)
+        if (result.error) {
+          toast.error(result.error)
+          return
+        }
+        onDelete?.(snippet.id)
+        toast.success('Snippet deleted')
+      } catch {
+        toast.error('Failed to delete snippet')
+      }
     },
     [snippet.id, onDelete],
   )

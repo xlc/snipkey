@@ -82,6 +82,8 @@ function TagsPage() {
     }
 
     // Get all snippets with the old tag (server-side filtering)
+    // Note: limit is hardcoded to 10000 - this is a known limitation of the current API
+    // The client-side listSnippets doesn't expose cursor pagination, so we fetch in one batch
     const result = await listSnippets({ tag: oldTag, limit: 10000 })
     if (result.error || !result.data) {
       toast.error('Failed to load snippets')
@@ -144,6 +146,8 @@ function TagsPage() {
     if (!tagToDelete) return
 
     // Get all snippets with the tag (server-side filtering)
+    // Note: limit is hardcoded to 10000 - this is a known limitation of the current API
+    // The client-side listSnippets doesn't expose cursor pagination, so we fetch in one batch
     const result = await listSnippets({ tag: tagToDelete, limit: 10000 })
     if (result.error || !result.data) {
       toast.error('Failed to load snippets')
