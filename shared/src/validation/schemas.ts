@@ -21,20 +21,49 @@ export const snippetUpdateInput = snippetSchema.partial().extend({
   id: z.string().uuid('Invalid snippet ID'),
 })
 
-export const snippetListInput = z.object({
-  query: z.string().max(LIMITS.MAX_SEARCH_QUERY_LENGTH).optional(),
-  tag: z.string().max(LIMITS.MAX_TAG_LENGTH).optional(),
-  folder_id: z.string().uuid().nullable().optional(),
-  limit: z.number().int().positive().max(LIMITS.MAX_SNIPPETS_PER_PAGE).default(20),
-  cursor: z
-    .object({
-      updatedAt: z.number(),
-      id: z.string(),
-    })
-    .optional(),
-  sortBy: z.enum(['updated', 'created', 'body']).default('updated'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
-})
+export const snippetListInput = z
+  .object({
+    query: z.string().max(LIMITS.MAX_SEARCH_QUERY_LENGTH).optional(),
+    tag: z.string().max(LIMITS.MAX_TAG_LENGTH).optional(),
+    folder_id: z.string().uuid().nullable().optional(),
+    limit: z.number().int().positive().max(LIMITS.MAX_SNIPPETS_PER_PAGE).default(20),
+    cursor: z
+      .discriminatedUnion('sortField', [
+        z.object({
+          sortField: z.literal('updated'),
+          updatedAt: z.number(),
+          id: z.string(),
+        }),
+        z.object({
+          sortField: z.literal('created'),
+          createdAt: z.number(),
+          id: z.string(),
+        }),
+        z.object({
+          sortField: z.literal('body'),
+          body: z.string(),
+          id: z.string(),
+        }),
+      ])
+      .optional(),
+    sortBy: z.enum(['updated', 'created', 'body']).default('updated'),
+    sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  })
+  .transform(data => {
+    // Transform legacy cursor format (without sortField) to new format
+    if (data.cursor && !('sortField' in data.cursor)) {
+      const legacyCursor = data.cursor as { updatedAt: number; id: string }
+      if (data.sortBy === 'created') {
+        return { ...data, cursor: { sortField: 'created', createdAt: legacyCursor.updatedAt, id: legacyCursor.id } }
+      }
+      if (data.sortBy === 'body') {
+        // Legacy cursor not supported for body sorting, just omit it
+        return { ...data, cursor: undefined }
+      }
+      return { ...data, cursor: { sortField: 'updated', ...legacyCursor } }
+    }
+    return data
+  })
 
 export const authRegisterStartInput = z.object({})
 

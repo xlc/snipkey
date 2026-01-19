@@ -17,6 +17,33 @@ export async function snippetsList(db: ReturnType<typeof getDb>, userId: string,
     .orderBy('id', sortDirection) // Secondary sort for consistency
     .limit(input.limit)
 
+  // Apply cursor pagination
+  if (input.cursor) {
+    const cursor = input.cursor as unknown
+    if (input.cursor.sortField === 'updated') {
+      const { updatedAt, id } = cursor as { updatedAt: number; id: string }
+      if (sortDirection === 'desc') {
+        query = query.where(eb => eb.or([eb('updated_at', '<', updatedAt), eb.and([eb('updated_at', '=', updatedAt), eb('id', '<', id)])]))
+      } else {
+        query = query.where(eb => eb.or([eb('updated_at', '>', updatedAt), eb.and([eb('updated_at', '=', updatedAt), eb('id', '>', id)])]))
+      }
+    } else if (input.cursor.sortField === 'created') {
+      const { createdAt, id } = cursor as { createdAt: number; id: string }
+      if (sortDirection === 'desc') {
+        query = query.where(eb => eb.or([eb('created_at', '<', createdAt), eb.and([eb('created_at', '=', createdAt), eb('id', '<', id)])]))
+      } else {
+        query = query.where(eb => eb.or([eb('created_at', '>', createdAt), eb.and([eb('created_at', '=', createdAt), eb('id', '>', id)])]))
+      }
+    } else if (input.cursor.sortField === 'body') {
+      const { body, id } = cursor as { body: string; id: string }
+      if (sortDirection === 'asc') {
+        query = query.where(eb => eb.or([eb('body', '>', body), eb.and([eb('body', '=', body), eb('id', '>', id)])]))
+      } else {
+        query = query.where(eb => eb.or([eb('body', '<', body), eb.and([eb('body', '=', body), eb('id', '<', id)])]))
+      }
+    }
+  }
+
   // Apply folder filter
   if (input.folder_id !== undefined) {
     query = query.where('folder_id', '=', input.folder_id)
@@ -41,34 +68,30 @@ export async function snippetsList(db: ReturnType<typeof getDb>, userId: string,
     )
   }
 
-  // Apply cursor pagination (works with updated_at sorting)
-  if (input.cursor && input.sortBy !== 'body') {
-    const { updatedAt, id } = input.cursor
-    if (sortDirection === 'desc') {
-      query = query.where(eb => eb.or([eb('updated_at', '<', updatedAt), eb.and([eb('updated_at', '=', updatedAt), eb('id', '<', id)])]))
-    } else {
-      query = query.where(eb => eb.or([eb('updated_at', '>', updatedAt), eb.and([eb('updated_at', '=', updatedAt), eb('id', '>', id)])]))
-    }
-  }
-
   const items = await query.selectAll().execute()
 
   // Generate next cursor if we have more items
-  let nextCursor:
-    | {
-        updatedAt: number
-        id: string
-      }
+  type NextCursor =
+    | { sortField: 'updated'; updatedAt: number; id: string }
+    | { sortField: 'created'; createdAt: number; id: string }
+    | { sortField: 'body'; body: string; id: string }
     | undefined
-  if (items.length === input.limit && input.sortBy !== 'body') {
+
+  let nextCursor: NextCursor
+  if (items.length === input.limit) {
     const lastIndex = items.length - 1
     const lastItem = items[lastIndex]
     if (lastItem) {
-      nextCursor = {
-        updatedAt: lastItem.updated_at,
-        id: lastItem.id,
+      if (input.sortBy === 'updated') {
+        nextCursor = { sortField: 'updated', updatedAt: lastItem.updated_at, id: lastItem.id }
+      } else if (input.sortBy === 'created') {
+        nextCursor = { sortField: 'created', createdAt: lastItem.created_at, id: lastItem.id }
+      } else {
+        nextCursor = { sortField: 'body', body: lastItem.body, id: lastItem.id }
       }
     }
+  } else {
+    nextCursor = undefined
   }
 
   return ok({
