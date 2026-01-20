@@ -22,5 +22,11 @@
 		"ORIGIN": "https://snipkey.polka.codes",
 		"CHALLENGE_TTL_MS": "300000",
 		"SESSION_TTL_MS": "604800000"
+	},
+	"observability": {
+		"logs": {
+			"enabled": true,
+			"invocation_logs": true
+		}
 	}
 }
