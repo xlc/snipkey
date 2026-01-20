@@ -601,6 +601,24 @@ export function renameFolderId(oldId: string, newId: string): boolean {
     localStorage.setItem(newKey, newData)
     localStorage.removeItem(oldKey)
 
+    // Update all snippets that reference this folder
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith(STORAGE_PREFIX)) continue
+
+      try {
+        const snippetData = localStorage.getItem(key)
+        if (!snippetData) continue
+
+        const snippet = JSON.parse(snippetData) as LocalSnippet
+        if (snippet.folder_id === oldId) {
+          snippet.folder_id = newId
+          snippet.synced = false // Mark as unsynced so it gets updated on server
+          localStorage.setItem(key, JSON.stringify(snippet))
+        }
+      } catch {}
+    }
+
     return true
   } catch {
     return false

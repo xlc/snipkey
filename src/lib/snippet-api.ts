@@ -554,13 +554,19 @@ export async function syncToServer(): Promise<{
         if (snippet.folder_id === null) {
           updateData.folder_id = null
         } else {
-          // Check if folder has a server ID
-          const folder = getLocalFolder(snippet.folder_id)
-          if (folder?.serverId) {
-            updateData.folder_id = folder.serverId
+          // Check if folder was just synced (has new ID in map)
+          const serverFolderId = folderIdMap.get(snippet.folder_id)
+          if (serverFolderId) {
+            updateData.folder_id = serverFolderId
           } else {
-            // Folder not synced yet, set to null
-            updateData.folder_id = null
+            // Check if folder has an existing server ID
+            const folder = getLocalFolder(snippet.folder_id)
+            if (folder?.serverId) {
+              updateData.folder_id = folder.serverId
+            } else {
+              // Folder not synced yet, set to null
+              updateData.folder_id = null
+            }
           }
         }
       }
