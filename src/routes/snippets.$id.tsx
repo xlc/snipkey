@@ -1,7 +1,7 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import { Copy, Download, FileCode, Save, Trash2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { PlaceholderEditor } from '~/components/PlaceholderEditor'
 import { Badge } from '~/components/ui/badge'
@@ -38,7 +38,6 @@ function SnippetDetail() {
   const [renderErrors, setRenderErrors] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Load placeholder values from localStorage
   const [placeholderValues, setPlaceholderValues] = usePlaceholderStorage(id, {})
@@ -75,37 +74,22 @@ function SnippetDetail() {
     setRenderErrors(!!renderResult.errors)
   }, [snippet, placeholderValues, editingBody])
 
-  // Auto-save after 2 seconds of inactivity
-  useEffect(() => {
+  async function handleBlur() {
     if (!snippet || editingBody === snippet.body || isSaving) return
 
-    // Clear existing timeout
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current)
-    }
-
-    // Set new timeout
-    saveTimeoutRef.current = setTimeout(async () => {
-      setIsSaving(true)
-      try {
-        const result = await updateSnippet(id, { body: editingBody })
-        if (result.error) {
-          toast.error(result.error)
-        } else {
-          setSnippet({ ...snippet, body: editingBody })
-          setLastSaved(new Date())
-        }
-      } finally {
-        setIsSaving(false)
+    setIsSaving(true)
+    try {
+      const result = await updateSnippet(id, { body: editingBody })
+      if (result.error) {
+        toast.error(result.error)
+      } else {
+        setSnippet({ ...snippet, body: editingBody })
+        setLastSaved(new Date())
       }
-    }, 2000)
-
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
-      }
+    } finally {
+      setIsSaving(false)
     }
-  }, [editingBody, snippet, id, isSaving])
+  }
 
   async function handleCopyRendered() {
     if (!snippet) return
@@ -345,13 +329,11 @@ function SnippetDetail() {
         <Textarea
           value={editingBody}
           onChange={e => setEditingBody(e.target.value)}
+          onBlur={handleBlur}
           rows={10}
           className="font-mono text-sm"
           autoComplete="off"
         />
-        {editingBody !== snippet.body && (
-          <p className="text-xs text-muted-foreground">Changes will auto-save after 2 seconds of inactivity</p>
-        )}
       </div>
     </div>
   )
