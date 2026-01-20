@@ -1,6 +1,6 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { Clock, Edit2, FileCode, Folder, FolderPlus, Plus, Search, Trash2, X } from 'lucide-react'
+import { Clock, Copy, Edit2, FileCode, Folder, FolderPlus, Plus, Search, Trash2, X } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { FolderDialog } from '~/components/FolderDialog'
@@ -130,12 +130,16 @@ const SnippetRow = memo(({ snippet, folders, onTagClick, formatRelativeTime, onD
             </Badge>
           )}
 
-          {/* Body - clickable to copy */}
+          {/* Body - clickable to view detail */}
           <button
             type="button"
-            onClick={handleCopy}
+            onClick={e => {
+              e.preventDefault()
+              e.stopPropagation()
+              router.navigate({ to: '/snippets/$id', params: { id: snippet.id } })
+            }}
             className="text-left w-full cursor-pointer hover:bg-muted/100 rounded p-2 -m-2 transition-colors"
-            title="Click to copy"
+            title="Click to view snippet"
           >
             <p className="text-sm text-foreground whitespace-pre-wrap font-mono break-words">{snippet.body}</p>
           </button>
@@ -177,6 +181,9 @@ const SnippetRow = memo(({ snippet, folders, onTagClick, formatRelativeTime, onD
 
             {/* Action buttons - always visible on mobile, hover on desktop */}
             <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} title="Copy">
+                <Copy className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"

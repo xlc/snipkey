@@ -1,7 +1,7 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import { ArrowLeft, Copy, Download, FileCode, Save, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { PlaceholderEditor } from '~/components/PlaceholderEditor'
 import { Badge } from '~/components/ui/badge'
@@ -15,6 +15,8 @@ import {
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
 import { Textarea } from '~/components/ui/textarea'
+import { useKeyboardShortcuts } from '~/lib/hooks/useKeyboardShortcuts'
+import { useMediaQuery } from '~/lib/hooks/useMediaQuery'
 import { usePlaceholderStorage } from '~/lib/hooks/usePlaceholderStorage'
 import { deleteSnippet, getSnippet, updateSnippet } from '~/lib/snippet-api'
 
@@ -164,6 +166,28 @@ function SnippetDetail() {
   async function _handleUndo() {
     // Undo feature not implemented
   }
+
+  // Keyboard shortcuts (disabled on mobile)
+  const isMobile = useMediaQuery('(max-width: 768px)')
+  const keyboardShortcuts = useMemo(
+    () =>
+      isMobile
+        ? []
+        : [
+            {
+              key: 'Escape',
+              handler: () => {
+                // Only navigate back if delete dialog is not open
+                if (!showDeleteDialog) {
+                  router.navigate({ to: '/' })
+                }
+              },
+              description: 'Go back',
+            },
+          ],
+    [isMobile, showDeleteDialog, router.navigate],
+  )
+  useKeyboardShortcuts(keyboardShortcuts)
 
   if (loading) {
     return (

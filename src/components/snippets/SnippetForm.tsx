@@ -8,6 +8,7 @@ import { FolderDialog } from '~/components/FolderDialog'
 import { FolderSelector } from '~/components/FolderSelector'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
 
@@ -39,6 +40,7 @@ export function SnippetForm({
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [showFolderDialog, setShowFolderDialog] = useState(false)
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
   const [folderListKey, setFolderListKey] = useState(0) // Used to force FolderSelector reload
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const formStateRef = useRef({ body, tags, folderId })
@@ -191,6 +193,28 @@ export function SnippetForm({
 
   function handleRemoveTag(tag: string) {
     setTags(tags.filter(t => t !== tag))
+  }
+
+  function handleCancel() {
+    if (hasUnsavedChanges) {
+      setShowUnsavedDialog(true)
+    } else {
+      // No unsaved changes, navigate directly
+      if (mode === 'create') {
+        router.navigate({ to: '/' })
+      } else if (id) {
+        router.navigate({ to: '/snippets/$id', params: { id } })
+      }
+    }
+  }
+
+  function handleConfirmLeave() {
+    setShowUnsavedDialog(false)
+    if (mode === 'create') {
+      router.navigate({ to: '/' })
+    } else if (id) {
+      router.navigate({ to: '/snippets/$id', params: { id } })
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -367,23 +391,7 @@ export function SnippetForm({
           <Button type="submit" disabled={loading}>
             {loading ? (mode === 'create' ? 'Creating...' : 'Updating...') : mode === 'create' ? 'Create Snippet' : 'Update Snippet'}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              if (hasUnsavedChanges) {
-                if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
-                  return
-                }
-              }
-              if (mode === 'create') {
-                router.navigate({ to: '/' })
-              } else if (id) {
-                router.navigate({ to: '/snippets/$id', params: { id } })
-              }
-            }}
-            disabled={loading}
-          >
+          <Button type="button" variant="outline" onClick={handleCancel} disabled={loading}>
             Cancel
           </Button>
         </div>
@@ -401,6 +409,39 @@ export function SnippetForm({
           setShowFolderDialog(false)
         }}
       />
+
+      {/* Unsaved changes dialog */}
+      <Dialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Discard changes?</DialogTitle>
+            <DialogDescription>You have unsaved changes. Are you sure you want to leave? Your changes will be lost.</DialogDescription>
+          </DialogHeader>
+
+          {/* Form preview */}
+          <div className="my-4 p-4 bg-muted rounded-lg border space-y-2">
+            {tags.length > 0 && (
+              <div className="flex gap-1 flex-wrap mb-2">
+                {tags.map(tag => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            <pre className="whitespace-pre-wrap font-mono text-xs break-words max-h-40 overflow-auto">{body}</pre>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUnsavedDialog(false)}>
+              Stay
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmLeave}>
+              Discard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
