@@ -124,7 +124,9 @@ const SnippetRow = memo(({ snippet, onTagClick, onDelete }: SnippetRowProps) => 
             style={{ opacity: copying ? 0.7 : 1 }}
             title="Click to copy snippet"
           >
-            <p className="text-sm text-foreground whitespace-pre-wrap font-mono break-words">{snippet.body}</p>
+            <p className="text-sm text-foreground whitespace-pre-wrap font-mono break-words max-h-32 overflow-hidden text-ellipsis line-clamp-4">
+              {snippet.body}
+            </p>
           </div>
 
           {/* Metadata row */}
