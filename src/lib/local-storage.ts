@@ -600,11 +600,15 @@ export function renameFolderId(oldId: string, newId: string): boolean {
 
     localStorage.setItem(newKey, newData)
 
-    // Update all child folders that have this folder as parent
+    // Collect all folder keys to update (avoid issues with modifying localStorage during iteration)
+    const folderKeys: string[] = []
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
-      if (!key?.startsWith(FOLDER_PREFIX)) continue
+      if (key?.startsWith(FOLDER_PREFIX)) folderKeys.push(key)
+    }
 
+    // Update all child folders that have this folder as parent
+    for (const key of folderKeys) {
       try {
         const folderData = localStorage.getItem(key)
         if (!folderData) continue
@@ -618,11 +622,15 @@ export function renameFolderId(oldId: string, newId: string): boolean {
       } catch {}
     }
 
-    // Update all snippets that reference this folder
+    // Collect all snippet keys to update
+    const snippetKeys: string[] = []
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
-      if (!key?.startsWith(STORAGE_PREFIX)) continue
+      if (key?.startsWith(STORAGE_PREFIX)) snippetKeys.push(key)
+    }
 
+    // Update all snippets that reference this folder
+    for (const key of snippetKeys) {
       try {
         const snippetData = localStorage.getItem(key)
         if (!snippetData) continue

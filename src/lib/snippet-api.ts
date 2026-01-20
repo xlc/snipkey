@@ -417,11 +417,18 @@ async function syncFoldersToServer(): Promise<{
     // If folder has a serverId, it's an update, otherwise it's a new folder
     if (folder.serverId) {
       // Update existing folder on server
-      // Resolve parent_id: if parent has a server ID, use it; otherwise null
+      // Resolve parent_id: check folderIdMap first (parent might have been synced this run)
       let serverParentId: string | null = null
       if (folder.parent_id !== undefined && folder.parent_id !== null) {
-        const parentFolder = getLocalFolder(folder.parent_id)
-        serverParentId = parentFolder?.serverId ?? null
+        // Check if parent was just synced (has new ID in map)
+        const mappedParentId = folderIdMap.get(folder.parent_id)
+        if (mappedParentId) {
+          serverParentId = mappedParentId
+        } else {
+          // Check if parent has an existing server ID
+          const parentFolder = getLocalFolder(folder.parent_id)
+          serverParentId = parentFolder?.serverId ?? null
+        }
       }
 
       const result = await folderUpdate({
@@ -451,11 +458,18 @@ async function syncFoldersToServer(): Promise<{
       }
     } else {
       // Create new folder on server (position is calculated server-side)
-      // Resolve parent_id: if parent has a server ID, use it; otherwise null
+      // Resolve parent_id: check folderIdMap first (parent might have been synced this run)
       let serverParentId: string | null = null
       if (folder.parent_id !== undefined && folder.parent_id !== null) {
-        const parentFolder = getLocalFolder(folder.parent_id)
-        serverParentId = parentFolder?.serverId ?? null
+        // Check if parent was just synced (has new ID in map)
+        const mappedParentId = folderIdMap.get(folder.parent_id)
+        if (mappedParentId) {
+          serverParentId = mappedParentId
+        } else {
+          // Check if parent has an existing server ID
+          const parentFolder = getLocalFolder(folder.parent_id)
+          serverParentId = parentFolder?.serverId ?? null
+        }
       }
 
       const result = await folderCreate({
