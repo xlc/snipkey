@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Collapsible, CollapsibleContent } from '~/components/ui/collapsible'
@@ -111,6 +111,22 @@ function FolderTreeNode({
   const _isSelected = selectedFolderId === item.id
   const indent = level * 16
 
+  const handleToggle = useCallback(() => {
+    setIsOpen(prev => !prev)
+  }, [])
+
+  const handleSelect = useCallback(() => {
+    onFolderSelect(item.id)
+  }, [item.id, onFolderSelect])
+
+  const handleCreate = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      onCreateFolder(item.id)
+    },
+    [item.id, onCreateFolder],
+  )
+
   return (
     <div>
       <div
@@ -122,7 +138,7 @@ function FolderTreeNode({
             type="button"
             onClick={e => {
               e.stopPropagation()
-              setIsOpen(!isOpen)
+              handleToggle()
             }}
             className="flex-shrink-0 p-0.5 hover:bg-muted rounded transition-colors"
             aria-label={isOpen ? 'Collapse folder' : 'Expand folder'}
@@ -140,7 +156,7 @@ function FolderTreeNode({
         <button
           type="button"
           className="flex items-center gap-1 flex-1 min-w-0 text-left"
-          onClick={() => onFolderSelect(item.id)}
+          onClick={handleSelect}
           aria-label={`Select folder: ${item.name}`}
         >
           <div className={`w-3 h-3 rounded-full ${COLORS[item.color] || 'bg-gray-500'} flex-shrink-0`} />
@@ -153,16 +169,7 @@ function FolderTreeNode({
         </button>
 
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0"
-            onClick={e => {
-              e.stopPropagation()
-              onCreateFolder(item.id)
-            }}
-          >
+          <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={handleCreate}>
             <span className="text-xs">+</span>
           </Button>
         </div>

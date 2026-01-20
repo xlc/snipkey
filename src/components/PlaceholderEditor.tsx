@@ -1,4 +1,5 @@
 import type { PlaceholderSegment } from '@shared/template'
+import { memo } from 'react'
 import { Badge } from '~/components/ui/badge'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
@@ -9,7 +10,7 @@ interface PlaceholderEditorProps {
   onChange: (values: Record<string, string>) => void
 }
 
-export function PlaceholderEditor({ placeholders, values, onChange }: PlaceholderEditorProps) {
+function PlaceholderEditorComponent({ placeholders, values, onChange }: PlaceholderEditorProps) {
   return (
     <div className="space-y-3">
       {placeholders.map(placeholder => {
@@ -61,3 +62,42 @@ export function PlaceholderEditor({ placeholders, values, onChange }: Placeholde
     </div>
   )
 }
+
+// Custom comparison function for props
+function arePropsEqual(prev: PlaceholderEditorProps, next: PlaceholderEditorProps): boolean {
+  // Compare placeholders array
+  if (prev.placeholders !== next.placeholders) {
+    if (prev.placeholders.length !== next.placeholders.length) return false
+
+    for (let i = 0; i < prev.placeholders.length; i++) {
+      const prevPh = prev.placeholders[i]
+      const nextPh = next.placeholders[i]
+
+      if (!prevPh || !nextPh) return false
+
+      if (
+        prevPh.name !== nextPh.name ||
+        prevPh.phType !== nextPh.phType ||
+        prevPh.defaultValue !== nextPh.defaultValue ||
+        prevPh.options?.join(',') !== nextPh.options?.join(',')
+      ) {
+        return false
+      }
+    }
+  }
+
+  // Compare values object
+  const prevKeys = Object.keys(prev.values)
+  const nextKeys = Object.keys(next.values)
+
+  if (prevKeys.length !== nextKeys.length) return false
+
+  for (const key of prevKeys) {
+    if (prev.values[key] !== next.values[key]) return false
+  }
+
+  // onChange function should be stable (ref equality)
+  return prev.onChange === next.onChange
+}
+
+export const PlaceholderEditor = memo(PlaceholderEditorComponent, arePropsEqual)

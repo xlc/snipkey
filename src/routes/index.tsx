@@ -61,11 +61,10 @@ interface SnippetRowProps {
   snippet: ValidatedSnippet
   folders: Map<string, { name: string; color: string }>
   onTagClick: (tag: string) => void
-  formatRelativeTime: (timestamp: number) => string
   onDelete?: (id: string) => void
 }
 
-const SnippetRow = memo(({ snippet, folders, onTagClick, formatRelativeTime, onDelete }: SnippetRowProps) => {
+const SnippetRow = memo(({ snippet, folders, onTagClick, onDelete }: SnippetRowProps) => {
   const parseResult = useMemo(() => parseTemplate(snippet.body), [snippet.body])
   const [copying, setCopying] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -719,7 +718,6 @@ function Index() {
                 snippet={snippet}
                 folders={foldersMap}
                 onTagClick={setSelectedTag}
-                formatRelativeTime={formatRelativeTime}
                 onDelete={handleDeleteSnippet}
               />
             ))}

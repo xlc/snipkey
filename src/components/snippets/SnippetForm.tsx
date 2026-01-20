@@ -46,8 +46,8 @@ export function SnippetForm({
   const formStateRef = useRef({ body, tags, folderId })
   const mountedRef = useRef(true) // Track if component is mounted
 
-  // Real-time parsing
-  const parseResult = parseTemplate(body)
+  // Real-time parsing (memoized to prevent re-parsing on every render)
+  const parseResult = useMemo(() => parseTemplate(body), [body])
 
   // Check if form has unsaved changes (memoized to prevent recomputation)
   const hasUnsavedChanges = useMemo(
