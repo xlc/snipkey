@@ -351,8 +351,8 @@ function Index() {
   }, [folderTree])
 
   const handleCreate = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
+    async (e?: React.FormEvent) => {
+      if (e) e.preventDefault()
       if (!createBody.trim()) return
 
       // Create optimistic snippet
@@ -447,14 +447,14 @@ function Index() {
   const handleInputKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
-        // In create mode, Enter submits
-        if (inputMode === 'create') {
+        // In create mode, or in search mode with text, Enter creates
+        if (inputMode === 'create' || (inputMode === 'search' && inputValue.trim())) {
           e.preventDefault()
-          handleCreate(e)
+          handleCreate()
         }
       }
     },
-    [inputMode, handleCreate],
+    [inputMode, inputValue, handleCreate],
   )
 
   const handleClearInput = useCallback(() => {
@@ -462,16 +462,6 @@ function Index() {
     setInputMode('search')
     setHadNoResults(false)
   }, [])
-
-  // Toggle between search and create mode
-  const handleToggleMode = useCallback(() => {
-    if (inputMode === 'search') {
-      setInputMode('create')
-    } else {
-      setInputMode('search')
-    }
-    inputRef.current?.focus()
-  }, [inputMode])
 
   // Keyboard shortcuts (disabled on mobile)
   const isMobile = useMediaQuery('(max-width: 768px)')
@@ -572,7 +562,7 @@ function Index() {
       {/* Main Content */}
       <div className="flex-1 space-y-3 sm:space-y-6">
         {/* Unified Input - acts as both search and create */}
-        <form onSubmit={handleCreate} className="space-y-3">
+        <div className="space-y-3">
           <div className="relative">
             {inputMode === 'search' ? (
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -592,14 +582,42 @@ function Index() {
               autoComplete="off"
             />
             <div className="absolute right-2 top-2 flex gap-1">
-              <button
-                type="button"
-                onClick={handleToggleMode}
-                className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
-                title={inputMode === 'search' ? 'Switch to create mode' : 'Switch to search mode'}
-              >
-                {inputMode === 'search' ? 'Create' : 'Search'}
-              </button>
+              {inputMode === 'search' ? (
+                <>
+                  {/* In search mode: Create button creates immediately, toggle button switches mode */}
+                  {inputValue.trim() ? (
+                    <button
+                      type="button"
+                      onClick={handleCreate}
+                      className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                      title="Create snippet now"
+                    >
+                      Create
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setInputMode('create')}
+                      className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
+                      title="Switch to create mode"
+                    >
+                      Create
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* In create mode: Search button goes back, can still add tags */}
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('search')}
+                    className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
+                    title="Switch to search mode"
+                  >
+                    Search
+                  </button>
+                </>
+              )}
               {inputValue && (
                 <button type="button" onClick={handleClearInput} className="text-muted-foreground hover:text-foreground p-1" title="Clear">
                   <X className="h-4 w-4" />
@@ -608,9 +626,9 @@ function Index() {
             </div>
           </div>
 
-          {/* Create mode options */}
+          {/* Create mode options - only shown in create mode */}
           {inputMode === 'create' && (
-            <>
+            <form onSubmit={handleCreate} className="space-y-3">
               {/* Tags */}
               {createTags.length > 0 && (
                 <div className="flex gap-1 flex-wrap">
@@ -626,7 +644,7 @@ function Index() {
               {/* Add tag input */}
               <div className="flex gap-2">
                 <Input
-                  placeholder="Add tag... (press Enter)"
+                  placeholder="Add tag... (optional, press Enter)"
                   value={createTagInput}
                   onChange={e => setCreateTagInput(e.target.value)}
                   onKeyDown={e => {
@@ -642,9 +660,9 @@ function Index() {
                   Add
                 </Button>
               </div>
-            </>
+            </form>
           )}
-        </form>
+        </div>
 
         {/* Filters row */}
         {(selectedTag || selectedFolderId || sortBy !== 'updated' || sortOrder !== 'desc') && (
