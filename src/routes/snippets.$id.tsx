@@ -74,18 +74,6 @@ function SnippetDetail() {
     setRenderErrors(!!renderResult.errors)
   }, [snippet, placeholderValues, editingBody])
 
-  // Escape key to go back (unless dialog is open)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !showDeleteDialog) {
-        router.navigate({ to: '/' })
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [router, showDeleteDialog])
-
   async function handleBlur() {
     if (!snippet || editingBody === snippet.body || isSaving) return
 
