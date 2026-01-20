@@ -1,8 +1,8 @@
 import type { ParseError, ParseResult, PlaceholderSegment, Segment } from './types'
 
 // Regex to match {{placeholder}} syntax
-// Matches: {{name}} or {{name=default}} or {{name:number}} or {{name:enum(opt1,opt2)=default}}
-const PLACEHOLDER_REGEX = /\{\{(\w+)(?::(number|enum\(([^)]+)\)))?(?:=([^}]*))?\}\}/g
+// Matches: {{name}} or {{name=default}} or {{name:number}} or {{name:text}} or {{name:enum(opt1,opt2)=default}}
+const PLACEHOLDER_REGEX = /\{\{(\w+)(?::(text|number|enum\(([^)]+)\)))?(?:=([^}]*))?\}\}/g
 
 export function parseTemplate(body: string): ParseResult {
   const segments: Segment[] = []
@@ -53,6 +53,7 @@ export function parseTemplate(body: string): ParseResult {
     } else if (typePart === 'number') {
       phType = 'number'
     }
+    // typePart === 'text' is handled by the default value of phType
 
     // Create placeholder segment
     const placeholder: PlaceholderSegment = {

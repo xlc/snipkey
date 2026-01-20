@@ -246,21 +246,38 @@ function SnippetDetail() {
                   return
                 }
 
+                // If unsaved dialog is open, close it
+                if (showUnsavedDialog) {
+                  setShowUnsavedDialog(false)
+                  return
+                }
+
                 // If textarea is focused, blur it first (triggers save)
                 if (document.activeElement === textareaRef.current) {
                   textareaRef.current?.blur()
                   return
                 }
 
-                // Only navigate back if no unsaved changes
-                if (!hasUnsavedChanges) {
-                  router.navigate({ to: '/' })
+                // If there are unsaved changes, show dialog
+                if (hasUnsavedChanges) {
+                  setPendingNavigateTo('/')
+                  setShowUnsavedDialog(true)
+                  return
                 }
+
+                // Otherwise navigate back
+                router.navigate({ to: '/' })
               },
               description: 'Go back',
             },
           ],
-    [isMobile, showDeleteDialog, hasUnsavedChanges, router.navigate],
+    [
+      isMobile,
+      showDeleteDialog,
+      showUnsavedDialog,
+      hasUnsavedChanges, // Otherwise navigate back
+      router.navigate,
+    ],
   )
   useKeyboardShortcuts(keyboardShortcuts)
 
