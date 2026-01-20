@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { FolderDialog } from '~/components/FolderDialog'
 import { FolderTree } from '~/components/FolderTree'
 import { KeyboardShortcutsHelp } from '~/components/KeyboardShortcutsHelp'
-import { SyncStatusBadge } from '~/components/SyncStatusBadge'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -63,13 +62,12 @@ function formatRelativeTime(timestamp: number): string {
 interface SnippetRowProps {
   snippet: ValidatedSnippet
   folders: Map<string, { name: string; color: string }>
-  authenticated: boolean
   onTagClick: (tag: string) => void
   formatRelativeTime: (timestamp: number) => string
   onDelete?: (id: string) => void
 }
 
-const SnippetRow = memo(({ snippet, folders, authenticated, onTagClick, formatRelativeTime, onDelete }: SnippetRowProps) => {
+const SnippetRow = memo(({ snippet, folders, onTagClick, formatRelativeTime, onDelete }: SnippetRowProps) => {
   const parseResult = useMemo(() => parseTemplate(snippet.body), [snippet.body])
   const [copying, setCopying] = useState(false)
   const router = useRouter()
@@ -122,9 +120,6 @@ const SnippetRow = memo(({ snippet, folders, authenticated, onTagClick, formatRe
   return (
     <div className="group relative border rounded-lg hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 bg-card animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="p-2 sm:p-4 space-y-1 sm:space-y-2">
-        {/* Sync status badge */}
-        {authenticated && <SyncStatusBadge snippet={snippet} />}
-
         {/* Action buttons - top right */}
         <div className="absolute top-4 right-4 z-10 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} title="Copy">
@@ -734,7 +729,6 @@ function Index() {
                 key={snippet.id}
                 snippet={snippet}
                 folders={foldersMap}
-                authenticated={authenticated}
                 onTagClick={setSelectedTag}
                 formatRelativeTime={formatRelativeTime}
                 onDelete={handleDeleteSnippet}
