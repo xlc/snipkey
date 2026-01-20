@@ -15,7 +15,7 @@ import { COLORS } from '~/lib/constants/colors'
 import { useDebounce } from '~/lib/hooks/useDebounce'
 import { useKeyboardShortcuts } from '~/lib/hooks/useKeyboardShortcuts'
 import { useMediaQuery } from '~/lib/hooks/useMediaQuery'
-import { useStorageListener } from '~/lib/hooks/useStorageListener'
+import { useAuthSync, useStorageListener } from '~/lib/hooks/useStorageListener'
 import type { FolderTreeItem } from '~/lib/server/folders'
 import {
   createSnippet,
@@ -232,6 +232,7 @@ function Index() {
   const [createFolderId, setCreateFolderId] = useState<string | null>(null)
   const [hadNoResults, setHadNoResults] = useState(false)
   const [previousQueryLength, setPreviousQueryLength] = useState(0)
+  const [creatingSnippetId, setCreatingSnippetId] = useState<string | null>(null)
 
   // Derive search query from input when in search mode
   const searchQuery = inputMode === 'search' ? inputValue : ''
@@ -264,6 +265,11 @@ function Index() {
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [])
+
+  // Sync authentication state across tabs
+  useAuthSync(userId => {
+    setAuthenticated(userId !== null)
+  })
 
   const loadSnippets = useCallback(async () => {
     setLoading(true)
@@ -310,7 +316,17 @@ function Index() {
       setFolderTree([])
     }
 
-    setSnippets(items)
+    // Preserve optimistic snippet if we're creating one
+    if (creatingSnippetId) {
+      const optimisticSnippet = snippets?.find(s => s.id === creatingSnippetId)
+      if (optimisticSnippet) {
+        setSnippets(optimisticSnippet ? [optimisticSnippet, ...items] : items)
+      } else {
+        setSnippets(items)
+      }
+    } else {
+      setSnippets(items)
+    }
 
     // Track if we had no results from search
     const hasNoResults = items.length === 0 && debouncedSearchQuery.length > 0
@@ -319,7 +335,7 @@ function Index() {
 
     // Add a small delay for smoother transitions
     setTimeout(() => setLoading(false), 100)
-  }, [authenticated, debouncedSearchQuery, selectedFolderId, selectedTag, sortBy, sortOrder])
+  }, [authenticated, debouncedSearchQuery, selectedFolderId, selectedTag, sortBy, sortOrder, creatingSnippetId, snippets])
 
   // Listen for localStorage changes from other tabs to keep UI in sync
   useStorageListener('snipkey_meta', () => {
@@ -377,6 +393,9 @@ function Index() {
       setCreateTagInput('')
       setCreateFolderId(null)
 
+      // Mark as creating to prevent reload from overwriting optimistic snippet
+      setCreatingSnippetId(tempId)
+
       // Optimistically add to list
       setSnippets(prev => [optimisticSnippet, ...(prev ?? [])])
 
@@ -396,6 +415,7 @@ function Index() {
           setInputMode('create')
           setCreateTags(optimisticSnippet.tags)
           setCreateFolderId(optimisticSnippet.folder_id)
+          setCreatingSnippetId(null)
           return
         }
 
@@ -406,6 +426,8 @@ function Index() {
             prev => prev?.map(s => (s.id === tempId ? ({ ...s, id: realId, synced: authenticated } as PartialSnippet) : s)) ?? null,
           )
         }
+        // Clear creating flag after successful creation
+        setCreatingSnippetId(null)
       } catch {
         // Remove optimistic snippet on error
         setSnippets(prev => prev?.filter(s => s.id !== tempId) ?? null)
@@ -415,6 +437,7 @@ function Index() {
         setInputMode('create')
         setCreateTags(optimisticSnippet.tags)
         setCreateFolderId(optimisticSnippet.folder_id)
+        setCreatingSnippetId(null)
       }
     },
     [createBody, createTags, createFolderId, selectedFolderId, authenticated],
