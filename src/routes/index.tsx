@@ -177,11 +177,17 @@ const SnippetRow = memo(({ snippet, folders, onTagClick, formatRelativeTime, onD
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} title="Copy">
                 <Copy className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" asChild disabled={snippet.id.startsWith('temp-')}>
-                <Link to="/snippets/$id/edit" params={{ id: snippet.id }} title="Edit">
+              {snippet.id.startsWith('temp-') ? (
+                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-50 pointer-events-none" title="Edit (saving...)">
                   <Edit2 className="h-4 w-4" />
-                </Link>
-              </Button>
+                </Button>
+              ) : (
+                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                  <Link to="/snippets/$id/edit" params={{ id: snippet.id }} title="Edit">
+                    <Edit2 className="h-4 w-4" />
+                  </Link>
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"

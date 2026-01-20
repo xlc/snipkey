@@ -44,6 +44,7 @@ function SnippetDetail() {
   // Load placeholder values from localStorage
   const [placeholderValues, setPlaceholderValues] = usePlaceholderStorage(id, {})
   const mountedRef = useRef(true)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Track if component is mounted
   useEffect(() => {
@@ -206,8 +207,19 @@ function SnippetDetail() {
             {
               key: 'Escape',
               handler: () => {
-                // Only navigate back if: delete dialog is not open AND no unsaved changes
-                if (!showDeleteDialog && !hasUnsavedChanges) {
+                // If delete dialog is open, close it
+                if (showDeleteDialog) {
+                  return
+                }
+
+                // If textarea is focused, blur it first (triggers save)
+                if (document.activeElement === textareaRef.current) {
+                  textareaRef.current?.blur()
+                  return
+                }
+
+                // Only navigate back if no unsaved changes
+                if (!hasUnsavedChanges) {
                   router.navigate({ to: '/' })
                 }
               },
@@ -371,12 +383,17 @@ function SnippetDetail() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold">Template</h2>
-          {(isSaving || lastSaved) && (
+          {(isSaving || lastSaved || hasUnsavedChanges) && (
             <div className="text-xs text-muted-foreground flex items-center gap-1">
               {isSaving ? (
                 <>
                   <Save className="h-3 w-3 animate-pulse" />
                   Saving…
+                </>
+              ) : hasUnsavedChanges ? (
+                <>
+                  <span className="inline-block w-2 h-2 rounded-full bg-orange-500" />
+                  Unsaved changes
                 </>
               ) : lastSaved ? (
                 <>
@@ -388,6 +405,7 @@ function SnippetDetail() {
           )}
         </div>
         <Textarea
+          ref={textareaRef}
           value={editingBody}
           onChange={e => setEditingBody(e.target.value)}
           onBlur={handleBlur}
