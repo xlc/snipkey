@@ -124,9 +124,7 @@ const SnippetRow = memo(({ snippet, onTagClick, onDelete }: SnippetRowProps) => 
             style={{ opacity: copying ? 0.7 : 1 }}
             title="Click to copy snippet"
           >
-            <p className="text-sm text-foreground whitespace-pre-wrap font-mono break-words max-h-32 overflow-hidden text-ellipsis line-clamp-4">
-              {snippet.body}
-            </p>
+            <p className="text-sm text-foreground whitespace-pre-wrap font-mono break-words max-h-32 overflow-y-auto">{snippet.body}</p>
           </div>
 
           {/* Metadata row */}
@@ -248,7 +246,7 @@ function Index() {
   const [authenticated, setAuthenticated] = useState(false)
   const [createTags, setCreateTags] = useState<string[]>([])
   const [createTagInput, setCreateTagInput] = useState('')
-  const [showSyntaxGuide, setShowSyntaxGuide] = useState(true)
+  const [showSyntaxGuide, setShowSyntaxGuide] = useState(false)
   const [hadNoResults, setHadNoResults] = useState(false)
   const [previousQueryLength, setPreviousQueryLength] = useState(0)
   const [creatingSnippetId, setCreatingSnippetId] = useState<string | null>(null)
