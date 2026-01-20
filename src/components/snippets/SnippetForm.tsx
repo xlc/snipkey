@@ -282,7 +282,7 @@ export function SnippetForm({
             autoComplete="off"
           />
           <p className="text-xs text-muted-foreground">
-            Use {'{{name:text}}'} for text, {'{{age:number}}'} for numbers, or {'{{tone:enum(formal,casual)}}'} for enums
+            Use {'{{name}}'} for text, {'{{name=default}}'} for text with default, {'{{name:number}}'} for numbers
           </p>
         </div>
 

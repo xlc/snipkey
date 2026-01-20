@@ -1,8 +1,8 @@
 import type { ParseError, ParseResult, PlaceholderSegment, Segment } from './types'
 
 // Regex to match {{placeholder}} syntax
-// Matches: {{name:type}} or {{name:type=default}} or {{name:enum(opt1,opt2)=default}}
-const PLACEHOLDER_REGEX = /\{\{(\w+):(text|number|enum\(([^)]+)\))(?:=([^}]*))?\}\}/g
+// Matches: {{name}} or {{name=default}} or {{name:number}} or {{name:enum(opt1,opt2)=default}}
+const PLACEHOLDER_REGEX = /\{\{(\w+)(?::(number|enum\(([^)]+)\)))?(?:=([^}]*))?\}\}/g
 
 export function parseTemplate(body: string): ParseResult {
   const segments: Segment[] = []
@@ -27,52 +27,36 @@ export function parseTemplate(body: string): ParseResult {
       })
     }
 
-    // Parse the type
-    let phType: 'text' | 'number' | 'enum'
+    // Parse the type - defaults to 'text' if not specified
+    let phType: 'text' | 'number' | 'enum' = (typePart as 'text' | 'number' | 'enum' | undefined) || 'text'
     let options: string[] | undefined
 
-    // Regex groups: fullMatch, name, typePart, enumOptions (optional), defaultValue (optional)
-    // When regex matches, capture groups 1 (name) and 2 (typePart) are always defined
-    // Groups 3 (enumOptions) and 4 (defaultValue) may be undefined
-    if (!name || !typePart) {
-      // Skip invalid matches (shouldn't happen with our regex)
-      lastIndex = end
-      match = PLACEHOLDER_REGEX.exec(body)
-      continue
-    }
-
-    const nameStr = name
-    const typeStr = typePart
-
-    if (typeStr.startsWith('enum(')) {
+    if (typePart?.startsWith('enum(')) {
       if (!enumOptions) {
         errors.push({
-          message: `Enum placeholder "${nameStr}" must have options, e.g., {{name:enum(opt1,opt2)}}`,
+          message: `Enum placeholder "${name}" must have options, e.g., {{name:enum(opt1,opt2)}}`,
           start,
           end,
         })
         phType = 'text'
       } else {
-        phType = 'enum'
         options = enumOptions.split(',').map(s => s.trim())
         if (options.length === 0) {
           errors.push({
-            message: `Enum placeholder "${nameStr}" must have at least one option`,
+            message: `Enum placeholder "${name}" must have at least one option`,
             start,
             end,
           })
         }
       }
-    } else if (typeStr === 'number') {
+    } else if (typePart === 'number') {
       phType = 'number'
-    } else {
-      phType = 'text'
     }
 
     // Create placeholder segment
     const placeholder: PlaceholderSegment = {
       kind: 'ph',
-      name: nameStr,
+      name: name ?? '',
       phType,
       options,
       defaultValue: defaultValue && defaultValue.length > 0 ? defaultValue : undefined,
@@ -84,8 +68,8 @@ export function parseTemplate(body: string): ParseResult {
     segments.push(placeholder)
 
     // Track unique placeholders (first appearance wins)
-    if (!seenNames.has(nameStr)) {
-      seenNames.add(nameStr)
+    if (placeholder.name && !seenNames.has(placeholder.name)) {
+      seenNames.add(placeholder.name)
       placeholders.push(placeholder)
     }
 
