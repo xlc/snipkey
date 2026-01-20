@@ -621,7 +621,11 @@ function Index() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setInputMode('create')}
+                      onClick={() => {
+                        setInputMode('create')
+                        setHadNoResults(false)
+                        inputRef.current?.focus()
+                      }}
                       className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
                       title="Switch to create mode"
                     >
