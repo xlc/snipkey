@@ -12,7 +12,6 @@ export const snippetSchema = z.object({
         .filter((tag, i, arr) => arr.indexOf(tag) === i),
     )
     .refine(tags => tags.length <= LIMITS.MAX_TAGS_PER_SNIPPET, `Maximum ${LIMITS.MAX_TAGS_PER_SNIPPET} tags allowed`),
-  folder_id: z.string().uuid().nullable().optional(),
 })
 
 export const snippetCreateInput = snippetSchema
@@ -24,7 +23,6 @@ export const snippetUpdateInput = snippetSchema.partial().extend({
 export const snippetListInput = z.object({
   query: z.string().max(LIMITS.MAX_SEARCH_QUERY_LENGTH).optional(),
   tag: z.string().max(LIMITS.MAX_TAG_LENGTH).optional(),
-  folder_id: z.string().uuid().nullable().optional(),
   limit: z.number().int().positive().max(LIMITS.MAX_SNIPPETS_PER_PAGE).default(20),
   cursor: z
     .preprocess(

@@ -1,19 +1,15 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Clock, Copy, Edit2, FileCode, Folder, FolderPlus, Plus, Search, Trash2, X } from 'lucide-react'
+import { Clock, Copy, Edit2, FileCode, Plus, Search, Trash2, X } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { FolderDialog } from '~/components/FolderDialog'
-import { FolderTree } from '~/components/FolderTree'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
-import { COLORS } from '~/lib/constants/colors'
 import { useDebounce } from '~/lib/hooks/useDebounce'
 import { useAuthSync, useStorageListener } from '~/lib/hooks/useStorageListener'
-import type { FolderTreeItem } from '~/lib/server/folders'
 import {
   createSnippet,
   deleteSnippet,
@@ -23,7 +19,6 @@ import {
   type PartialSnippet,
   type ValidatedSnippet,
 } from '~/lib/snippet-api'
-import { foldersTree } from '~/server/folders'
 
 export const Route = createFileRoute('/')({
   component: Index,
@@ -59,12 +54,11 @@ function formatRelativeTime(timestamp: number): string {
 // Memoized snippet row component
 interface SnippetRowProps {
   snippet: ValidatedSnippet
-  folders: Map<string, { name: string; color: string }>
   onTagClick: (tag: string) => void
   onDelete?: (id: string) => void
 }
 
-const SnippetRow = memo(({ snippet, folders, onTagClick, onDelete }: SnippetRowProps) => {
+const SnippetRow = memo(({ snippet, onTagClick, onDelete }: SnippetRowProps) => {
   const parseResult = useMemo(() => parseTemplate(snippet.body), [snippet.body])
   const [copying, setCopying] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -115,18 +109,6 @@ const SnippetRow = memo(({ snippet, folders, onTagClick, onDelete }: SnippetRowP
     <>
       <div className="group relative border rounded-lg hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 bg-card animate-in fade-in slide-in-from-bottom-2 duration-300">
         <div className="p-2 sm:p-4 space-y-1 sm:space-y-2">
-          {/* Folder badge */}
-          {snippet.folder_id && folders.has(snippet.folder_id) && (
-            <Badge
-              variant="outline"
-              className="text-xs mb-1"
-              style={{ backgroundColor: `${COLORS[folders.get(snippet.folder_id)?.color ?? 'gray']}20` }}
-            >
-              <Folder className="h-3 w-3 mr-1" />
-              {folders.get(snippet.folder_id)?.name}
-            </Badge>
-          )}
-
           {/* Body - clickable to copy */}
           <div
             role="button"
@@ -259,17 +241,11 @@ function Index() {
   const [inputValue, setInputValue] = useState('')
   const [inputMode, setInputMode] = useState<'search' | 'create'>('search')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<'updated' | 'created' | 'body'>('updated')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [authenticated, setAuthenticated] = useState(false)
-  const [folderTree, setFolderTree] = useState<FolderTreeItem[]>([])
-  const [folderTreeLoading, setFolderTreeLoading] = useState(false)
-  const [showFolderDialog, setShowFolderDialog] = useState(false)
-  const [folderDialogParentId, setFolderDialogParentId] = useState<string | null>(null)
   const [createTags, setCreateTags] = useState<string[]>([])
   const [createTagInput, setCreateTagInput] = useState('')
-  const [createFolderId, setCreateFolderId] = useState<string | null>(null)
   const [hadNoResults, setHadNoResults] = useState(false)
   const [previousQueryLength, setPreviousQueryLength] = useState(0)
   const [creatingSnippetId, setCreatingSnippetId] = useState<string | null>(null)
@@ -314,33 +290,13 @@ function Index() {
   const loadSnippets = useCallback(async () => {
     setLoading(true)
 
-    // Parallel fetch: start all requests at once (async-parallel rule)
-    const snippetsPromise = listSnippets({
+    const snippetsResult = await listSnippets({
       limit: 20,
       query: debouncedSearchQuery || undefined,
       tag: selectedTag || undefined,
-      folder_id: selectedFolderId || undefined,
       sortBy,
       sortOrder,
     })
-
-    // Load folder tree with loading state
-    const loadFolders = async () => {
-      if (!authenticated) {
-        return { error: null, data: null }
-      }
-      setFolderTreeLoading(true)
-      try {
-        const result = await foldersTree({})
-        setFolderTreeLoading(false)
-        return { error: null, data: result.data }
-      } catch {
-        setFolderTreeLoading(false)
-        return { error: null, data: null }
-      }
-    }
-
-    const [snippetsResult, foldersResult] = await Promise.all([snippetsPromise, loadFolders()])
 
     if (snippetsResult.error) {
       setLoading(false)
@@ -348,13 +304,6 @@ function Index() {
     }
 
     const items = snippetsResult.data || []
-
-    // Load folder tree
-    if (authenticated && foldersResult?.data) {
-      setFolderTree(foldersResult.data.tree)
-    } else {
-      setFolderTree([])
-    }
 
     // Preserve optimistic snippet if we're creating one
     if (creatingSnippetId) {
@@ -375,7 +324,7 @@ function Index() {
 
     // Add a small delay for smoother transitions
     setTimeout(() => setLoading(false), 100)
-  }, [authenticated, debouncedSearchQuery, selectedFolderId, selectedTag, sortBy, sortOrder, creatingSnippetId, snippets])
+  }, [debouncedSearchQuery, selectedTag, sortBy, sortOrder, creatingSnippetId, snippets])
 
   // Listen for localStorage changes from other tabs to keep UI in sync
   useStorageListener('snipkey_meta', () => {
@@ -393,27 +342,11 @@ function Index() {
     }
   }, [hadNoResults, inputMode, searchQuery.length, previousQueryLength, searchQuery])
 
-  // Build folder map once for efficient lookup (memoized to prevent rebuilding on every render)
-  const foldersMap = useMemo(() => {
-    const map = new Map<string, { name: string; color: string }>()
-    const addToMap = (items: FolderTreeItem[]) => {
-      for (const item of items) {
-        map.set(item.id, { name: item.name, color: item.color })
-        if (item.children.length > 0) addToMap(item.children)
-      }
-    }
-    addToMap(folderTree)
-    return map
-  }, [folderTree])
-
   const handleCreate = useCallback(
     async (e?: React.FormEvent) => {
       if (e) e.preventDefault()
       // Use inputValue directly instead of createBody to support creating from search mode
       if (!inputValue.trim()) return
-
-      // Use the currently selected folder (if any) for the new snippet
-      const folderId = createFolderId ?? selectedFolderId
 
       // Create optimistic snippet
       const tempId = `temp-${Date.now()}`
@@ -421,7 +354,6 @@ function Index() {
         id: tempId,
         body: inputValue.trim(),
         tags: createTags,
-        folder_id: folderId,
         created_at: Date.now(),
         updated_at: Date.now(),
         synced: false,
@@ -432,7 +364,6 @@ function Index() {
       setInputMode('search')
       setCreateTags([])
       setCreateTagInput('')
-      setCreateFolderId(null)
 
       // Mark as creating to prevent reload from overwriting optimistic snippet
       setCreatingSnippetId(tempId)
@@ -444,7 +375,6 @@ function Index() {
         const result = await createSnippet({
           body: optimisticSnippet.body,
           tags: optimisticSnippet.tags,
-          folder_id: optimisticSnippet.folder_id,
         })
 
         if (result.error) {
@@ -455,7 +385,6 @@ function Index() {
           setInputValue(optimisticSnippet.body)
           setInputMode('create')
           setCreateTags(optimisticSnippet.tags)
-          setCreateFolderId(optimisticSnippet.folder_id)
           setCreatingSnippetId(null)
           return
         }
@@ -477,11 +406,10 @@ function Index() {
         setInputValue(optimisticSnippet.body)
         setInputMode('create')
         setCreateTags(optimisticSnippet.tags)
-        setCreateFolderId(optimisticSnippet.folder_id)
         setCreatingSnippetId(null)
       }
     },
-    [inputValue, createTags, createFolderId, selectedFolderId, authenticated],
+    [inputValue, createTags, authenticated],
   )
 
   const handleAddCreateTag = useCallback(
@@ -523,250 +451,177 @@ function Index() {
   }, [debouncedSearchQuery, selectedTag, sortBy, sortOrder, authenticated])
 
   return (
-    <div className="flex gap-6">
-      {/* Folder Sidebar */}
-      <aside className="hidden lg:block w-64 flex-shrink-0">
-        <div className="sticky top-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold">Folders</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setFolderDialogParentId(null)
-                setShowFolderDialog(true)
-              }}
-            >
-              <FolderPlus className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {folderTree.length > 0 || authenticated || folderTreeLoading ? (
-            <FolderTree
-              tree={folderTree}
-              selectedFolderId={selectedFolderId}
-              onFolderSelect={setSelectedFolderId}
-              onCreateFolder={parentId => {
-                setFolderDialogParentId(parentId)
-                setShowFolderDialog(true)
-              }}
-              onEditFolder={() => {}}
-              onDeleteFolder={() => {}}
-              loading={folderTreeLoading}
-            />
+    <div className="max-w-3xl mx-auto space-y-3 sm:space-y-6">
+      {/* Unified Input - acts as both search and create */}
+      <div className="space-y-3">
+        <div className="relative">
+          {inputMode === 'search' ? (
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           ) : (
-            <div className="text-center py-8 text-sm text-muted-foreground">
-              No folders yet. Create your first folder to organize your snippets!
-            </div>
+            <Plus className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           )}
-
-          {/* "All Snippets" option */}
-          {selectedFolderId !== null && (
-            <Button variant="ghost" className="w-full justify-start" onClick={() => setSelectedFolderId(null)}>
-              <FileCode className="h-4 w-4 mr-2" />
-              All Snippets
-            </Button>
-          )}
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 space-y-3 sm:space-y-6">
-        {/* Unified Input - acts as both search and create */}
-        <div className="space-y-3">
-          <div className="relative">
+          <Textarea
+            ref={inputRef}
+            placeholder={inputMode === 'search' ? 'Search snippets…' : 'Type your snippet here…'}
+            value={inputValue}
+            onChange={e => setInputValue(e.target.value)}
+            rows={inputMode === 'create' ? 4 : 1}
+            className={`resize-none ${inputMode === 'search' ? 'pl-10 pr-20 min-h-[38px]' : 'pl-10 pr-20'}`}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <div className="absolute right-2 top-2 flex gap-1">
             {inputMode === 'search' ? (
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            ) : (
-              <Plus className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            )}
-            <Textarea
-              ref={inputRef}
-              placeholder={inputMode === 'search' ? 'Search snippets…' : 'Type your snippet here…'}
-              value={inputValue}
-              onChange={e => setInputValue(e.target.value)}
-              rows={inputMode === 'create' ? 4 : 1}
-              className={`resize-none ${inputMode === 'search' ? 'pl-10 pr-20 min-h-[38px]' : 'pl-10 pr-20'}`}
-              autoComplete="off"
-              spellCheck={false}
-            />
-            <div className="absolute right-2 top-2 flex gap-1">
-              {inputMode === 'search' ? (
-                <>
-                  {/* In search mode: Create button creates immediately, toggle button switches mode */}
-                  {inputValue.trim() ? (
-                    <button
-                      type="button"
-                      onClick={handleCreate}
-                      className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                      title="Create snippet now"
-                    >
-                      Create
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setInputMode('create')
-                        setHadNoResults(false)
-                        inputRef.current?.focus()
-                      }}
-                      className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
-                      title="Switch to create mode"
-                    >
-                      Create
-                    </button>
-                  )}
-                </>
-              ) : (
-                <>
-                  {/* In create mode: Search button goes back, can still add tags */}
+              <>
+                {/* In search mode: Create button creates immediately, toggle button switches mode */}
+                {inputValue.trim() ? (
                   <button
                     type="button"
-                    onClick={() => setInputMode('search')}
-                    className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
-                    title="Switch to search mode"
+                    onClick={handleCreate}
+                    className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                    title="Create snippet now"
                   >
-                    Search
+                    Create
                   </button>
-                </>
-              )}
-              {inputValue && (
-                <button type="button" onClick={handleClearInput} className="text-muted-foreground hover:text-foreground p-1" title="Clear">
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Create mode options - only shown in create mode */}
-          {inputMode === 'create' && (
-            <form onSubmit={handleCreate} className="space-y-3">
-              {/* Tags */}
-              {createTags.length > 0 && (
-                <div className="flex gap-1 flex-wrap">
-                  {createTags.map(tag => (
-                    <Badge key={tag} variant="secondary" interactive onClick={() => handleRemoveCreateTag(tag)} className="text-xs">
-                      {tag}
-                      <X className="h-2.5 w-2.5 ml-1" />
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
-              {/* Add tag input */}
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add tag... (optional, press Enter)"
-                  value={createTagInput}
-                  onChange={e => setCreateTagInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      handleAddCreateTag(e)
-                    }
-                  }}
-                  className="flex-1"
-                />
-                <Button type="submit" disabled={!createBody.trim()} className="px-4">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add
-                </Button>
-              </div>
-            </form>
-          )}
-        </div>
-
-        {/* Filters row */}
-        {(selectedTag || selectedFolderId || sortBy !== 'updated' || sortOrder !== 'desc') && (
-          <div className="flex items-center gap-2 flex-wrap">
-            {selectedTag && (
-              <Badge variant="secondary" interactive onClick={() => setSelectedTag(null)} className="gap-1">
-                Tag: {selectedTag}
-                <X className="h-3 w-3" />
-              </Badge>
-            )}
-            {selectedFolderId && foldersMap.has(selectedFolderId) && (
-              <Badge variant="secondary" interactive onClick={() => setSelectedFolderId(null)} className="gap-1">
-                {foldersMap.get(selectedFolderId)?.name}
-                <X className="h-3 w-3" />
-              </Badge>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSelectedTag(null)
-                setSelectedFolderId(null)
-                setSortBy('updated')
-                setSortOrder('desc')
-                setHadNoResults(false)
-              }}
-            >
-              Clear filters
-            </Button>
-          </div>
-        )}
-
-        {/* Snippets List */}
-        {loading ? (
-          LOADING_SKELETON
-        ) : snippets && snippets.length > 0 ? (
-          <div className="space-y-2">
-            {snippets.filter(isValidSnippet).map(snippet => (
-              <SnippetRow
-                key={snippet.id}
-                snippet={snippet}
-                folders={foldersMap}
-                onTagClick={setSelectedTag}
-                onDelete={handleDeleteSnippet}
-              />
-            ))}
-          </div>
-        ) : (
-          // Empty state
-          <div className="text-center py-8 sm:py-16 px-4">
-            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-muted mb-3 sm:mb-4">
-              <FileCode className="h-6 w-6 sm:h-8 w-6 sm:w-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-base sm:text-lg font-semibold mb-2">
-              {searchQuery || selectedTag ? 'No snippets found' : 'No snippets yet'}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4 sm:mb-6 max-w-md mx-auto">
-              {searchQuery || selectedTag ? (
-                <>
-                  No snippets match your search. Continue typing to create a new snippet with this text, or{' '}
+                ) : (
                   <button
                     type="button"
                     onClick={() => {
-                      setInputValue('')
-                      setInputMode('search')
+                      setInputMode('create')
                       setHadNoResults(false)
+                      inputRef.current?.focus()
                     }}
-                    className="text-primary hover:underline"
+                    className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
+                    title="Switch to create mode"
                   >
-                    clear search
+                    Create
                   </button>
-                  .
-                </>
-              ) : (
-                'Type in the box above to create your first snippet'
-              )}
-            </p>
+                )}
+              </>
+            ) : (
+              <>
+                {/* In create mode: Search button goes back, can still add tags */}
+                <button
+                  type="button"
+                  onClick={() => setInputMode('search')}
+                  className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
+                  title="Switch to search mode"
+                >
+                  Search
+                </button>
+              </>
+            )}
+            {inputValue && (
+              <button type="button" onClick={handleClearInput} className="text-muted-foreground hover:text-foreground p-1" title="Clear">
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
+        </div>
+
+        {/* Create mode options - only shown in create mode */}
+        {inputMode === 'create' && (
+          <form onSubmit={handleCreate} className="space-y-3">
+            {/* Tags */}
+            {createTags.length > 0 && (
+              <div className="flex gap-1 flex-wrap">
+                {createTags.map(tag => (
+                  <Badge key={tag} variant="secondary" interactive onClick={() => handleRemoveCreateTag(tag)} className="text-xs">
+                    {tag}
+                    <X className="h-2.5 w-2.5 ml-1" />
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {/* Add tag input */}
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add tag... (optional, press Enter)"
+                value={createTagInput}
+                onChange={e => setCreateTagInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleAddCreateTag(e)
+                  }
+                }}
+                className="flex-1"
+              />
+              <Button type="submit" disabled={!createBody.trim()} className="px-4">
+                <Plus className="h-4 w-4 mr-2" />
+                Add
+              </Button>
+            </div>
+          </form>
         )}
       </div>
 
-      {/* Folder Dialog */}
-      <FolderDialog
-        open={showFolderDialog}
-        onOpenChange={setShowFolderDialog}
-        mode="create"
-        parent_id={folderDialogParentId}
-        onSuccess={() => {
-          loadSnippets()
-        }}
-      />
+      {/* Filters row */}
+      {(selectedTag || sortBy !== 'updated' || sortOrder !== 'desc') && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {selectedTag && (
+            <Badge variant="secondary" interactive onClick={() => setSelectedTag(null)} className="gap-1">
+              Tag: {selectedTag}
+              <X className="h-3 w-3" />
+            </Badge>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSelectedTag(null)
+              setSortBy('updated')
+              setSortOrder('desc')
+              setHadNoResults(false)
+            }}
+          >
+            Clear filters
+          </Button>
+        </div>
+      )}
+
+      {/* Snippets List */}
+      {loading ? (
+        LOADING_SKELETON
+      ) : snippets && snippets.length > 0 ? (
+        <div className="space-y-2">
+          {snippets.filter(isValidSnippet).map(snippet => (
+            <SnippetRow key={snippet.id} snippet={snippet} onTagClick={setSelectedTag} onDelete={handleDeleteSnippet} />
+          ))}
+        </div>
+      ) : (
+        // Empty state
+        <div className="text-center py-8 sm:py-16 px-4">
+          <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-muted mb-3 sm:mb-4">
+            <FileCode className="h-6 w-6 sm:h-8 w-6 sm:w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-base sm:text-lg font-semibold mb-2">
+            {searchQuery || selectedTag ? 'No snippets found' : 'No snippets yet'}
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4 sm:mb-6 max-w-md mx-auto">
+            {searchQuery || selectedTag ? (
+              <>
+                No snippets match your search. Continue typing to create a new snippet with this text, or{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInputValue('')
+                    setInputMode('search')
+                    setHadNoResults(false)
+                  }}
+                  className="text-primary hover:underline"
+                >
+                  clear search
+                </button>
+                .
+              </>
+            ) : (
+              'Type in the box above to create your first snippet'
+            )}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

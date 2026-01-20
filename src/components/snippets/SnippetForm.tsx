@@ -4,8 +4,6 @@ import { useRouter } from '@tanstack/react-router'
 import { Save } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { FolderDialog } from '~/components/FolderDialog'
-import { FolderSelector } from '~/components/FolderSelector'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
@@ -17,33 +15,21 @@ export interface SnippetFormProps {
   id?: string
   initialBody?: string
   initialTags?: string[]
-  initialFolderId?: string | null
-  onSubmit: (data: { body: string; tags: string[]; folder_id?: string | null }) => Promise<void>
+  onSubmit: (data: { body: string; tags: string[] }) => Promise<void>
   enableAutoSave?: boolean
 }
 
-export function SnippetForm({
-  mode,
-  id,
-  initialBody = '',
-  initialTags = [],
-  initialFolderId = null,
-  onSubmit,
-  enableAutoSave = true,
-}: SnippetFormProps) {
+export function SnippetForm({ mode, id, initialBody = '', initialTags = [], onSubmit, enableAutoSave = true }: SnippetFormProps) {
   const router = useRouter()
   const [body, setBody] = useState(initialBody)
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>(initialTags)
-  const [folderId, setFolderId] = useState<string | null>(initialFolderId)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
-  const [showFolderDialog, setShowFolderDialog] = useState(false)
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
-  const [folderListKey, setFolderListKey] = useState(0) // Used to force FolderSelector reload
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const formStateRef = useRef({ body, tags, folderId })
+  const formStateRef = useRef({ body, tags })
   const mountedRef = useRef(true) // Track if component is mounted
 
   // Real-time parsing (memoized to prevent re-parsing on every render)
@@ -51,12 +37,8 @@ export function SnippetForm({
 
   // Check if form has unsaved changes (memoized to prevent recomputation)
   const hasUnsavedChanges = useMemo(
-    () =>
-      body !== initialBody ||
-      tags.length !== initialTags.length ||
-      tags.some((t, i) => t !== initialTags[i]) ||
-      folderId !== initialFolderId,
-    [body, tags, initialBody, initialTags, initialFolderId, folderId],
+    () => body !== initialBody || tags.length !== initialTags.length || tags.some((t, i) => t !== initialTags[i]),
+    [body, tags, initialBody, initialTags],
   )
 
   // Warn before navigation with unsaved changes
@@ -77,14 +59,14 @@ export function SnippetForm({
     if (!enableAutoSave) return
 
     const draftKey = mode === 'edit' ? `draft-edit-${id}` : 'draft-new'
-    const formState = { body, tags, folderId }
+    const formState = { body, tags }
 
     // Save to localStorage whenever form changes
     localStorage.setItem(draftKey, JSON.stringify(formState))
 
     // Update ref for auto-save comparison
     formStateRef.current = formState
-  }, [body, tags, mode, id, enableAutoSave, folderId])
+  }, [body, tags, mode, id, enableAutoSave])
 
   // Load draft on mount
   useEffect(() => {
@@ -97,20 +79,15 @@ export function SnippetForm({
       try {
         const draft = JSON.parse(draftJson)
         // Only restore if it's different from initial values
-        if (
-          draft.body !== initialBody ||
-          JSON.stringify(draft.tags) !== JSON.stringify(initialTags) ||
-          draft.folderId !== initialFolderId
-        ) {
+        if (draft.body !== initialBody || JSON.stringify(draft.tags) !== JSON.stringify(initialTags)) {
           setBody(draft.body || '')
           setTags(draft.tags || [])
-          setFolderId(draft.folderId || null)
         }
       } catch {
         // Invalid draft data in localStorage - continue with empty form
       }
     }
-  }, [mode, id, enableAutoSave, initialBody, initialTags, initialFolderId])
+  }, [mode, id, enableAutoSave, initialBody, initialTags])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -140,13 +117,12 @@ export function SnippetForm({
     // Set new timeout
     autoSaveTimeoutRef.current = setTimeout(async () => {
       // Only save if something changed and form is valid
-      if (body.trim() && (body !== initialBody || JSON.stringify(tags) !== JSON.stringify(initialTags) || folderId !== initialFolderId)) {
+      if (body.trim() && (body !== initialBody || JSON.stringify(tags) !== JSON.stringify(initialTags))) {
         setSaving(true)
         try {
           await onSubmitRef.current({
             body,
             tags,
-            folder_id: folderId,
           })
           // Only update lastSaved time if submission succeeded and component is still mounted
           if (mountedRef.current) {
@@ -169,7 +145,7 @@ export function SnippetForm({
         clearTimeout(autoSaveTimeoutRef.current)
       }
     }
-  }, [body, tags, folderId, enableAutoSave, mode, loading, initialBody, initialTags, initialFolderId])
+  }, [body, tags, enableAutoSave, mode, loading, initialBody, initialTags])
 
   // Clear draft on successful submit
   useEffect(() => {
@@ -178,10 +154,10 @@ export function SnippetForm({
     const draftKey = mode === 'edit' ? `draft-edit-${id}` : 'draft-new'
 
     // Clear draft if form matches initial values (successful save)
-    if (body === initialBody && JSON.stringify(tags) === JSON.stringify(initialTags) && folderId === initialFolderId) {
+    if (body === initialBody && JSON.stringify(tags) === JSON.stringify(initialTags)) {
       localStorage.removeItem(draftKey)
     }
-  }, [body, tags, folderId, initialBody, initialTags, initialFolderId, mode, id, loading])
+  }, [body, tags, initialBody, initialTags, mode, id, loading])
 
   function handleAddTag() {
     const trimmed = tagInput.trim().toLowerCase()
@@ -236,7 +212,6 @@ export function SnippetForm({
       await onSubmit({
         body,
         tags,
-        folder_id: folderId,
       })
     } finally {
       setLoading(false)
@@ -346,16 +321,6 @@ export function SnippetForm({
         )}
 
         <div className="space-y-2">
-          <div className="text-sm font-medium">Folder (optional)</div>
-          <FolderSelector
-            key={folderListKey}
-            selectedFolderId={folderId}
-            onFolderSelect={setFolderId}
-            onCreateFolder={() => setShowFolderDialog(true)}
-          />
-        </div>
-
-        <div className="space-y-2">
           <label htmlFor="tags" className="text-sm font-medium">
             Tags (optional)
           </label>
@@ -391,19 +356,6 @@ export function SnippetForm({
           </Button>
         </div>
       </form>
-
-      {/* Folder Dialog */}
-      <FolderDialog
-        open={showFolderDialog}
-        onOpenChange={setShowFolderDialog}
-        mode="create"
-        parent_id={null}
-        onSuccess={() => {
-          // Folder was created successfully, force FolderSelector to reload
-          setFolderListKey(prev => prev + 1)
-          setShowFolderDialog(false)
-        }}
-      />
 
       {/* Unsaved changes dialog */}
       <Dialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
