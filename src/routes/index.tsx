@@ -272,6 +272,20 @@ function Index() {
     checkAuth()
   }, [])
 
+  // Re-check auth status when page becomes visible (handles redirect from login/register)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        getAuthStatus().then(status => {
+          setAuthenticated(status.authenticated)
+        })
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [])
+
   const loadSnippets = useCallback(async () => {
     setLoading(true)
 

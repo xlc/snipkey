@@ -34,6 +34,20 @@ export function Header() {
     checkAuth()
   }, [])
 
+  // Re-check auth status when window gains focus or becomes visible (handles redirect from login/register)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        getAuthStatus().then(status => {
+          setAuthenticated(status.authenticated)
+        })
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [])
+
   async function handleLogout() {
     // Check for unsynced changes and pending deletions
     const unsynced = getUnsyncedSnippets()
