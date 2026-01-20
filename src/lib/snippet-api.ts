@@ -417,6 +417,13 @@ async function syncFoldersToServer(): Promise<{
     // If folder has a serverId, it's an update, otherwise it's a new folder
     if (folder.serverId) {
       // Update existing folder on server
+      // Resolve parent_id: if parent has a server ID, use it; otherwise null
+      let serverParentId: string | null = null
+      if (folder.parent_id !== undefined && folder.parent_id !== null) {
+        const parentFolder = getLocalFolder(folder.parent_id)
+        serverParentId = parentFolder?.serverId ?? null
+      }
+
       const result = await folderUpdate({
         data: {
           id: folder.serverId,
@@ -424,6 +431,7 @@ async function syncFoldersToServer(): Promise<{
             name: folder.name,
             color: folder.color,
             icon: folder.icon,
+            parent_id: serverParentId,
             position: folder.position,
           },
         },
@@ -443,11 +451,19 @@ async function syncFoldersToServer(): Promise<{
       }
     } else {
       // Create new folder on server (position is calculated server-side)
+      // Resolve parent_id: if parent has a server ID, use it; otherwise null
+      let serverParentId: string | null = null
+      if (folder.parent_id !== undefined && folder.parent_id !== null) {
+        const parentFolder = getLocalFolder(folder.parent_id)
+        serverParentId = parentFolder?.serverId ?? null
+      }
+
       const result = await folderCreate({
         data: {
           name: folder.name,
           color: folder.color,
           icon: folder.icon,
+          parent_id: serverParentId,
         },
       })
 

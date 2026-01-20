@@ -599,7 +599,6 @@ export function renameFolderId(oldId: string, newId: string): boolean {
     const newData = JSON.stringify(folder)
 
     localStorage.setItem(newKey, newData)
-    localStorage.removeItem(oldKey)
 
     // Update all child folders that have this folder as parent
     for (let i = 0; i < localStorage.length; i++) {
@@ -636,6 +635,9 @@ export function renameFolderId(oldId: string, newId: string): boolean {
         }
       } catch {}
     }
+
+    // Only remove old key after all references have been updated
+    localStorage.removeItem(oldKey)
 
     return true
   } catch {
