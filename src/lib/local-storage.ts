@@ -234,6 +234,15 @@ export function renameSnippetId(oldId: string, newId: string): boolean {
   try {
     // Parse and update snippet
     const snippet = JSON.parse(data) as LocalSnippet
+
+    // Handle edge case: if IDs are the same, just update metadata in place
+    if (oldId === newId) {
+      snippet.serverId = newId
+      snippet.synced = true
+      localStorage.setItem(oldKey, JSON.stringify(snippet))
+      return true
+    }
+
     snippet.id = newId
     snippet.serverId = newId // Track server ID
     snippet.synced = true
@@ -591,6 +600,15 @@ export function renameFolderId(oldId: string, newId: string): boolean {
 
   try {
     const folder = JSON.parse(data) as LocalFolder
+
+    // Handle edge case: if IDs are the same, just update metadata in place
+    if (oldId === newId) {
+      folder.serverId = newId
+      folder.synced = true
+      localStorage.setItem(oldKey, JSON.stringify(folder))
+      return true
+    }
+
     folder.id = newId
     folder.serverId = newId
     folder.synced = true
