@@ -38,11 +38,11 @@ export const Route = createRootRoute({
     <RootDocument>
       <div className="min-h-screen bg-background flex flex-col">
         <Header />
-        <main className="container mx-auto px-4 py-6 sm:py-8 flex-1">
+        <main className="container mx-auto px-3 py-3 sm:px-4 sm:py-6 flex-1">
           <Outlet />
         </main>
-        <footer className="border-t py-4">
-          <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">Snipkey v{__GIT_COMMIT__}</div>
+        <footer className="border-t py-2 sm:py-4">
+          <div className="container mx-auto px-3 sm:px-4 text-center text-xs text-muted-foreground">Snipkey v{__GIT_COMMIT__}</div>
         </footer>
       </div>
       <Toaster />

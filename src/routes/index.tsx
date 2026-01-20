@@ -146,7 +146,7 @@ const SnippetRow = memo(({ snippet, folders, authenticated, onTagClick, formatRe
 
   return (
     <div className="group relative border rounded-lg hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 bg-card animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="p-4 space-y-2">
+      <div className="p-2 sm:p-4 space-y-1 sm:space-y-2">
         {/* Sync status badge */}
         {authenticated && <SyncStatusBadge snippet={snippet} />}
 
@@ -600,9 +600,9 @@ function Index() {
       <KeyboardShortcutsHelp open={showKeyboardShortcuts} onOpenChange={setShowKeyboardShortcuts} />
 
       {/* Main Content */}
-      <div className="flex-1 space-y-8">
+      <div className="flex-1 space-y-4 sm:space-y-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
           <div className="flex-1" />
           <div className="flex flex-wrap gap-2">
             {authenticated && unsyncedCount > 0 && (
@@ -623,7 +623,7 @@ function Index() {
         </div>
 
         {/* Quick Create Form */}
-        <form onSubmit={handleQuickCreate} className="space-y-4 border rounded-lg p-6 bg-card">
+        <form onSubmit={handleQuickCreate} className="space-y-3 border rounded-lg p-3 sm:p-6 sm:space-y-4 bg-card">
           <div className="space-y-4">
             {/* Title and Add button */}
             <div className="flex items-center justify-between">

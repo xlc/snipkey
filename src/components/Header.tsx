@@ -84,7 +84,7 @@ export function Header() {
   if (loading) {
     return (
       <header className="border-b">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
+        <div className="container mx-auto flex items-center justify-between px-3 py-2 sm:px-4 sm:py-4">
           <div className="min-w-0 flex-1">
             <div className="space-y-1.5">
               <div className="h-6 w-24 bg-muted animate-pulse rounded" />
@@ -101,7 +101,7 @@ export function Header() {
 
   return (
     <header className="border-b">
-      <div className="container mx-auto flex items-center justify-between px-4 py-4">
+      <div className="container mx-auto flex items-center justify-between px-3 py-2 sm:px-4 sm:py-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-bold truncate bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
