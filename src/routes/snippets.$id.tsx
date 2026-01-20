@@ -1,6 +1,6 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
-import { ArrowLeft, Copy, Download, Edit2, FileCode, Save, Trash2 } from 'lucide-react'
+import { ArrowLeft, Copy, Download, FileCode, Save, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { PlaceholderEditor } from '~/components/PlaceholderEditor'
@@ -282,14 +282,6 @@ function SnippetDetail() {
           </div>
         )}
         <div className="flex-1" />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handleNavigateWithCheck(`/snippets/${id}/edit`)}
-          className="touch-manipulation h-11 w-11 sm:h-9 sm:w-9 px-0"
-        >
-          <Edit2 className="h-4 w-4" />
-        </Button>
         <Button
           variant="ghost"
           size="sm"
