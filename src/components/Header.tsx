@@ -52,12 +52,17 @@ export function Header() {
     // Check for unsynced changes and pending deletions
     const unsynced = getUnsyncedSnippets()
     const deleted = getDeletedSnippets()
-    const unsyncedCount = unsynced.length + deleted.length
+
+    // Filter out snippets that exist on both server and local (these are safe)
+    // Only warn about truly local-only changes
+    const trulyUnsynced = unsynced.filter(s => !s.serverId)
+    const trulyDeleted = deleted.filter(s => s.serverId)
+    const unsyncedCount = trulyUnsynced.length + trulyDeleted.length
 
     if (unsyncedCount > 0) {
       const changes = []
-      if (unsynced.length > 0) changes.push(`${unsynced.length} unsynced snippet${unsynced.length > 1 ? 's' : ''}`)
-      if (deleted.length > 0) changes.push(`${deleted.length} pending deletion${deleted.length > 1 ? 's' : ''}`)
+      if (trulyUnsynced.length > 0) changes.push(`${trulyUnsynced.length} unsynced snippet${trulyUnsynced.length > 1 ? 's' : ''}`)
+      if (trulyDeleted.length > 0) changes.push(`${trulyDeleted.length} pending deletion${trulyDeleted.length > 1 ? 's' : ''}`)
 
       const confirmLogout = confirm(`You have ${changes.join(' and ')}. Logging out will lose these local changes. Continue?`)
       if (!confirmLogout) return
