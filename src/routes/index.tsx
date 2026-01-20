@@ -355,13 +355,16 @@ function Index() {
       if (e) e.preventDefault()
       if (!createBody.trim()) return
 
+      // Use the currently selected folder (if any) for the new snippet
+      const folderId = createFolderId ?? selectedFolderId
+
       // Create optimistic snippet
       const tempId = `temp-${Date.now()}`
       const optimisticSnippet: ValidatedSnippet = {
         id: tempId,
         body: createBody.trim(),
         tags: createTags,
-        folder_id: createFolderId,
+        folder_id: folderId,
         created_at: Date.now(),
         updated_at: Date.now(),
         synced: false,
@@ -414,7 +417,7 @@ function Index() {
         setCreateFolderId(optimisticSnippet.folder_id)
       }
     },
-    [createBody, createTags, createFolderId, authenticated],
+    [createBody, createTags, createFolderId, selectedFolderId, authenticated],
   )
 
   const handleAddCreateTag = useCallback(
@@ -465,43 +468,46 @@ function Index() {
 
   // Keyboard shortcuts (disabled on mobile)
   const isMobile = useMediaQuery('(max-width: 768px)')
-  useKeyboardShortcuts(
-    isMobile
-      ? []
-      : [
-          {
-            key: 'n',
-            ctrlKey: true,
-            handler: () => {
-              setInputMode('create')
-              inputRef.current?.focus()
+  const keyboardShortcuts = useMemo(
+    () =>
+      isMobile
+        ? []
+        : [
+            {
+              key: 'n',
+              ctrlKey: true,
+              handler: () => {
+                setInputMode('create')
+                inputRef.current?.focus()
+              },
+              description: 'Focus create input',
             },
-            description: 'Focus create input',
-          },
-          {
-            key: '/',
-            handler: () => {
-              setInputMode('search')
-              inputRef.current?.focus()
-            },
-            description: 'Focus search input',
-          },
-          {
-            key: 'Escape',
-            handler: () => {
-              if (inputMode === 'create' && createBody) {
-                setInputValue('')
+            {
+              key: '/',
+              handler: () => {
                 setInputMode('search')
-              } else if (searchQuery) {
-                setInputValue('')
-              } else if (selectedTag) {
-                setSelectedTag(null)
-              }
+                inputRef.current?.focus()
+              },
+              description: 'Focus search input',
             },
-            description: 'Clear filters',
-          },
-        ],
+            {
+              key: 'Escape',
+              handler: () => {
+                if (inputMode === 'create' && createBody) {
+                  setInputValue('')
+                  setInputMode('search')
+                } else if (searchQuery) {
+                  setInputValue('')
+                } else if (selectedTag) {
+                  setSelectedTag(null)
+                }
+              },
+              description: 'Clear filters',
+            },
+          ],
+    [isMobile, inputMode, createBody, searchQuery, selectedTag],
   )
+  useKeyboardShortcuts(keyboardShortcuts)
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Re-load when search, tag, sort, sortBy, sortOrder, or auth changes
   useEffect(() => {

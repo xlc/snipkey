@@ -73,6 +73,7 @@ function SnippetDetail() {
     if (!snippet) return
 
     if (renderErrors) {
+      toast.error('Please fix placeholder errors before copying')
       return
     }
 
@@ -259,7 +260,7 @@ function SnippetDetail() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={handleCopyRendered} className="touch-manipulation cursor-pointer">
+              <DropdownMenuItem onClick={handleCopyRendered} disabled={renderErrors} className="touch-manipulation cursor-pointer">
                 <Copy className="h-4 w-4 mr-2" />
                 <span>Copy rendered output</span>
               </DropdownMenuItem>
