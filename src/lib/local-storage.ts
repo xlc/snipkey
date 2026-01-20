@@ -405,3 +405,243 @@ export function clearServerIdMap(): void {
 
   localStorage.removeItem(SERVER_ID_MAP_KEY)
 }
+
+// ============================================================================
+// FOLDER LOCAL STORAGE
+// ============================================================================
+
+const FOLDER_PREFIX = 'folder_'
+
+export interface Folder {
+  id: string
+  user_id: string
+  parent_id: string | null
+  name: string
+  color: string
+  icon: string
+  created_at: number
+  updated_at: number
+  position: number
+}
+
+export interface LocalFolder extends Omit<Folder, 'parent_id'> {
+  parent_id?: string | null
+  synced: boolean
+  deleted: boolean
+  serverId?: string
+}
+
+function getFolderKey(id: string): string {
+  return `${FOLDER_PREFIX}${id}`
+}
+
+export function listLocalFolders(): LocalFolder[] {
+  if (typeof window === 'undefined') return []
+
+  const folders: LocalFolder[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (!key?.startsWith(FOLDER_PREFIX)) continue
+
+    try {
+      const data = localStorage.getItem(key)
+      if (!data) continue
+
+      const folder = JSON.parse(data) as LocalFolder
+      if (folder.deleted) continue
+
+      folders.push(folder)
+    } catch {}
+  }
+
+  return folders.sort((a, b) => a.position - b.position)
+}
+
+export function getLocalFolder(id: string): LocalFolder | null {
+  if (typeof window === 'undefined') return null
+
+  const key = getFolderKey(id)
+  const data = localStorage.getItem(key)
+
+  if (!data) return null
+
+  try {
+    return JSON.parse(data) as LocalFolder
+  } catch {
+    return null
+  }
+}
+
+export function createLocalFolder(folder: Omit<Folder, 'id' | 'user_id' | 'created_at' | 'updated_at'>): LocalFolder | null {
+  const now = Date.now()
+  const id = crypto.randomUUID()
+  const meta = getMeta()
+
+  const localFolder: LocalFolder = {
+    id,
+    user_id: meta.userId || '',
+    ...folder,
+    created_at: now,
+    updated_at: now,
+    synced: false,
+    deleted: false,
+  }
+
+  if (!saveLocalFolder(localFolder)) {
+    return null
+  }
+
+  return localFolder
+}
+
+export function updateLocalFolder(
+  id: string,
+  updates: Partial<Omit<Folder, 'id' | 'created_at' | 'updated_at' | 'user_id'>>,
+): LocalFolder | null {
+  const existing = getLocalFolder(id)
+  if (!existing) return null
+
+  const updated: LocalFolder = {
+    ...existing,
+    ...updates,
+    updated_at: Date.now(),
+    synced: false,
+  }
+
+  if (!saveLocalFolder(updated)) {
+    return null
+  }
+
+  return updated
+}
+
+export function deleteLocalFolder(id: string): boolean {
+  const existing = getLocalFolder(id)
+  if (!existing) return false
+
+  const deleted: LocalFolder = {
+    ...existing,
+    deleted: true,
+    synced: false,
+    updated_at: Date.now(),
+  }
+
+  return saveLocalFolder(deleted)
+}
+
+export function saveLocalFolder(folder: LocalFolder): boolean {
+  if (typeof window === 'undefined') return false
+
+  const key = getFolderKey(folder.id)
+  try {
+    localStorage.setItem(key, JSON.stringify(folder))
+    return true
+  } catch (error) {
+    if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+      console.error('Local storage quota exceeded, unable to save folder')
+    } else {
+      console.error('Failed to save folder to local storage:', error)
+    }
+    return false
+  }
+}
+
+export function markFolderAsSynced(id: string): void {
+  const existing = getLocalFolder(id)
+  if (!existing) return
+
+  existing.synced = true
+  saveLocalFolder(existing)
+}
+
+export function getUnsyncedFolders(): LocalFolder[] {
+  const folders = listLocalFolders()
+  return folders.filter(f => !f.synced && !f.deleted)
+}
+
+export function getDeletedFolders(): LocalFolder[] {
+  if (typeof window === 'undefined') return []
+
+  const folders: LocalFolder[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (!key?.startsWith(FOLDER_PREFIX)) continue
+
+    try {
+      const data = localStorage.getItem(key)
+      if (!data) continue
+
+      const folder = JSON.parse(data) as LocalFolder
+      if (folder.deleted && !folder.synced) {
+        folders.push(folder)
+      }
+    } catch {}
+  }
+
+  return folders
+}
+
+export function renameFolderId(oldId: string, newId: string): boolean {
+  if (typeof window === 'undefined') return false
+
+  const oldKey = getFolderKey(oldId)
+  const data = localStorage.getItem(oldKey)
+
+  if (!data) return false
+
+  try {
+    const folder = JSON.parse(data) as LocalFolder
+    folder.id = newId
+    folder.serverId = newId
+    folder.synced = true
+
+    const newKey = getFolderKey(newId)
+    const newData = JSON.stringify(folder)
+
+    localStorage.setItem(newKey, newData)
+    localStorage.removeItem(oldKey)
+
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function permanentlyDeleteFolder(id: string): boolean {
+  if (typeof window === 'undefined') return false
+
+  const key = getFolderKey(id)
+  const exists = localStorage.getItem(key)
+
+  if (!exists) return false
+
+  localStorage.removeItem(key)
+  return true
+}
+
+export function clearLocalFolders(): void {
+  if (typeof window === 'undefined') return
+
+  const keys: string[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (!key?.startsWith(FOLDER_PREFIX)) continue
+    keys.push(key)
+  }
+
+  for (const key of keys) {
+    localStorage.removeItem(key)
+  }
+}
+
+// Get local folder by server ID (for sync)
+export function getLocalFolderByServerId(serverId: string): LocalFolder | null {
+  const folders = listLocalFolders()
+  return folders.find(f => f.serverId === serverId) || null
+}
+
+// Get server ID by local folder ID (for sync)
+export function getServerFolderId(localId: string): string | null {
+  const folder = getLocalFolder(localId)
+  return folder?.serverId || null
+}

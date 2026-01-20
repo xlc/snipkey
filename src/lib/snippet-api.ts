@@ -3,25 +3,33 @@ import type { ServerIdMap, Snippet, SnippetData } from '~/lib/local-storage'
 import {
   createLocalSnippet,
   deleteLocalSnippet,
+  getDeletedFolders,
   getDeletedSnippets,
+  getLocalFolder,
   getLocalIdByServerId,
   getLocalSnippet,
   getMeta,
   getServerIdMap,
+  getUnsyncedFolders,
   getUnsyncedSnippets,
   isAuthenticated,
   type LocalSnippet,
   listLocalSnippets,
   markAsSynced,
+  markFolderAsSynced,
+  permanentlyDeleteFolder,
   permanentlyDeleteSnippet,
+  renameFolderId,
   renameSnippetId,
   resolveSnippetId,
+  saveLocalFolder,
   saveLocalSnippet,
   saveServerIdMap,
   setMeta,
   updateLocalSnippet,
 } from '~/lib/local-storage'
 import { authMe } from '~/server/auth'
+import { folderCreate, folderDelete, folderUpdate } from '~/server/folders'
 import { snippetCreate, snippetDelete, snippetGet, snippetsList, snippetUpdate } from '~/server/snippets'
 
 export type { SnippetData }
@@ -384,6 +392,127 @@ export async function getAuthStatus(): Promise<{ authenticated: boolean; userId?
   return { authenticated: false }
 }
 
+// Sync folders to server (must be called before syncing snippets)
+async function syncFoldersToServer(): Promise<{
+  synced: number
+  updated: number
+  deleted: number
+  errors: number
+  skipped: number
+  folderIdMap: Map<string, string> // local ID -> server ID
+}> {
+  const unsynced = getUnsyncedFolders()
+  const deleted = getDeletedFolders()
+  let synced = 0
+  let updated = 0
+  let deletedCount = 0
+  let errors = 0
+  let skipped = 0
+  const folderIdMap = new Map<string, string>()
+
+  // Sync new and modified folders
+  for (const folder of unsynced) {
+    const folderTimestamp = folder.updated_at
+
+    // If folder has a serverId, it's an update, otherwise it's a new folder
+    if (folder.serverId) {
+      // Update existing folder on server
+      const result = await folderUpdate({
+        data: {
+          id: folder.serverId,
+          data: {
+            name: folder.name,
+            color: folder.color,
+            icon: folder.icon,
+            position: folder.position,
+          },
+        },
+      })
+
+      if (result.error) {
+        errors++
+      } else {
+        // Only mark as synced if the folder hasn't been modified during the sync request
+        const current = getLocalFolder(folder.id)
+        if (current && current.updated_at === folderTimestamp) {
+          markFolderAsSynced(folder.id)
+          updated++
+        } else {
+          skipped++
+        }
+      }
+    } else {
+      // Create new folder on server (position is calculated server-side)
+      const result = await folderCreate({
+        data: {
+          name: folder.name,
+          color: folder.color,
+          icon: folder.icon,
+        },
+      })
+
+      if (result.error) {
+        errors++
+      } else if (result.data) {
+        const serverId = result.data.folder.id
+        // Only rename if the folder hasn't been modified during the sync request
+        const current = getLocalFolder(folder.id)
+        if (current && current.updated_at === folderTimestamp) {
+          if (renameFolderId(folder.id, serverId)) {
+            folderIdMap.set(folder.id, serverId)
+            synced++
+          } else {
+            // Rename failed, but at least update the serverId
+            const updatedFolder = getLocalFolder(folder.id)
+            if (updatedFolder) {
+              updatedFolder.serverId = serverId
+              updatedFolder.synced = true
+              if (!saveLocalFolder(updatedFolder)) {
+                errors++
+              } else {
+                folderIdMap.set(folder.id, serverId)
+                synced++
+              }
+            } else {
+              errors++
+            }
+          }
+        } else {
+          // Folder was modified during sync
+          const updatedFolder = getLocalFolder(folder.id)
+          if (updatedFolder) {
+            updatedFolder.serverId = serverId
+            saveLocalFolder(updatedFolder)
+            folderIdMap.set(folder.id, serverId)
+          }
+          skipped++
+        }
+      }
+    }
+  }
+
+  // Sync deletions to server
+  for (const folder of deleted) {
+    if (folder.serverId) {
+      const result = await folderDelete({
+        data: { id: folder.serverId },
+      })
+
+      if (result.error) {
+        errors++
+      } else {
+        permanentlyDeleteFolder(folder.id)
+        deletedCount++
+      }
+    } else {
+      permanentlyDeleteFolder(folder.id)
+      deletedCount++
+    }
+  }
+
+  return { synced, updated, deleted: deletedCount, errors, skipped, folderIdMap }
+}
+
 // Sync to server
 export async function syncToServer(): Promise<{
   synced: number
@@ -392,13 +521,17 @@ export async function syncToServer(): Promise<{
   errors: number
   skipped: number
 }> {
+  // Sync folders first (snippets depend on folders existing)
+  const folderResult = await syncFoldersToServer()
+  const folderIdMap = folderResult.folderIdMap
+
   const unsynced = getUnsyncedSnippets()
   const deleted = getDeletedSnippets()
   let synced = 0
   let updated = 0
   let deletedCount = 0
-  let errors = 0
-  let skipped = 0
+  let errors = folderResult.errors
+  let skipped = folderResult.skipped
 
   // Batch server ID map updates for performance
   const serverIdMapUpdates: ServerIdMap = {}
@@ -411,10 +544,25 @@ export async function syncToServer(): Promise<{
     // If snippet has a serverId, it's an update, otherwise it's a new snippet
     if (snippet.serverId) {
       // Update existing snippet on server
-      // Note: folder_id is not synced since folder sync is not yet implemented
-      const updateData: { body: string; tags: string[] } = {
+      const updateData: { body: string; tags: string[]; folder_id?: string | null } = {
         body: snippet.body,
         tags: snippet.tags ?? [],
+      }
+
+      // Map local folder_id to server folder_id if it exists
+      if (snippet.folder_id !== undefined) {
+        if (snippet.folder_id === null) {
+          updateData.folder_id = null
+        } else {
+          // Check if folder has a server ID
+          const folder = getLocalFolder(snippet.folder_id)
+          if (folder?.serverId) {
+            updateData.folder_id = folder.serverId
+          } else {
+            // Folder not synced yet, set to null
+            updateData.folder_id = null
+          }
+        }
       }
 
       const result = await snippetUpdate({
@@ -439,10 +587,31 @@ export async function syncToServer(): Promise<{
       }
     } else {
       // Create new snippet on server
-      // Note: folder_id is not synced since folder sync is not yet implemented
-      const createData: { body: string; tags: string[] } = {
+      const createData: { body: string; tags: string[]; folder_id?: string | null } = {
         body: snippet.body,
         tags: snippet.tags ?? [],
+      }
+
+      // Map local folder_id to server folder_id if it exists
+      if (snippet.folder_id !== undefined) {
+        if (snippet.folder_id === null) {
+          createData.folder_id = null
+        } else {
+          // Check if folder has a server ID
+          const serverFolderId = folderIdMap.get(snippet.folder_id)
+          if (serverFolderId) {
+            createData.folder_id = serverFolderId
+          } else {
+            // Folder not synced yet, check if it has an existing server ID
+            const folder = getLocalFolder(snippet.folder_id)
+            if (folder?.serverId) {
+              createData.folder_id = folder.serverId
+            } else {
+              // Folder not synced, set to null
+              createData.folder_id = null
+            }
+          }
+        }
       }
 
       const result = await snippetCreate({
