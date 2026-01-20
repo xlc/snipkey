@@ -108,7 +108,10 @@ export async function listSnippets(filters: {
     }
 
     // Merge server results with local unsynced snippets
-    const serverItems: SnippetListItem[] = result.data.items
+    const serverItems: SnippetListItem[] = result.data.items.map(item => ({
+      ...item,
+      synced: true, // Server items are always synced
+    }))
     const localUnsynced = listLocalSnippets().filter(s => !s.synced)
     const localDeleted = getDeletedSnippets()
 
