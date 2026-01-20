@@ -99,8 +99,6 @@ function SnippetDetail() {
 
     setIsSaving(true)
     try {
-      let _lastSavedBody = bodyToSave
-
       // Keep saving until there are no more pending changes
       while (pendingSaveBodyRef.current !== null && mountedRef.current) {
         const bodyToSaveNow = pendingSaveBodyRef.current
@@ -118,8 +116,6 @@ function SnippetDetail() {
           setSnippet(prev => (prev ? { ...prev, body: bodyToSaveNow } : prev))
           setLastSaved(new Date())
         }
-
-        _lastSavedBody = bodyToSaveNow
 
         // Small delay to prevent overwhelming the API
         await new Promise(resolve => setTimeout(resolve, 100))
@@ -200,10 +196,6 @@ function SnippetDetail() {
 
     setShowDeleteDialog(false)
     router.navigate({ to: '/' })
-  }
-
-  async function _handleUndo() {
-    // Undo feature not implemented
   }
 
   function handleNavigateWithCheck(to: string) {
