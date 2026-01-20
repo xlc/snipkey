@@ -28,16 +28,13 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
             Home
           </Link>
         ) : (
-          <Link
-            to="/"
+          <button
+            type="button"
+            onClick={() => router.history.back()}
             className={`px-2 py-1 bg-gray-600 dark:bg-gray-700 rounded-sm text-white uppercase font-extrabold`}
-            onClick={e => {
-              e.preventDefault()
-              window.history.back()
-            }}
           >
             Go Back
-          </Link>
+          </button>
         )}
       </div>
     </div>

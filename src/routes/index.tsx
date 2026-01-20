@@ -239,6 +239,7 @@ SnippetRow.displayName = 'SnippetRow'
 function Index() {
   const _router = useRouter()
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const quickCreateTextareaRef = useRef<HTMLTextAreaElement>(null)
   const [snippets, setSnippets] = useState<Array<PartialSnippet> | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -510,8 +511,7 @@ function Index() {
       ctrlKey: true,
       handler: () => {
         // Focus the quick create textarea
-        const textarea = document.querySelector('textarea[placeholder*="snippet"]') as HTMLTextAreaElement
-        textarea?.focus()
+        quickCreateTextareaRef.current?.focus()
       },
       description: 'Focus snippet input',
     },
@@ -627,6 +627,7 @@ function Index() {
 
             {/* Body input */}
             <Textarea
+              ref={quickCreateTextareaRef}
               placeholder="Type your snippet here... (supports {{placeholder:text}} syntax)"
               value={quickCreateBody}
               onChange={e => setQuickCreateBody(e.target.value)}
