@@ -149,7 +149,7 @@ const SnippetRow = memo(({ snippet, folders, onTagClick, onDelete }: SnippetRowP
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {/* Timestamp */}
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 tabular-nums">
                 <Clock className="h-3 w-3" />
                 <span>{formatRelativeTime(snippet.updated_at)}</span>
               </div>
@@ -588,6 +588,7 @@ function Index() {
               rows={inputMode === 'create' ? 4 : 1}
               className={`resize-none ${inputMode === 'search' ? 'pl-10 pr-20 min-h-[38px]' : 'pl-10 pr-20'}`}
               autoComplete="off"
+              spellCheck={false}
             />
             <div className="absolute right-2 top-2 flex gap-1">
               {inputMode === 'search' ? (

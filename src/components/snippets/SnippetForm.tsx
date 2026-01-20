@@ -248,7 +248,7 @@ export function SnippetForm({
       {/* Auto-save indicator - sticky on mobile */}
       {enableAutoSave && mode === 'edit' && (saving || lastSaved) && (
         <div className="sm:hidden sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b py-2 px-3 rounded-lg">
-          <div className="text-sm font-medium flex items-center justify-center gap-2">
+          <div className="text-sm font-medium flex items-center justify-center gap-2 tabular-nums">
             {saving ? (
               <>
                 <Save className="h-4 w-4 animate-pulse text-primary" />
@@ -273,7 +273,7 @@ export function SnippetForm({
             </p>
           </div>
           {enableAutoSave && mode === 'edit' && (
-            <div className="hidden sm:block text-xs text-muted-foreground flex items-center gap-1 shrink-0">
+            <div className="hidden sm:block text-xs text-muted-foreground flex items-center gap-1 shrink-0 tabular-nums">
               {saving ? (
                 <>
                   <Save className="h-3 w-3 animate-pulse" />
@@ -304,6 +304,7 @@ export function SnippetForm({
             className="font-mono text-sm"
             required
             autoComplete="off"
+            spellCheck={false}
           />
           <p className="text-xs text-muted-foreground">
             Use {'{{name}}'} for text, {'{{name=default}}'} for text with default, {'{{name:number}}'} for numbers

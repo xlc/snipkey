@@ -415,7 +415,7 @@ function SnippetDetail() {
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold">Template</h2>
           {(isSaving || lastSaved || hasUnsavedChanges) && (
-            <div className="text-xs text-muted-foreground flex items-center gap-1">
+            <div className="text-xs text-muted-foreground flex items-center gap-1 tabular-nums">
               {isSaving ? (
                 <>
                   <Save className="h-3 w-3 animate-pulse" />
@@ -443,6 +443,7 @@ function SnippetDetail() {
           rows={10}
           className="font-mono text-sm"
           autoComplete="off"
+          spellCheck={false}
         />
       </div>
     </div>
