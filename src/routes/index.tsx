@@ -14,6 +14,7 @@ import { Textarea } from '~/components/ui/textarea'
 import { COLORS } from '~/lib/constants/colors'
 import { useDebounce } from '~/lib/hooks/useDebounce'
 import { useKeyboardShortcuts } from '~/lib/hooks/useKeyboardShortcuts'
+import { useMediaQuery } from '~/lib/hooks/useMediaQuery'
 import { useStorageListener } from '~/lib/hooks/useStorageListener'
 import { getUnsyncedSnippets, listLocalSnippets } from '~/lib/local-storage'
 import type { FolderTreeItem } from '~/lib/server/folders'
@@ -482,7 +483,7 @@ function Index() {
   }, [])
 
   // Keyboard shortcuts (disabled on mobile)
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+  const isMobile = useMediaQuery('(max-width: 768px)')
   useKeyboardShortcuts(
     isMobile
       ? []
@@ -665,13 +666,11 @@ function Index() {
         )}
       </div>
 
-      {/* Floating Action Button for mobile */}
+      {/* Floating Action Button for mobile - navigates to new snippet page */}
       <button
         type="button"
         onClick={() => {
-          const textarea = document.querySelector('textarea[placeholder*="snippet"]') as HTMLTextAreaElement
-          textarea?.focus()
-          textarea?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          _router.navigate({ to: '/snippets/new' })
         }}
         className="lg:hidden fixed bottom-20 right-4 z-20 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
         aria-label="Create snippet"
