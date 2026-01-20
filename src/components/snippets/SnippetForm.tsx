@@ -360,27 +360,21 @@ export function SnippetForm({
             Tags (optional)
           </label>
           <div className="flex gap-2">
-            <Input
-              id="tags"
-              placeholder="Add a tag..."
-              value={tagInput}
-              onChange={e => setTagInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  handleAddTag()
-                }
-              }}
-              autoComplete="off"
-            />
-            <Button type="button" variant="outline" onClick={handleAddTag}>
+            <Input id="tags" placeholder="Add a tag..." value={tagInput} onChange={e => setTagInput(e.target.value)} autoComplete="off" />
+            <Button type="button" variant="outline" onClick={handleAddTag} className="h-11 px-6 sm:h-9 sm:px-4">
               Add
             </Button>
           </div>
           {tags.length > 0 && (
             <div className="flex gap-2 flex-wrap mt-2">
               {tags.map(tag => (
-                <Badge key={tag} variant="secondary" interactive onClick={() => handleRemoveTag(tag)}>
+                <Badge
+                  key={tag}
+                  variant="secondary"
+                  interactive
+                  onClick={() => handleRemoveTag(tag)}
+                  className="min-h-[44px] px-4 text-xs sm:min-h-[32px] sm:px-2.5"
+                >
                   {tag} ×
                 </Badge>
               ))}

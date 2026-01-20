@@ -166,13 +166,13 @@ const SnippetRow = memo(({ snippet, folders, onTagClick, onDelete }: SnippetRowP
                         e.stopPropagation()
                         onTagClick(tag)
                       }}
-                      className="text-xs"
+                      className="text-xs min-h-[32px] px-3 sm:min-h-[28px] sm:px-2.5"
                     >
                       {tag}
                     </Badge>
                   ))}
                   {snippet.tags.length > 3 && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-xs min-h-[32px] px-3 sm:min-h-[28px] sm:px-2.5">
                       +{snippet.tags.length - 3}
                     </Badge>
                   )}
