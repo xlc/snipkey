@@ -83,7 +83,7 @@ export function Header() {
 
   if (loading) {
     return (
-      <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 z-10 transition-all duration-300">
+      <header className="border-b">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <div className="min-w-0 flex-1">
             <div className="space-y-1.5">
@@ -100,7 +100,7 @@ export function Header() {
   }
 
   return (
-    <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 z-10 transition-all duration-300">
+    <header className="border-b">
       <div className="container mx-auto flex items-center justify-between px-4 py-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
