@@ -8,6 +8,7 @@ import { FolderTree } from '~/components/FolderTree'
 import { KeyboardShortcutsHelp } from '~/components/KeyboardShortcutsHelp'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
 import { COLORS } from '~/lib/constants/colors'
@@ -70,6 +71,8 @@ interface SnippetRowProps {
 const SnippetRow = memo(({ snippet, folders, onTagClick, formatRelativeTime, onDelete }: SnippetRowProps) => {
   const parseResult = useMemo(() => parseTemplate(snippet.body), [snippet.body])
   const [copying, setCopying] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
 
   // Get rendered output (with default empty placeholder values)
@@ -95,113 +98,142 @@ const SnippetRow = memo(({ snippet, folders, onTagClick, formatRelativeTime, onD
     [rendered],
   )
 
-  const handleDelete = useCallback(
-    async (e: React.MouseEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
+  const handleDelete = useCallback(async () => {
+    setIsDeleting(true)
+    const result = await deleteSnippet(snippet.id)
 
-      if (!confirm('Are you sure you want to delete this snippet?')) return
+    if (result.error) {
+      toast.error(result.error)
+      setIsDeleting(false)
+      setShowDeleteDialog(false)
+      return
+    }
 
-      try {
-        const result = await deleteSnippet(snippet.id)
-        if (result.error) {
-          toast.error(result.error)
-          return
-        }
-        onDelete?.(snippet.id)
-        toast.success('Snippet deleted')
-      } catch {
-        toast.error('Failed to delete snippet')
-      }
-    },
-    [snippet.id, onDelete],
-  )
+    setShowDeleteDialog(false)
+    onDelete?.(snippet.id)
+    toast.success('Snippet deleted')
+  }, [snippet.id, onDelete])
 
   return (
-    <div className="group relative border rounded-lg hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 bg-card animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="p-2 sm:p-4 space-y-1 sm:space-y-2">
-        {/* Action buttons - top right */}
-        <div className="absolute top-4 right-4 z-10 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} title="Copy">
-            <Copy className={`h-4 w-4 ${copying ? 'text-green-500' : ''}`} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => router.navigate({ to: '/snippets/$id/edit', params: { id: snippet.id } })}
-            title="Edit"
-            disabled={snippet.id.startsWith('temp-')}
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-destructive hover:text-destructive"
-            onClick={handleDelete}
-            title="Delete"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Folder badge */}
-        {snippet.folder_id && folders.has(snippet.folder_id) && (
-          <Badge
-            variant="outline"
-            className="absolute top-4 right-20 z-10"
-            style={{ backgroundColor: `${COLORS[folders.get(snippet.folder_id)?.color ?? 'gray']}20` }}
-          >
-            <Folder className="h-3 w-3 mr-1" />
-            {folders.get(snippet.folder_id)?.name}
-          </Badge>
-        )}
-
-        {/* Body - clickable to copy */}
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="text-left w-full cursor-pointer hover:bg-muted/100 rounded p-2 -m-2 transition-colors pr-20"
-          title="Click to copy"
-        >
-          <p className="text-sm text-foreground whitespace-pre-wrap font-mono break-words">{snippet.body}</p>
-        </button>
-
-        {/* Metadata row */}
-        <div className="flex items-center gap-4">
-          {/* Timestamp */}
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>{formatRelativeTime(snippet.updated_at)}</span>
+    <>
+      <div className="group relative border rounded-lg hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 bg-card animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="p-2 sm:p-4 space-y-1 sm:space-y-2">
+          {/* Action buttons - top right */}
+          <div className="absolute top-4 right-4 z-10 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} title="Copy">
+              <Copy className={`h-4 w-4 ${copying ? 'text-green-500' : ''}`} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => router.navigate({ to: '/snippets/$id/edit', params: { id: snippet.id } })}
+              title="Edit"
+              disabled={snippet.id.startsWith('temp-')}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={() => setShowDeleteDialog(true)}
+              title="Delete"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
 
-          {/* Tags */}
-          {snippet.tags.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {snippet.tags.slice(0, 3).map(tag => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  interactive
-                  onClick={e => {
-                    e.stopPropagation()
-                    onTagClick(tag)
-                  }}
-                >
-                  {tag}
-                </Badge>
-              ))}
-              {snippet.tags.length > 3 && (
-                <Badge variant="secondary" className="text-xs">
-                  +{snippet.tags.length - 3}
-                </Badge>
-              )}
-            </div>
+          {/* Folder badge */}
+          {snippet.folder_id && folders.has(snippet.folder_id) && (
+            <Badge
+              variant="outline"
+              className="absolute top-4 right-20 z-10"
+              style={{ backgroundColor: `${COLORS[folders.get(snippet.folder_id)?.color ?? 'gray']}20` }}
+            >
+              <Folder className="h-3 w-3 mr-1" />
+              {folders.get(snippet.folder_id)?.name}
+            </Badge>
           )}
+
+          {/* Body - clickable to copy */}
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="text-left w-full cursor-pointer hover:bg-muted/100 rounded p-2 -m-2 transition-colors pr-20"
+            title="Click to copy"
+          >
+            <p className="text-sm text-foreground whitespace-pre-wrap font-mono break-words">{snippet.body}</p>
+          </button>
+
+          {/* Metadata row */}
+          <div className="flex items-center gap-4">
+            {/* Timestamp */}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>{formatRelativeTime(snippet.updated_at)}</span>
+            </div>
+
+            {/* Tags */}
+            {snippet.tags.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {snippet.tags.slice(0, 3).map(tag => (
+                  <Badge
+                    key={tag}
+                    variant="secondary"
+                    interactive
+                    onClick={e => {
+                      e.stopPropagation()
+                      onTagClick(tag)
+                    }}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+                {snippet.tags.length > 3 && (
+                  <Badge variant="secondary" className="text-xs">
+                    +{snippet.tags.length - 3}
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Delete snippet?</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this snippet? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+
+          {/* Snippet preview */}
+          <div className="my-4 p-4 bg-muted rounded-lg border space-y-2">
+            {snippet.tags.length > 0 && (
+              <div className="flex gap-1 flex-wrap mb-2">
+                {snippet.tags.map(tag => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            <pre className="whitespace-pre-wrap font-mono text-xs break-words max-h-40 overflow-auto">{snippet.body}</pre>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 })
 SnippetRow.displayName = 'SnippetRow'
