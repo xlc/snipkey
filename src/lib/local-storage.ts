@@ -601,6 +601,24 @@ export function renameFolderId(oldId: string, newId: string): boolean {
     localStorage.setItem(newKey, newData)
     localStorage.removeItem(oldKey)
 
+    // Update all child folders that have this folder as parent
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith(FOLDER_PREFIX)) continue
+
+      try {
+        const folderData = localStorage.getItem(key)
+        if (!folderData) continue
+
+        const childFolder = JSON.parse(folderData) as LocalFolder
+        if (childFolder.parent_id === oldId) {
+          childFolder.parent_id = newId
+          childFolder.synced = false // Mark as unsynced so it gets updated on server
+          localStorage.setItem(key, JSON.stringify(childFolder))
+        }
+      } catch {}
+    }
+
     // Update all snippets that reference this folder
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
