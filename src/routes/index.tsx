@@ -504,36 +504,41 @@ function Index() {
     setSnippets(prev => prev?.filter((s: PartialSnippet) => s.id !== id) ?? null)
   }, [])
 
-  // Keyboard shortcuts
-  useKeyboardShortcuts([
-    {
-      key: 'n',
-      ctrlKey: true,
-      handler: () => {
-        // Focus the quick create textarea
-        quickCreateTextareaRef.current?.focus()
-      },
-      description: 'Focus snippet input',
-    },
-    {
-      key: '/',
-      handler: () => {
-        searchInputRef.current?.focus()
-      },
-      description: 'Focus search',
-    },
-    {
-      key: 'Escape',
-      handler: () => {
-        if (searchQuery) {
-          setSearchQuery('')
-        } else if (selectedTag) {
-          setSelectedTag(null)
-        }
-      },
-      description: 'Clear filters',
-    },
-  ])
+  // Keyboard shortcuts (disabled on mobile)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+  useKeyboardShortcuts(
+    isMobile
+      ? []
+      : [
+          {
+            key: 'n',
+            ctrlKey: true,
+            handler: () => {
+              // Focus the quick create textarea
+              quickCreateTextareaRef.current?.focus()
+            },
+            description: 'Focus snippet input',
+          },
+          {
+            key: '/',
+            handler: () => {
+              searchInputRef.current?.focus()
+            },
+            description: 'Focus search',
+          },
+          {
+            key: 'Escape',
+            handler: () => {
+              if (searchQuery) {
+                setSearchQuery('')
+              } else if (selectedTag) {
+                setSelectedTag(null)
+              }
+            },
+            description: 'Clear filters',
+          },
+        ],
+  )
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Re-load when search, tag, sort, sortBy, sortOrder, or auth changes
   useEffect(() => {
@@ -598,16 +603,20 @@ function Index() {
       <div className="flex-1 space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">My Snippets</h2>
-          </div>
+          <div className="flex-1" />
           <div className="flex flex-wrap gap-2">
             {authenticated && unsyncedCount > 0 && (
               <Button variant="outline" onClick={handleSync} disabled={syncing}>
                 {syncing ? 'Syncing…' : `Sync (${unsyncedCount})`}
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={() => setShowKeyboardShortcuts(true)} aria-label="Keyboard shortcuts">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowKeyboardShortcuts(true)}
+              aria-label="Keyboard shortcuts"
+              className="hidden sm:inline-flex"
+            >
               <HelpCircle className="h-4 w-4" />
             </Button>
           </div>
