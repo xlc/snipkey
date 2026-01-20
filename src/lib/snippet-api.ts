@@ -5,6 +5,7 @@ import {
   deleteLocalSnippet,
   getDeletedFolders,
   getDeletedSnippets,
+  getIdMap,
   getLocalFolder,
   getLocalIdByServerId,
   getLocalSnippet,
@@ -471,7 +472,18 @@ async function syncFoldersToServer(): Promise<{
         } else {
           // Check if parent has an existing server ID
           const parentFolder = getLocalFolder(folder.parent_id)
-          serverParentId = parentFolder?.serverId ?? null
+          if (parentFolder?.serverId) {
+            serverParentId = parentFolder.serverId
+          } else {
+            // Parent might have been renamed in a previous sync - check ID map
+            const idMap = getIdMap()
+            const resolvedParentId = idMap[folder.parent_id]
+            if (resolvedParentId) {
+              // Parent was renamed, get the server ID from the resolved folder
+              const resolvedFolder = getLocalFolder(resolvedParentId)
+              serverParentId = resolvedFolder?.serverId ?? null
+            }
+          }
         }
       }
 
@@ -512,7 +524,18 @@ async function syncFoldersToServer(): Promise<{
         } else {
           // Check if parent has an existing server ID
           const parentFolder = getLocalFolder(folder.parent_id)
-          serverParentId = parentFolder?.serverId ?? null
+          if (parentFolder?.serverId) {
+            serverParentId = parentFolder.serverId
+          } else {
+            // Parent might have been renamed in a previous sync - check ID map
+            const idMap = getIdMap()
+            const resolvedParentId = idMap[folder.parent_id]
+            if (resolvedParentId) {
+              // Parent was renamed, get the server ID from the resolved folder
+              const resolvedFolder = getLocalFolder(resolvedParentId)
+              serverParentId = resolvedFolder?.serverId ?? null
+            }
+          }
         }
       }
 
