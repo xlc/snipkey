@@ -13,6 +13,7 @@ This document contains project-specific rules and instructions for AI agents wor
 - **Authentication**: WebAuthn passkeys via SimpleWebAuthn
 - **Styling**: Tailwind CSS + shadcn/ui components
 - **Linting/Formatting**: Biome
+- **React Compiler**: Enabled (automatic memoization via `babel-plugin-react-compiler`)
 - **UI Components**: Prefer shadcn/ui components (`src/components/ui`) for new UI work
 
 ## Project Structure
@@ -45,7 +46,7 @@ snipkey/
 ├── worker-configuration.d.ts # Wrangler env type generation
 ├── worker-runtime.d.ts   # Wrangler runtime type generation
 ├── biome.json            # Biome linting/formatting config
-├── vite.config.ts        # Vite configuration
+├── vite.config.ts        # Vite configuration (includes React Compiler)
 └── package.json          # Single package at root
 ```
 
@@ -61,6 +62,90 @@ Key style rules:
 - **Trailing commas**: All
 - **Arrow parentheses**: Always
 - **Import type**: Use `import type` for type-only imports
+
+## React Compiler Best Practices
+
+**React Compiler is ENABLED** in this project via `babel-plugin-react-compiler` (see `vite.config.ts`).
+
+The compiler automatically optimizes component rendering by memoizing values and preventing unnecessary re-renders.
+
+### Core Principles
+
+1. **Write simple, readable code** - The compiler handles performance optimizations
+2. **Avoid manual memoization** - Don't use `useMemo`, `useCallback`, or `React.memo` unless absolutely necessary
+3. **Treat components as pure functions** - Derive UI purely from props, state, and context
+4. **Trust the compiler** - Focus on correctness and clarity, not render avoidance
+
+### What NOT to Do (Pre-Compiler Patterns)
+
+❌ **AVOID** - Defensive memoization for performance:
+```typescript
+// DON'T - Compiler handles this automatically
+const value = useMemo(() => expensiveCalculation(data), [data])
+const handleClick = useCallback(() => setState(false), [])
+const Component = memo(function Component() { ... })
+```
+
+❌ **AVOID** - Storing derived state:
+```typescript
+// DON'T - Derive inline instead
+const [filtered, setFiltered] = useState([])
+useEffect(() => {
+  setFiltered(items.filter(i => i.active))
+}, [items])
+```
+
+### What TO Do (Post-Compiler Patterns)
+
+✅ **DO** - Use plain JavaScript/TypeScript:
+```typescript
+// DO - Compiler auto-memoizes this
+const value = expensiveCalculation(data)
+
+// DO - Inline callbacks are fine
+<Dialog open={open} onClose={() => setOpen(false)} />
+
+// DO - Derive values inline during render
+const filtered = items.filter(i => i.active)
+const total = items.reduce((sum, i) => sum + i.price, 0)
+```
+
+### When Manual Memoization IS Allowed
+
+Only use `useMemo`, `useCallback`, or `React.memo` when:
+
+1. **Integrating with non-React systems** (event listeners, subscriptions, imperative APIs)
+2. **Referential stability is required for correctness** (not performance) - e.g., effect dependencies
+3. **Profiling shows a real bottleneck** AFTER compilation
+4. **Interfacing with legacy systems** that require stable references
+
+In these cases, **add a comment explaining why** memoization is necessary.
+
+### Hooks Guidelines
+
+- **`useState`**: Use for true local UI state. Prefer multiple small states over one large object.
+- **`useEffect`**: Use only for effects (synchronizing with external world), not derivations
+- **`useRef`**: Use for imperative handles and mutable values that don't affect rendering. Don't use as a memoization cache.
+
+### Compiler Directives
+
+- **`"use memo"`** - Explicitly opt-in to compilation (rarely needed in `infer` mode)
+- **`"use no memo"`** - Explicitly opt-out (escape hatch for problematic components)
+
+Never introduce directives automatically. Use `"use no memo"` only as a last resort with documentation.
+
+### Data Flow
+
+- **Lift state only when semantically necessary** (multiple components need coordination), not for performance
+- **Use stable, semantic keys** for lists (avoid indices when items can be reordered)
+- **Derive data, don't store it** - Compute derived values during render
+
+### Code Style Expectations
+
+- Prefer readability over cleverness
+- Avoid defensive patterns from pre-compiler React
+- Minimize hooks usage - use only for semantics, not performance
+- Trust the compiler to optimize
 
 ## Architecture Patterns
 
@@ -141,7 +226,7 @@ Placeholders use `{{name:type}}` or `{{name:type=default}}` syntax:
 ### Configuration
 - `wrangler.jsonc` - Cloudflare Workers config (D1 binding, env vars)
 - `biome.json` - Code style rules
-- `vite.config.ts` - Vite bundler config
+- `vite.config.ts` - Vite bundler config (includes React Compiler setup)
 - `tsconfig.json` - TypeScript config
 
 ### Key Source Files
