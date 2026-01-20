@@ -101,14 +101,14 @@ export async function listSnippets(filters: {
       },
     })
 
-    if (result.error) {
-      // On error, fallback to local
+    if (result.error || !result.data) {
+      // On error or no data, fallback to local
       const local = listLocalSnippets()
       return { data: local.map(toListItem) }
     }
 
     // Merge server results with local unsynced snippets
-    const serverItems: SnippetListItem[] = result.data.items.map(item => ({
+    const serverItems: SnippetListItem[] = (result.data.items ?? []).map(item => ({
       ...item,
       synced: true, // Server items are always synced
     }))
