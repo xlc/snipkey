@@ -15,8 +15,6 @@ import {
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
 import { Textarea } from '~/components/ui/textarea'
-import { useKeyboardShortcuts } from '~/lib/hooks/useKeyboardShortcuts'
-import { useMediaQuery } from '~/lib/hooks/useMediaQuery'
 import { usePlaceholderStorage } from '~/lib/hooks/usePlaceholderStorage'
 import { deleteSnippet, getSnippet, updateSnippet } from '~/lib/snippet-api'
 
@@ -231,56 +229,6 @@ function SnippetDetail() {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [hasUnsavedChanges])
-
-  // Keyboard shortcuts (disabled on mobile)
-  const isMobile = useMediaQuery('(max-width: 768px)')
-  const keyboardShortcuts = useMemo(
-    () =>
-      isMobile
-        ? []
-        : [
-            {
-              key: 'Escape',
-              handler: () => {
-                // If delete dialog is open, close it
-                if (showDeleteDialog) {
-                  return
-                }
-
-                // If unsaved dialog is open, close it
-                if (showUnsavedDialog) {
-                  setShowUnsavedDialog(false)
-                  return
-                }
-
-                // If textarea is focused, blur it first (triggers save)
-                if (document.activeElement === textareaRef.current) {
-                  textareaRef.current?.blur()
-                  return
-                }
-
-                // If there are unsaved changes, show dialog
-                if (hasUnsavedChanges) {
-                  setPendingNavigateTo('/')
-                  setShowUnsavedDialog(true)
-                  return
-                }
-
-                // Otherwise navigate back
-                router.navigate({ to: '/' })
-              },
-              description: 'Go back',
-            },
-          ],
-    [
-      isMobile,
-      showDeleteDialog,
-      showUnsavedDialog,
-      hasUnsavedChanges, // Otherwise navigate back
-      router.navigate,
-    ],
-  )
-  useKeyboardShortcuts(keyboardShortcuts)
 
   if (loading) {
     return (

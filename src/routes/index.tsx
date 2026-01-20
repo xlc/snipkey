@@ -5,7 +5,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { FolderDialog } from '~/components/FolderDialog'
 import { FolderTree } from '~/components/FolderTree'
-import { KeyboardShortcutsHelp } from '~/components/KeyboardShortcutsHelp'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
@@ -13,8 +12,6 @@ import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
 import { COLORS } from '~/lib/constants/colors'
 import { useDebounce } from '~/lib/hooks/useDebounce'
-import { useKeyboardShortcuts } from '~/lib/hooks/useKeyboardShortcuts'
-import { useMediaQuery } from '~/lib/hooks/useMediaQuery'
 import { useAuthSync, useStorageListener } from '~/lib/hooks/useStorageListener'
 import type { FolderTreeItem } from '~/lib/server/folders'
 import {
@@ -259,7 +256,6 @@ function Index() {
   const [folderTreeLoading, setFolderTreeLoading] = useState(false)
   const [showFolderDialog, setShowFolderDialog] = useState(false)
   const [folderDialogParentId, setFolderDialogParentId] = useState<string | null>(null)
-  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [createTags, setCreateTags] = useState<string[]>([])
   const [createTagInput, setCreateTagInput] = useState('')
   const [createFolderId, setCreateFolderId] = useState<string | null>(null)
@@ -510,49 +506,6 @@ function Index() {
     setHadNoResults(false)
   }, [])
 
-  // Keyboard shortcuts (disabled on mobile)
-  const isMobile = useMediaQuery('(max-width: 768px)')
-  const keyboardShortcuts = useMemo(
-    () =>
-      isMobile
-        ? []
-        : [
-            {
-              key: 'n',
-              ctrlKey: true,
-              handler: () => {
-                setInputMode('create')
-                inputRef.current?.focus()
-              },
-              description: 'Focus create input',
-            },
-            {
-              key: '/',
-              handler: () => {
-                setInputMode('search')
-                inputRef.current?.focus()
-              },
-              description: 'Focus search input',
-            },
-            {
-              key: 'Escape',
-              handler: () => {
-                if (inputMode === 'create' && createBody) {
-                  setInputValue('')
-                  setInputMode('search')
-                } else if (searchQuery) {
-                  setInputValue('')
-                } else if (selectedTag) {
-                  setSelectedTag(null)
-                }
-              },
-              description: 'Clear filters',
-            },
-          ],
-    [isMobile, inputMode, createBody, searchQuery, selectedTag],
-  )
-  useKeyboardShortcuts(keyboardShortcuts)
-
   // biome-ignore lint/correctness/useExhaustiveDependencies: Re-load when search, tag, sort, sortBy, sortOrder, or auth changes
   useEffect(() => {
     loadSnippets()
@@ -606,9 +559,6 @@ function Index() {
         </div>
       </aside>
 
-      {/* Keyboard Shortcuts Help Modal */}
-      <KeyboardShortcutsHelp open={showKeyboardShortcuts} onOpenChange={setShowKeyboardShortcuts} />
-
       {/* Main Content */}
       <div className="flex-1 space-y-3 sm:space-y-6">
         {/* Unified Input - acts as both search and create */}
@@ -621,7 +571,7 @@ function Index() {
             )}
             <Textarea
               ref={inputRef}
-              placeholder={inputMode === 'search' ? 'Search snippets… (/ to focus)' : 'Type your snippet here… (Ctrl+N to focus)'}
+              placeholder={inputMode === 'search' ? 'Search snippets…' : 'Type your snippet here…'}
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               rows={inputMode === 'create' ? 4 : 1}
