@@ -39,12 +39,15 @@ function SnippetDetail() {
   const [rendered, setRendered] = useState('')
   const [renderErrors, setRenderErrors] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
+  const [pendingNavigateTo, setPendingNavigateTo] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
   // Load placeholder values from localStorage
   const [placeholderValues, setPlaceholderValues] = usePlaceholderStorage(id, {})
   const mountedRef = useRef(true)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const pendingSaveBodyRef = useRef<string | null>(null)
 
   // Track if component is mounted
   useEffect(() => {
@@ -85,19 +88,49 @@ function SnippetDetail() {
   }, [parseResult, placeholderValues])
 
   async function handleBlur() {
-    if (!snippet || editingBody === snippet.body || isSaving) return
+    if (!snippet || editingBody === snippet.body) return
+
+    // Store the latest body to save
+    const bodyToSave = editingBody
+    pendingSaveBodyRef.current = bodyToSave
+
+    // If already saving, the pending save will be handled after the current save completes
+    if (isSaving) return
 
     setIsSaving(true)
     try {
-      const result = await updateSnippet(id, { body: editingBody })
+      // Save the current body
+      let result = await updateSnippet(id, { body: bodyToSave })
       if (result.error) {
         toast.error(result.error)
       } else {
         // Only update state if component is still mounted
         if (mountedRef.current) {
-          setSnippet({ ...snippet, body: editingBody })
+          setSnippet(prev => (prev ? { ...prev, body: bodyToSave } : prev))
           setLastSaved(new Date())
         }
+      }
+
+      // Check if there's a pending save while we were saving
+      if (pendingSaveBodyRef.current !== bodyToSave && pendingSaveBodyRef.current !== null && mountedRef.current) {
+        const nextBodyToSave = pendingSaveBodyRef.current
+        pendingSaveBodyRef.current = null
+
+        // Save the pending body
+        result = await updateSnippet(id, { body: nextBodyToSave })
+        if (result.error) {
+          toast.error(result.error)
+        } else {
+          if (mountedRef.current) {
+            setSnippet(prev => (prev ? { ...prev, body: nextBodyToSave } : prev))
+            setLastSaved(new Date())
+          }
+        }
+      }
+
+      // Clear pending save ref if we're done
+      if (mountedRef.current) {
+        pendingSaveBodyRef.current = null
       }
     } finally {
       // Only set saving to false if component is still mounted
@@ -179,6 +212,23 @@ function SnippetDetail() {
 
   async function _handleUndo() {
     // Undo feature not implemented
+  }
+
+  function handleNavigateWithCheck(to: string) {
+    if (hasUnsavedChanges) {
+      setPendingNavigateTo(to)
+      setShowUnsavedDialog(true)
+    } else {
+      router.navigate({ to })
+    }
+  }
+
+  function handleConfirmNavigate() {
+    setShowUnsavedDialog(false)
+    if (pendingNavigateTo) {
+      router.navigate({ to: pendingNavigateTo })
+      setPendingNavigateTo(null)
+    }
   }
 
   // Check if there are unsaved changes
@@ -264,10 +314,8 @@ function SnippetDetail() {
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" asChild className="touch-manipulation">
-          <Link to="/">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
+        <Button variant="ghost" size="sm" onClick={() => handleNavigateWithCheck('/')} className="touch-manipulation">
+          <ArrowLeft className="h-4 w-4" />
         </Button>
         {snippet.tags.length > 0 && (
           <div className="flex gap-1.5 flex-wrap">
@@ -279,10 +327,8 @@ function SnippetDetail() {
           </div>
         )}
         <div className="flex-1" />
-        <Button variant="ghost" size="sm" asChild className="touch-manipulation">
-          <Link to="/snippets/$id/edit" params={{ id }} title="Edit tags and folder">
-            <Edit2 className="h-4 w-4" />
-          </Link>
+        <Button variant="ghost" size="sm" onClick={() => handleNavigateWithCheck(`/snippets/${id}/edit`)} className="touch-manipulation">
+          <Edit2 className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
@@ -322,6 +368,39 @@ function SnippetDetail() {
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
               {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unsaved changes dialog */}
+      <Dialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Unsaved changes</DialogTitle>
+            <DialogDescription>You have unsaved changes. Do you want to save them before leaving?</DialogDescription>
+          </DialogHeader>
+
+          {/* Form preview */}
+          <div className="my-4 p-4 bg-muted rounded-lg border space-y-2">
+            {snippet.tags.length > 0 && (
+              <div className="flex gap-1 flex-wrap mb-2">
+                {snippet.tags.map(tag => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            <pre className="whitespace-pre-wrap font-mono text-xs break-words max-h-40 overflow-auto">{editingBody}</pre>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUnsavedDialog(false)}>
+              Stay
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmNavigate}>
+              Leave without saving
             </Button>
           </DialogFooter>
         </DialogContent>
