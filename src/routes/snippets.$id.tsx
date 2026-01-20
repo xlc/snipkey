@@ -192,12 +192,10 @@ function SnippetDetail() {
           )}
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button
-            variant="outline"
-            onClick={() => router.navigate({ to: '/snippets/$id/edit', params: { id } })}
-            className="touch-manipulation"
-          >
-            Edit
+          <Button variant="outline" asChild>
+            <Link to="/snippets/$id/edit" params={{ id }} className="touch-manipulation">
+              Edit
+            </Link>
           </Button>
           <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} className="touch-manipulation">
             <Trash2 className="h-4 w-4 mr-2" />
