@@ -1,7 +1,7 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import { ArrowLeft, Copy, Download, Edit2, FileCode, Save, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { PlaceholderEditor } from '~/components/PlaceholderEditor'
 import { Badge } from '~/components/ui/badge'
@@ -43,6 +43,15 @@ function SnippetDetail() {
 
   // Load placeholder values from localStorage
   const [placeholderValues, setPlaceholderValues] = usePlaceholderStorage(id, {})
+  const mountedRef = useRef(true)
+
+  // Track if component is mounted
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only load on mount
   useEffect(() => {
@@ -64,17 +73,15 @@ function SnippetDetail() {
     setLoading(false)
   }
 
+  // Parse the editing body in real-time
+  const parseResult = useMemo(() => parseTemplate(editingBody), [editingBody])
+
+  // Update rendered output when parseResult or placeholder values change
   useEffect(() => {
-    if (!snippet) return
-
-    // Parse the editing body (not the saved body)
-    const parseResult = parseTemplate(editingBody)
-
-    // Render with current values
     const renderResult = renderTemplate(parseResult.segments, placeholderValues)
     setRendered(renderResult.rendered)
     setRenderErrors(!!renderResult.errors)
-  }, [snippet, placeholderValues, editingBody])
+  }, [parseResult, placeholderValues])
 
   async function handleBlur() {
     if (!snippet || editingBody === snippet.body || isSaving) return
@@ -85,11 +92,17 @@ function SnippetDetail() {
       if (result.error) {
         toast.error(result.error)
       } else {
-        setSnippet({ ...snippet, body: editingBody })
-        setLastSaved(new Date())
+        // Only update state if component is still mounted
+        if (mountedRef.current) {
+          setSnippet({ ...snippet, body: editingBody })
+          setLastSaved(new Date())
+        }
       }
     } finally {
-      setIsSaving(false)
+      // Only set saving to false if component is still mounted
+      if (mountedRef.current) {
+        setIsSaving(false)
+      }
     }
   }
 
@@ -234,9 +247,6 @@ function SnippetDetail() {
       </div>
     )
   }
-
-  // React Compiler automatically memoizes this
-  const parseResult = snippet ? parseTemplate(snippet.body) : null
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
