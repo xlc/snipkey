@@ -107,8 +107,9 @@ function SnippetDetail() {
         const result = await updateSnippet(id, { body: bodyToSaveNow })
         if (result.error) {
           toast.error(result.error)
-          // On error, stop trying to save
-          break
+          // Continue to process any pending saves that were queued during this failed save
+          // Don't break - check if there are more pending saves in the next loop iteration
+          continue
         }
 
         // Update state if component is still mounted
