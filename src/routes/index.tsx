@@ -173,29 +173,34 @@ const SnippetRow = memo(({ snippet, folders, onTagClick, formatRelativeTime, onD
             </div>
 
             {/* Action buttons - always visible on mobile, hover on desktop */}
-            <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} title="Copy">
-                <Copy className="h-4 w-4" />
+            <div className="flex gap-2 sm:gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+              <Button variant="ghost" size="icon" className="h-11 w-11 sm:h-8 sm:w-8" onClick={handleCopy} title="Copy">
+                <Copy className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
               </Button>
               {snippet.id.startsWith('temp-') ? (
-                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-50 pointer-events-none" title="Edit (saving...)">
-                  <Edit2 className="h-4 w-4" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11 opacity-50 pointer-events-none sm:h-8 sm:w-8"
+                  title="Edit (saving...)"
+                >
+                  <Edit2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                 </Button>
               ) : (
-                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                <Button variant="ghost" size="icon" className="h-11 w-11 sm:h-8 sm:w-8" asChild>
                   <Link to="/snippets/$id/edit" params={{ id: snippet.id }} title="Edit">
-                    <Edit2 className="h-4 w-4" />
+                    <Edit2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                   </Link>
                 </Button>
               )}
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
+                className="h-11 w-11 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
                 onClick={() => setShowDeleteDialog(true)}
                 title="Delete"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
               </Button>
             </div>
           </div>

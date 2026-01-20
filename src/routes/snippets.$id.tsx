@@ -315,28 +315,38 @@ function SnippetDetail() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={() => handleNavigateWithCheck('/')} className="touch-manipulation">
+      <div className="flex items-center gap-2 sm:gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleNavigateWithCheck('/')}
+          className="touch-manipulation h-11 w-11 sm:h-9 sm:w-9 px-0"
+        >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         {snippet.tags.length > 0 && (
           <div className="flex gap-1.5 flex-wrap">
             {snippet.tags.map(tag => (
-              <Badge key={tag} variant="outline" className="hover:bg-accent transition-colors cursor-default text-xs">
+              <Badge key={tag} variant="outline" className="hover:bg-accent transition-colors cursor-default text-xs sm:text-xs">
                 {tag}
               </Badge>
             ))}
           </div>
         )}
         <div className="flex-1" />
-        <Button variant="ghost" size="sm" onClick={() => handleNavigateWithCheck(`/snippets/${id}/edit`)} className="touch-manipulation">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleNavigateWithCheck(`/snippets/${id}/edit`)}
+          className="touch-manipulation h-11 w-11 sm:h-9 sm:w-9 px-0"
+        >
           <Edit2 className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setShowDeleteDialog(true)}
-          className="touch-manipulation text-muted-foreground hover:text-destructive"
+          className="touch-manipulation h-11 w-11 sm:h-9 sm:w-9 px-0 text-muted-foreground hover:text-destructive"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
