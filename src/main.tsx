@@ -3,9 +3,6 @@ import { DefaultCatchBoundary } from './components/DefaultCatchBoundary'
 import { NotFound } from './components/NotFound'
 import { routeTree } from './routeTree.gen'
 
-// Log current git commit for debugging
-console.log(`Snipkey version: ${__GIT_COMMIT__}`)
-
 const router = createRouter({
   routeTree,
   defaultPreload: 'intent',

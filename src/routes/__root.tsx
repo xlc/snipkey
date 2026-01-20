@@ -36,11 +36,14 @@ export const Route = createRootRoute({
   notFoundComponent: () => <NotFound />,
   component: () => (
     <RootDocument>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex flex-col">
         <Header />
-        <main className="container mx-auto px-4 py-6 sm:py-8 pb-20">
+        <main className="container mx-auto px-4 py-6 sm:py-8 flex-1">
           <Outlet />
         </main>
+        <footer className="border-t py-4">
+          <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">Snipkey v{__GIT_COMMIT__}</div>
+        </footer>
       </div>
       <Toaster />
     </RootDocument>
