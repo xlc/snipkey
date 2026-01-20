@@ -59,7 +59,7 @@ export function Header() {
       if (unsynced.length > 0) changes.push(`${unsynced.length} unsynced snippet${unsynced.length > 1 ? 's' : ''}`)
       if (deleted.length > 0) changes.push(`${deleted.length} pending deletion${deleted.length > 1 ? 's' : ''}`)
 
-      const confirmLogout = confirm(`You have ${changes.join(' and ')}. Logging out will permanently delete these local changes. Continue?`)
+      const confirmLogout = confirm(`You have ${changes.join(' and ')}. Logging out will lose these local changes. Continue?`)
       if (!confirmLogout) return
     }
 
