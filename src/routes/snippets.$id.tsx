@@ -1,7 +1,7 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
-import { Copy, Download, FileCode, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Copy, Download, FileCode, Save, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { PlaceholderEditor } from '~/components/PlaceholderEditor'
 import { Badge } from '~/components/ui/badge'
@@ -14,8 +14,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
+import { Textarea } from '~/components/ui/textarea'
 import { usePlaceholderStorage } from '~/lib/hooks/usePlaceholderStorage'
-import { deleteSnippet, getSnippet } from '~/lib/snippet-api'
+import { deleteSnippet, getSnippet, updateSnippet } from '~/lib/snippet-api'
 
 export const Route = createFileRoute('/snippets/$id')({
   component: SnippetDetail,
@@ -30,10 +31,14 @@ function SnippetDetail() {
     tags: string[]
   } | null>(null)
   const [loading, setLoading] = useState(true)
+  const [editingBody, setEditingBody] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [rendered, setRendered] = useState('')
   const [renderErrors, setRenderErrors] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Load placeholder values from localStorage
   const [placeholderValues, setPlaceholderValues] = usePlaceholderStorage(id, {})
@@ -54,20 +59,53 @@ function SnippetDetail() {
     }
 
     setSnippet(result.data)
+    setEditingBody(result.data.body)
     setLoading(false)
   }
 
   useEffect(() => {
     if (!snippet) return
 
-    // Parse the body
-    const parseResult = parseTemplate(snippet.body)
+    // Parse the editing body (not the saved body)
+    const parseResult = parseTemplate(editingBody)
 
     // Render with current values
     const renderResult = renderTemplate(parseResult.segments, placeholderValues)
     setRendered(renderResult.rendered)
     setRenderErrors(!!renderResult.errors)
-  }, [snippet, placeholderValues])
+  }, [snippet, placeholderValues, editingBody])
+
+  // Auto-save after 2 seconds of inactivity
+  useEffect(() => {
+    if (!snippet || editingBody === snippet.body || isSaving) return
+
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+
+    // Set new timeout
+    saveTimeoutRef.current = setTimeout(async () => {
+      setIsSaving(true)
+      try {
+        const result = await updateSnippet(id, { body: editingBody })
+        if (result.error) {
+          toast.error(result.error)
+        } else {
+          setSnippet({ ...snippet, body: editingBody })
+          setLastSaved(new Date())
+        }
+      } finally {
+        setIsSaving(false)
+      }
+    }, 2000)
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [editingBody, snippet, id, isSaving])
 
   async function handleCopyRendered() {
     if (!snippet) return
@@ -89,7 +127,7 @@ function SnippetDetail() {
     if (!snippet) return
 
     try {
-      await navigator.clipboard.writeText(snippet.body)
+      await navigator.clipboard.writeText(editingBody)
     } catch {
       // Clipboard API failed (user denied permission or browser doesn't support it)
       toast.error('Failed to copy to clipboard')
@@ -192,11 +230,6 @@ function SnippetDetail() {
           )}
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button variant="outline" asChild className="touch-manipulation">
-            <Link to="/snippets/$id/edit" params={{ id }}>
-              Edit
-            </Link>
-          </Button>
           <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} className="touch-manipulation">
             <Trash2 className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">Delete</span>
@@ -223,7 +256,7 @@ function SnippetDetail() {
                 ))}
               </div>
             )}
-            <pre className="whitespace-pre-wrap font-mono text-xs break-words max-h-40 overflow-auto">{snippet.body}</pre>
+            <pre className="whitespace-pre-wrap font-mono text-xs break-words max-h-40 overflow-auto">{editingBody}</pre>
           </div>
 
           <DialogFooter>
@@ -279,7 +312,7 @@ function SnippetDetail() {
           </DropdownMenu>
         </div>
         <div className="p-4 bg-muted rounded-lg border">
-          <pre className="whitespace-pre-wrap font-mono text-sm break-words">{rendered || snippet.body}</pre>
+          <pre className="whitespace-pre-wrap font-mono text-sm break-words">{rendered || editingBody}</pre>
         </div>
         {renderErrors && (
           <p className="text-sm text-destructive flex items-center gap-2">
@@ -289,16 +322,37 @@ function SnippetDetail() {
         )}
       </div>
 
-      {/* Raw body */}
-      <details className="space-y-2 group">
-        <summary className="text-base font-semibold cursor-pointer list-none flex items-center justify-between p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
-          <span>Raw Template</span>
-          <span className="text-muted-foreground group-open:rotate-180 transition-transform duration-200">▼</span>
-        </summary>
-        <div className="p-4 bg-muted/50 rounded-lg mt-2 border">
-          <pre className="whitespace-pre-wrap font-mono text-xs break-words">{snippet.body}</pre>
+      {/* Inline editor */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold">Template</h2>
+          {(isSaving || lastSaved) && (
+            <div className="text-xs text-muted-foreground flex items-center gap-1">
+              {isSaving ? (
+                <>
+                  <Save className="h-3 w-3 animate-pulse" />
+                  Saving…
+                </>
+              ) : lastSaved ? (
+                <>
+                  <Save className="h-3 w-3" />
+                  Saved {lastSaved.toLocaleTimeString()}
+                </>
+              ) : null}
+            </div>
+          )}
         </div>
-      </details>
+        <Textarea
+          value={editingBody}
+          onChange={e => setEditingBody(e.target.value)}
+          rows={10}
+          className="font-mono text-sm"
+          autoComplete="off"
+        />
+        {editingBody !== snippet.body && (
+          <p className="text-xs text-muted-foreground">Changes will auto-save after 2 seconds of inactivity</p>
+        )}
+      </div>
     </div>
   )
 }
