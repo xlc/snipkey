@@ -40,6 +40,7 @@ function SnippetDetail() {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
   const [pendingNavigateTo, setPendingNavigateTo] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showSyntaxGuide, setShowSyntaxGuide] = useState(false)
 
   // Load placeholder values from localStorage
   const [placeholderValues, setPlaceholderValues] = usePlaceholderStorage(id, {})
@@ -413,7 +414,16 @@ function SnippetDetail() {
       {/* Inline editor */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold">Template</h2>
+          <div>
+            <h2 className="text-base font-semibold">Template</h2>
+            <button
+              type="button"
+              onClick={() => setShowSyntaxGuide(!showSyntaxGuide)}
+              className="text-xs text-muted-foreground hover:text-foreground underline decoration-dotted"
+            >
+              {showSyntaxGuide ? 'Hide' : 'Show'} syntax guide
+            </button>
+          </div>
           {(isSaving || lastSaved || hasUnsavedChanges) && (
             <div className="text-xs text-muted-foreground flex items-center gap-1 tabular-nums">
               {isSaving ? (
@@ -445,6 +455,40 @@ function SnippetDetail() {
           autoComplete="off"
           spellCheck={false}
         />
+        {showSyntaxGuide && (
+          <div id="placeholder-syntax-guide" className="mt-4 rounded-lg border p-4 bg-muted/50 space-y-3">
+            <h3 className="text-sm font-medium">💡 Placeholder Syntax Guide</h3>
+            <div className="text-xs text-muted-foreground space-y-2">
+              <p>Use placeholders to create dynamic snippets:</p>
+              <ul className="space-y-1 ml-4 list-disc">
+                <li>
+                  <code className="bg-background px-1.5 py-0.5 rounded">{'{{name}}'}</code> - Text placeholder
+                </li>
+                <li>
+                  <code className="bg-background px-1.5 py-0.5 rounded">{'{{name:text}}'}</code> - Text with type
+                </li>
+                <li>
+                  <code className="bg-background px-1.5 py-0.5 rounded">{'{{name}}'}</code> - Text with default value
+                </li>
+                <li>
+                  <code className="bg-background px-1.5 py-0.5 rounded">{'{{name:number}}'}</code> - Number input
+                </li>
+                <li>
+                  <code className="bg-background px-1.5 py-0.5 rounded">{'{{name:number=30}}'}</code> - Number with default
+                </li>
+                <li>
+                  <code className="bg-background px-1.5 py-0.5 rounded">{'{{name:enum(a,b,c)}}'}</code> - Dropdown options
+                </li>
+              </ul>
+              <p className="text-[11px]">
+                Try:{' '}
+                <code>
+                  Hello {'{{name:text=World}}'}, you are {'{{age:number=30}}'}
+                </code>
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
