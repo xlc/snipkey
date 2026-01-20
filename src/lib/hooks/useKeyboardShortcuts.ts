@@ -13,6 +13,15 @@ interface Shortcut {
 export function useKeyboardShortcuts(shortcuts: Shortcut[]) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement
+      // Check if user is typing in an input field
+      const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+
+      // Skip shortcuts if user is typing (except for Escape key which should always work)
+      if (isInputField && event.key !== 'Escape') {
+        return
+      }
+
       for (const shortcut of shortcuts) {
         const matchesKey = event.key.toLowerCase() === shortcut.key.toLowerCase()
         const matchesCtrl = shortcut.ctrlKey === undefined || event.ctrlKey === shortcut.ctrlKey
