@@ -17,8 +17,8 @@ export function useKeyboardShortcuts(shortcuts: Shortcut[]) {
       // Check if user is typing in an input field
       const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
 
-      // Skip shortcuts if user is typing (except for Escape key which should always work)
-      if (isInputField && event.key !== 'Escape') {
+      // Skip shortcuts if user is typing, but allow Escape and modifier key combinations
+      if (isInputField && event.key !== 'Escape' && !event.ctrlKey && !event.metaKey && !event.altKey) {
         return
       }
 
