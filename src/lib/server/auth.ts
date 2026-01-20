@@ -9,6 +9,21 @@ import {
   verifyRegistrationResponse,
 } from '@simplewebauthn/server'
 
+// Hex encoding helpers for Uint8Array
+function uint8ArrayToHex(uint8Array: Uint8Array): string {
+  return Array.from(uint8Array)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+function hexToUint8Array(hex: string): Uint8Array<ArrayBuffer> {
+  const bytes = new Uint8Array(hex.length / 2)
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = Number.parseInt(hex.substring(i * 2, i * 2 + 2), 16)
+  }
+  return bytes as Uint8Array<ArrayBuffer>
+}
+
 // Environment config will be loaded from wrangler vars via TanStack Start
 export interface AuthConfig {
   rpID: string
@@ -195,7 +210,7 @@ export async function authRegisterFinish(
     .values({
       credential_id: credential.id,
       user_id: userId,
-      public_key: JSON.stringify(credential.publicKey),
+      public_key: uint8ArrayToHex(credential.publicKey),
       counter: credential.counter,
       transports: JSON.stringify(credential.transports || []),
       created_at: nowMs(),
@@ -290,7 +305,7 @@ export async function authLoginFinish(
     expectedRPID: config.rpID,
     credential: {
       id: credentialRecord.credential_id,
-      publicKey: JSON.parse(credentialRecord.public_key),
+      publicKey: hexToUint8Array(credentialRecord.public_key),
       counter: credentialRecord.counter,
       transports: JSON.parse(credentialRecord.transports),
     },
