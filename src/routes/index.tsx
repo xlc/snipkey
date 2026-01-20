@@ -1,6 +1,6 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { Clock, Copy, Edit2, FileCode, Folder, FolderPlus, Plus, Search, Trash2, X } from 'lucide-react'
+import { Clock, Edit2, FileCode, Folder, FolderPlus, Plus, Search, Trash2, X } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { FolderDialog } from '~/components/FolderDialog'
@@ -70,7 +70,7 @@ interface SnippetRowProps {
 
 const SnippetRow = memo(({ snippet, folders, onTagClick, formatRelativeTime, onDelete }: SnippetRowProps) => {
   const parseResult = useMemo(() => parseTemplate(snippet.body), [snippet.body])
-  const [copying, setCopying] = useState(false)
+  const [_copying, setCopying] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
@@ -118,37 +118,11 @@ const SnippetRow = memo(({ snippet, folders, onTagClick, formatRelativeTime, onD
     <>
       <div className="group relative border rounded-lg hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 bg-card animate-in fade-in slide-in-from-bottom-2 duration-300">
         <div className="p-2 sm:p-4 space-y-1 sm:space-y-2">
-          {/* Action buttons - top right */}
-          <div className="absolute top-4 right-4 z-10 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} title="Copy">
-              <Copy className={`h-4 w-4 ${copying ? 'text-green-500' : ''}`} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => router.navigate({ to: '/snippets/$id/edit', params: { id: snippet.id } })}
-              title="Edit"
-              disabled={snippet.id.startsWith('temp-')}
-            >
-              <Edit2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-destructive hover:text-destructive"
-              onClick={() => setShowDeleteDialog(true)}
-              title="Delete"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-
           {/* Folder badge */}
           {snippet.folder_id && folders.has(snippet.folder_id) && (
             <Badge
               variant="outline"
-              className="absolute top-4 right-20 z-10"
+              className="text-xs mb-1"
               style={{ backgroundColor: `${COLORS[folders.get(snippet.folder_id)?.color ?? 'gray']}20` }}
             >
               <Folder className="h-3 w-3 mr-1" />
@@ -160,43 +134,69 @@ const SnippetRow = memo(({ snippet, folders, onTagClick, formatRelativeTime, onD
           <button
             type="button"
             onClick={handleCopy}
-            className="text-left w-full cursor-pointer hover:bg-muted/100 rounded p-2 -m-2 transition-colors pr-20"
+            className="text-left w-full cursor-pointer hover:bg-muted/100 rounded p-2 -m-2 transition-colors"
             title="Click to copy"
           >
             <p className="text-sm text-foreground whitespace-pre-wrap font-mono break-words">{snippet.body}</p>
           </button>
 
           {/* Metadata row */}
-          <div className="flex items-center gap-4">
-            {/* Timestamp */}
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              <span>{formatRelativeTime(snippet.updated_at)}</span>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              {/* Timestamp */}
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                <Clock className="h-3 w-3" />
+                <span>{formatRelativeTime(snippet.updated_at)}</span>
+              </div>
+
+              {/* Tags */}
+              {snippet.tags.length > 0 && (
+                <div className="flex gap-1.5 flex-wrap">
+                  {snippet.tags.slice(0, 3).map(tag => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      interactive
+                      onClick={e => {
+                        e.stopPropagation()
+                        onTagClick(tag)
+                      }}
+                      className="text-xs"
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                  {snippet.tags.length > 3 && (
+                    <Badge variant="secondary" className="text-xs">
+                      +{snippet.tags.length - 3}
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Tags */}
-            {snippet.tags.length > 0 && (
-              <div className="flex gap-2 flex-wrap">
-                {snippet.tags.slice(0, 3).map(tag => (
-                  <Badge
-                    key={tag}
-                    variant="secondary"
-                    interactive
-                    onClick={e => {
-                      e.stopPropagation()
-                      onTagClick(tag)
-                    }}
-                  >
-                    {tag}
-                  </Badge>
-                ))}
-                {snippet.tags.length > 3 && (
-                  <Badge variant="secondary" className="text-xs">
-                    +{snippet.tags.length - 3}
-                  </Badge>
-                )}
-              </div>
-            )}
+            {/* Action buttons - always visible on mobile, hover on desktop */}
+            <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => router.navigate({ to: '/snippets/$id/edit', params: { id: snippet.id } })}
+                title="Edit"
+                disabled={snippet.id.startsWith('temp-')}
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={() => setShowDeleteDialog(true)}
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
