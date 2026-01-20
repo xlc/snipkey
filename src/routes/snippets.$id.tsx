@@ -99,38 +99,30 @@ function SnippetDetail() {
 
     setIsSaving(true)
     try {
-      // Save the current body
-      let result = await updateSnippet(id, { body: bodyToSave })
-      if (result.error) {
-        toast.error(result.error)
-      } else {
-        // Only update state if component is still mounted
-        if (mountedRef.current) {
-          setSnippet(prev => (prev ? { ...prev, body: bodyToSave } : prev))
-          setLastSaved(new Date())
-        }
-      }
+      let _lastSavedBody = bodyToSave
 
-      // Check if there's a pending save while we were saving
-      if (pendingSaveBodyRef.current !== bodyToSave && pendingSaveBodyRef.current !== null && mountedRef.current) {
-        const nextBodyToSave = pendingSaveBodyRef.current
+      // Keep saving until there are no more pending changes
+      while (pendingSaveBodyRef.current !== null && mountedRef.current) {
+        const bodyToSaveNow = pendingSaveBodyRef.current
         pendingSaveBodyRef.current = null
 
-        // Save the pending body
-        result = await updateSnippet(id, { body: nextBodyToSave })
+        const result = await updateSnippet(id, { body: bodyToSaveNow })
         if (result.error) {
           toast.error(result.error)
-        } else {
-          if (mountedRef.current) {
-            setSnippet(prev => (prev ? { ...prev, body: nextBodyToSave } : prev))
-            setLastSaved(new Date())
-          }
+          // On error, stop trying to save
+          break
         }
-      }
 
-      // Clear pending save ref if we're done
-      if (mountedRef.current) {
-        pendingSaveBodyRef.current = null
+        // Update state if component is still mounted
+        if (mountedRef.current) {
+          setSnippet(prev => (prev ? { ...prev, body: bodyToSaveNow } : prev))
+          setLastSaved(new Date())
+        }
+
+        _lastSavedBody = bodyToSaveNow
+
+        // Small delay to prevent overwhelming the API
+        await new Promise(resolve => setTimeout(resolve, 100))
       }
     } finally {
       // Only set saving to false if component is still mounted

@@ -397,7 +397,8 @@ function Index() {
   const handleCreate = useCallback(
     async (e?: React.FormEvent) => {
       if (e) e.preventDefault()
-      if (!createBody.trim()) return
+      // Use inputValue directly instead of createBody to support creating from search mode
+      if (!inputValue.trim()) return
 
       // Use the currently selected folder (if any) for the new snippet
       const folderId = createFolderId ?? selectedFolderId
@@ -406,7 +407,7 @@ function Index() {
       const tempId = `temp-${Date.now()}`
       const optimisticSnippet: ValidatedSnippet = {
         id: tempId,
-        body: createBody.trim(),
+        body: inputValue.trim(),
         tags: createTags,
         folder_id: folderId,
         created_at: Date.now(),
@@ -468,7 +469,7 @@ function Index() {
         setCreatingSnippetId(null)
       }
     },
-    [createBody, createTags, createFolderId, selectedFolderId, authenticated],
+    [inputValue, createTags, createFolderId, selectedFolderId, authenticated],
   )
 
   const handleAddCreateTag = useCallback(
