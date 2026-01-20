@@ -1,6 +1,6 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
-import { Copy, Download, FileCode, Save, Trash2 } from 'lucide-react'
+import { ArrowLeft, Copy, Download, FileCode, Save, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { PlaceholderEditor } from '~/components/PlaceholderEditor'
@@ -73,6 +73,18 @@ function SnippetDetail() {
     setRendered(renderResult.rendered)
     setRenderErrors(!!renderResult.errors)
   }, [snippet, placeholderValues, editingBody])
+
+  // Escape key to go back (unless dialog is open)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !showDeleteDialog) {
+        router.navigate({ to: '/' })
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [router, showDeleteDialog])
 
   async function handleBlur() {
     if (!snippet || editingBody === snippet.body || isSaving) return
@@ -203,6 +215,12 @@ function SnippetDetail() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
+          <Button variant="ghost" size="sm" asChild className="mb-4 touch-manipulation">
+            <Link to="/">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Link>
+          </Button>
           {snippet.tags.length > 0 && (
             <div className="flex gap-2 flex-wrap">
               {snippet.tags.map(tag => (
