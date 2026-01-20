@@ -13,6 +13,7 @@ import {
   getUnsyncedFolders,
   getUnsyncedSnippets,
   isAuthenticated,
+  type LocalFolder,
   type LocalSnippet,
   listLocalSnippets,
   markAsSynced,
@@ -392,6 +393,44 @@ export async function getAuthStatus(): Promise<{ authenticated: boolean; userId?
   return { authenticated: false }
 }
 
+// Sort folders by hierarchy (parents before children) for safe sync
+// Uses topological sort based on parent_id references
+function sortFoldersByHierarchy(folders: LocalFolder[]): LocalFolder[] {
+  const sorted: LocalFolder[] = []
+  const visited = new Set<string>()
+  const visiting = new Set<string>()
+
+  function visit(folder: LocalFolder) {
+    // Skip if already processed
+    if (visited.has(folder.id)) return
+    // Detect cycles (shouldn't happen, but safety check)
+    if (visiting.has(folder.id)) {
+      console.warn(`Cycle detected in folder hierarchy: ${folder.id}`)
+      return
+    }
+
+    visiting.add(folder.id)
+
+    // Visit parent first if it exists and is in the list
+    if (folder.parent_id) {
+      const parent = folders.find(f => f.id === folder.parent_id)
+      if (parent) {
+        visit(parent)
+      }
+    }
+
+    visiting.delete(folder.id)
+    visited.add(folder.id)
+    sorted.push(folder)
+  }
+
+  for (const folder of folders) {
+    visit(folder)
+  }
+
+  return sorted
+}
+
 // Sync folders to server (must be called before syncing snippets)
 async function syncFoldersToServer(): Promise<{
   synced: number
@@ -401,7 +440,7 @@ async function syncFoldersToServer(): Promise<{
   skipped: number
   folderIdMap: Map<string, string> // local ID -> server ID
 }> {
-  const unsynced = getUnsyncedFolders()
+  let unsynced = getUnsyncedFolders()
   const deleted = getDeletedFolders()
   let synced = 0
   let updated = 0
@@ -409,6 +448,11 @@ async function syncFoldersToServer(): Promise<{
   let errors = 0
   let skipped = 0
   const folderIdMap = new Map<string, string>()
+
+  // Sort folders so parents sync before children (topological sort)
+  // This prevents foreign key constraint errors when creating folders with parent references
+  const sorted = sortFoldersByHierarchy(unsynced)
+  unsynced = sorted
 
   // Sync new and modified folders
   for (const folder of unsynced) {
