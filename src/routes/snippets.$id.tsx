@@ -192,8 +192,8 @@ function SnippetDetail() {
           )}
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button variant="outline" asChild>
-            <Link to="/snippets/$id/edit" params={{ id }} className="touch-manipulation">
+          <Button variant="outline" asChild className="touch-manipulation">
+            <Link to="/snippets/$id/edit" params={{ id }}>
               Edit
             </Link>
           </Button>
