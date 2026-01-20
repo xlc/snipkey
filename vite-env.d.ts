@@ -9,3 +9,5 @@ declare module '*.css' {
   const content: { [className: string]: string }
   export default content
 }
+
+declare const __GIT_COMMIT__: string
