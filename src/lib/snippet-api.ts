@@ -411,13 +411,10 @@ export async function syncToServer(): Promise<{
     // If snippet has a serverId, it's an update, otherwise it's a new snippet
     if (snippet.serverId) {
       // Update existing snippet on server
-      const updateData: { body: string; tags: string[]; folder_id?: string | null } = {
+      // Note: folder_id is not synced since folder sync is not yet implemented
+      const updateData: { body: string; tags: string[] } = {
         body: snippet.body,
         tags: snippet.tags ?? [],
-      }
-      // Only include folder_id if it's defined (not undefined)
-      if (snippet.folder_id !== undefined) {
-        updateData.folder_id = snippet.folder_id
       }
 
       const result = await snippetUpdate({
@@ -442,13 +439,10 @@ export async function syncToServer(): Promise<{
       }
     } else {
       // Create new snippet on server
-      const createData: { body: string; tags: string[]; folder_id?: string | null } = {
+      // Note: folder_id is not synced since folder sync is not yet implemented
+      const createData: { body: string; tags: string[] } = {
         body: snippet.body,
         tags: snippet.tags ?? [],
-      }
-      // Only include folder_id if it's defined (not undefined)
-      if (snippet.folder_id !== undefined) {
-        createData.folder_id = snippet.folder_id
       }
 
       const result = await snippetCreate({

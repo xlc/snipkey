@@ -190,6 +190,12 @@ function Login() {
         <div className="text-center text-xs text-muted-foreground">
           <p>Uses your device's built-in security (Face ID, Touch ID, Windows Hello, or Pattern/PIN)</p>
         </div>
+
+        <div className="text-center">
+          <Button onClick={() => router.navigate({ to: '/' })} variant="ghost" size="sm">
+            Back to home
+          </Button>
+        </div>
       </div>
     </div>
   )
