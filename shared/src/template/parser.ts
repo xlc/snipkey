@@ -28,7 +28,7 @@ export function parseTemplate(body: string): ParseResult {
     }
 
     // Parse the type - defaults to 'text' if not specified
-    let phType: 'text' | 'number' | 'enum' = (typePart as 'text' | 'number' | 'enum' | undefined) || 'text'
+    let phType: 'text' | 'number' | 'enum' = 'text'
     let options: string[] | undefined
 
     if (typePart?.startsWith('enum(')) {
@@ -40,6 +40,7 @@ export function parseTemplate(body: string): ParseResult {
         })
         phType = 'text'
       } else {
+        phType = 'enum'
         options = enumOptions.split(',').map(s => s.trim())
         if (options.length === 0) {
           errors.push({

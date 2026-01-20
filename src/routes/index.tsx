@@ -1,5 +1,5 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
-import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import { Clock, Copy, Edit2, FileCode, Folder, FolderPlus, Plus, Search, Trash2, X } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -73,7 +73,7 @@ const SnippetRow = memo(({ snippet, folders, onTagClick, formatRelativeTime, onD
   const [_copying, setCopying] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const router = useRouter()
+  const _router = useRouter()
 
   // Get rendered output (with default empty placeholder values)
   const rendered = useMemo(() => {
@@ -131,18 +131,11 @@ const SnippetRow = memo(({ snippet, folders, onTagClick, formatRelativeTime, onD
           )}
 
           {/* Body - clickable to view detail */}
-          <button
-            type="button"
-            onClick={e => {
-              e.preventDefault()
-              e.stopPropagation()
-              router.navigate({ to: '/snippets/$id', params: { id: snippet.id } })
-            }}
-            className="text-left w-full cursor-pointer hover:bg-muted/100 rounded p-2 -m-2 transition-colors"
-            title="Click to view snippet"
-          >
-            <p className="text-sm text-foreground whitespace-pre-wrap font-mono break-words">{snippet.body}</p>
-          </button>
+          <Link to="/snippets/$id" params={{ id: snippet.id }} className="block">
+            <div className="text-left cursor-pointer hover:bg-muted/100 rounded p-2 -m-2 transition-colors" title="Click to view snippet">
+              <p className="text-sm text-foreground whitespace-pre-wrap font-mono break-words">{snippet.body}</p>
+            </div>
+          </Link>
 
           {/* Metadata row */}
           <div className="flex items-center justify-between gap-2">
@@ -184,15 +177,10 @@ const SnippetRow = memo(({ snippet, folders, onTagClick, formatRelativeTime, onD
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} title="Copy">
                 <Copy className="h-4 w-4" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => router.navigate({ to: '/snippets/$id/edit', params: { id: snippet.id } })}
-                title="Edit"
-                disabled={snippet.id.startsWith('temp-')}
-              >
-                <Edit2 className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-8 w-8" asChild disabled={snippet.id.startsWith('temp-')}>
+                <Link to="/snippets/$id/edit" params={{ id: snippet.id }} title="Edit">
+                  <Edit2 className="h-4 w-4" />
+                </Link>
               </Button>
               <Button
                 variant="ghost"

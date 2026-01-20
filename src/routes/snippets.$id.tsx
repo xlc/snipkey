@@ -1,6 +1,6 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
-import { ArrowLeft, Copy, Download, FileCode, Save, Trash2 } from 'lucide-react'
+import { ArrowLeft, Copy, Download, Edit2, FileCode, Save, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { PlaceholderEditor } from '~/components/PlaceholderEditor'
@@ -167,6 +167,22 @@ function SnippetDetail() {
     // Undo feature not implemented
   }
 
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = snippet ? editingBody !== snippet.body : false
+
+  // Warn before navigation with unsaved changes
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = '' // Chrome requires returnValue to be set
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
   // Keyboard shortcuts (disabled on mobile)
   const isMobile = useMediaQuery('(max-width: 768px)')
   const keyboardShortcuts = useMemo(
@@ -177,15 +193,15 @@ function SnippetDetail() {
             {
               key: 'Escape',
               handler: () => {
-                // Only navigate back if delete dialog is not open
-                if (!showDeleteDialog) {
+                // Only navigate back if: delete dialog is not open AND no unsaved changes
+                if (!showDeleteDialog && !hasUnsavedChanges) {
                   router.navigate({ to: '/' })
                 }
               },
               description: 'Go back',
             },
           ],
-    [isMobile, showDeleteDialog, router.navigate],
+    [isMobile, showDeleteDialog, hasUnsavedChanges, router.navigate],
   )
   useKeyboardShortcuts(keyboardShortcuts)
 
@@ -241,6 +257,11 @@ function SnippetDetail() {
           </div>
         )}
         <div className="flex-1" />
+        <Button variant="ghost" size="sm" asChild className="touch-manipulation">
+          <Link to="/snippets/$id/edit" params={{ id }} title="Edit tags and folder">
+            <Edit2 className="h-4 w-4" />
+          </Link>
+        </Button>
         <Button
           variant="ghost"
           size="sm"
