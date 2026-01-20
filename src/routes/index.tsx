@@ -499,19 +499,6 @@ function Index() {
     setSnippets(prev => prev?.filter((s: PartialSnippet) => s.id !== id) ?? null)
   }, [])
 
-  const handleInputKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        // In create mode, or in search mode with text, Enter creates
-        if (inputMode === 'create' || (inputMode === 'search' && inputValue.trim())) {
-          e.preventDefault()
-          handleCreate()
-        }
-      }
-    },
-    [inputMode, inputValue, handleCreate],
-  )
-
   const handleClearInput = useCallback(() => {
     setInputValue('')
     setInputMode('search')
@@ -629,12 +616,9 @@ function Index() {
             )}
             <Textarea
               ref={inputRef}
-              placeholder={
-                inputMode === 'search' ? 'Search snippets… (/ to focus)' : 'Type your snippet here… (Ctrl+N to focus, Enter to submit)'
-              }
+              placeholder={inputMode === 'search' ? 'Search snippets… (/ to focus)' : 'Type your snippet here… (Ctrl+N to focus)'}
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
-              onKeyDown={handleInputKeyDown}
               rows={inputMode === 'create' ? 4 : 1}
               className={`resize-none ${inputMode === 'search' ? 'pl-10 pr-20 min-h-[38px]' : 'pl-10 pr-20'}`}
               autoComplete="off"
