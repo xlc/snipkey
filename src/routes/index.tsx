@@ -230,6 +230,8 @@ function Index() {
   const [createTags, setCreateTags] = useState<string[]>([])
   const [createTagInput, setCreateTagInput] = useState('')
   const [createFolderId, setCreateFolderId] = useState<string | null>(null)
+  const [hadNoResults, setHadNoResults] = useState(false)
+  const [previousQueryLength, setPreviousQueryLength] = useState(0)
 
   // Derive search query from input when in search mode
   const searchQuery = inputMode === 'search' ? inputValue : ''
@@ -309,6 +311,12 @@ function Index() {
     }
 
     setSnippets(items)
+
+    // Track if we had no results from search
+    const hasNoResults = items.length === 0 && debouncedSearchQuery.length > 0
+    setHadNoResults(hasNoResults)
+    setPreviousQueryLength(debouncedSearchQuery.length)
+
     // Add a small delay for smoother transitions
     setTimeout(() => setLoading(false), 100)
   }, [authenticated, debouncedSearchQuery, selectedFolderId, selectedTag, sortBy, sortOrder])
@@ -318,6 +326,16 @@ function Index() {
     // Reload snippets when metadata changes (e.g., authentication, sync status)
     loadSnippets()
   })
+
+  // Auto-switch to create mode when user continues typing after no results
+  useEffect(() => {
+    // Only trigger if: we had no results, user is adding more text, and we're in search mode
+    if (hadNoResults && inputMode === 'search' && searchQuery.length > previousQueryLength && searchQuery.length > 0) {
+      // Switch to create mode and keep the search query as the snippet content
+      setInputMode('create')
+      setHadNoResults(false) // Reset so we don't keep triggering
+    }
+  }, [hadNoResults, inputMode, searchQuery.length, previousQueryLength, searchQuery])
 
   // Build folder map once for efficient lookup (memoized to prevent rebuilding on every render)
   const foldersMap = useMemo(() => {
@@ -442,6 +460,7 @@ function Index() {
   const handleClearInput = useCallback(() => {
     setInputValue('')
     setInputMode('search')
+    setHadNoResults(false)
   }, [])
 
   // Toggle between search and create mode
@@ -650,6 +669,7 @@ function Index() {
                 setSelectedFolderId(null)
                 setSortBy('updated')
                 setSortOrder('desc')
+                setHadNoResults(false)
               }}
             >
               Clear filters
@@ -684,9 +704,25 @@ function Index() {
               {searchQuery || selectedTag ? 'No snippets found' : 'No snippets yet'}
             </h3>
             <p className="text-sm text-muted-foreground mb-4 sm:mb-6 max-w-md mx-auto">
-              {searchQuery || selectedTag
-                ? 'Try adjusting your search or filters to find what you are looking for.'
-                : 'Type in the box above to create your first snippet'}
+              {searchQuery || selectedTag ? (
+                <>
+                  No snippets match your search. Continue typing to create a new snippet with this text, or{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInputValue('')
+                      setInputMode('search')
+                      setHadNoResults(false)
+                    }}
+                    className="text-primary hover:underline"
+                  >
+                    clear search
+                  </button>
+                  .
+                </>
+              ) : (
+                'Type in the box above to create your first snippet'
+              )}
             </p>
           </div>
         )}
