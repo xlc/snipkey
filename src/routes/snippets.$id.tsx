@@ -40,7 +40,7 @@ function SnippetDetail() {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
   const [pendingNavigateTo, setPendingNavigateTo] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [showSyntaxGuide, setShowSyntaxGuide] = useState(false)
+  const [showSyntaxGuide, setShowSyntaxGuide] = useState(true)
 
   // Load placeholder values from localStorage
   const [placeholderValues, setPlaceholderValues] = usePlaceholderStorage(id, {})

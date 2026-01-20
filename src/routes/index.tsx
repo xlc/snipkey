@@ -246,6 +246,7 @@ function Index() {
   const [authenticated, setAuthenticated] = useState(false)
   const [createTags, setCreateTags] = useState<string[]>([])
   const [createTagInput, setCreateTagInput] = useState('')
+  const [showSyntaxGuide, setShowSyntaxGuide] = useState(true)
   const [hadNoResults, setHadNoResults] = useState(false)
   const [previousQueryLength, setPreviousQueryLength] = useState(0)
   const [creatingSnippetId, setCreatingSnippetId] = useState<string | null>(null)
@@ -557,20 +558,12 @@ function Index() {
         )}
       </div>
 
-      {/* Placeholder syntax guide - shown when no snippets exist */}
-      {!loading && snippets && snippets.length === 0 && !searchQuery && !selectedTag && (
+      {/* Placeholder syntax guide - always visible but collapsible */}
+      {!loading && snippets && showSyntaxGuide && (
         <div className="rounded-lg border p-4 bg-muted/50 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium">💡 Placeholder Syntax Guide</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 touch-manipulation"
-              onClick={() => {
-                const guide = document.getElementById('placeholder-guide')
-                guide?.scrollIntoView({ behavior: 'smooth' })
-              }}
-            >
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 touch-manipulation" onClick={() => setShowSyntaxGuide(false)}>
               <X className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -628,6 +621,13 @@ function Index() {
             Clear filters
           </Button>
         </div>
+      )}
+
+      {/* Show syntax guide button - shown when guide is hidden */}
+      {!showSyntaxGuide && snippets && (
+        <Button variant="ghost" size="sm" onClick={() => setShowSyntaxGuide(true)} className="gap-2">
+          💡 Show syntax guide
+        </Button>
       )}
 
       {/* Snippets List */}
