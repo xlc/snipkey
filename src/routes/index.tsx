@@ -1,22 +1,6 @@
 import { parseTemplate, renderTemplate } from '@shared/template'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import {
-  Clock,
-  Copy,
-  Edit2,
-  FileCode,
-  Filter,
-  Folder,
-  FolderPlus,
-  HelpCircle,
-  Plus,
-  Search,
-  Tags,
-  ToggleLeft,
-  ToggleRight,
-  Trash2,
-  X,
-} from 'lucide-react'
+import { Clock, Copy, Edit2, FileCode, Folder, FolderPlus, Plus, Search, Trash2, X } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { FolderDialog } from '~/components/FolderDialog'
@@ -25,13 +9,6 @@ import { KeyboardShortcutsHelp } from '~/components/KeyboardShortcutsHelp'
 import { SyncStatusBadge } from '~/components/SyncStatusBadge'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '~/components/ui/dropdown-menu'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
 import { COLORS } from '~/lib/constants/colors'
@@ -249,7 +226,7 @@ function Index() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [_allTags, setAllTags] = useState<string[]>([])
   const [authenticated, setAuthenticated] = useState(false)
-  const [syncing, setSyncing] = useState(false)
+  const [_syncing, setSyncing] = useState(false)
   const [folderTree, setFolderTree] = useState<FolderTreeItem[]>([])
   const [folderTreeLoading, setFolderTreeLoading] = useState(false)
   const [showFolderDialog, setShowFolderDialog] = useState(false)
@@ -259,7 +236,7 @@ function Index() {
   const [quickCreateTags, setQuickCreateTags] = useState<string[]>([])
   const [quickCreateTagInput, setQuickCreateTagInput] = useState('')
   const [quickCreateFolderId, setQuickCreateFolderId] = useState<string | null>(null)
-  const [showQuickCreateOptions, setShowQuickCreateOptions] = useState(false)
+  const [_showQuickCreateOptions, setShowQuickCreateOptions] = useState(false)
 
   // Debounce search input to reduce API calls
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
@@ -385,7 +362,7 @@ function Index() {
     return map
   }, [folderTree])
 
-  const handleSync = useCallback(async () => {
+  const _handleSync = useCallback(async () => {
     if (!authenticated) {
       toast.error('Please sign up to sync your snippets')
       return
@@ -477,7 +454,7 @@ function Index() {
     [quickCreateBody, quickCreateTags, quickCreateFolderId, authenticated],
   )
 
-  const handleAddQuickCreateTag = useCallback(
+  const _handleAddQuickCreateTag = useCallback(
     (e?: React.KeyboardEvent) => {
       const tag = quickCreateTagInput.trim()
       if (!tag) return
@@ -546,7 +523,7 @@ function Index() {
   }, [debouncedSearchQuery, selectedTag, sortBy, sortOrder, authenticated])
 
   // Calculate unsynced count
-  const unsyncedCount = snippets?.filter(s => s.synced === false).length || 0
+  const _unsyncedCount = snippets?.filter(s => s.synced === false).length || 0
 
   return (
     <div className="flex gap-6">
@@ -600,204 +577,64 @@ function Index() {
       <KeyboardShortcutsHelp open={showKeyboardShortcuts} onOpenChange={setShowKeyboardShortcuts} />
 
       {/* Main Content */}
-      <div className="flex-1 space-y-4 sm:space-y-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-          <div className="flex-1" />
-          <div className="flex flex-wrap gap-2">
-            {authenticated && unsyncedCount > 0 && (
-              <Button variant="outline" onClick={handleSync} disabled={syncing}>
-                {syncing ? 'Syncing…' : `Sync (${unsyncedCount})`}
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowKeyboardShortcuts(true)}
-              aria-label="Keyboard shortcuts"
-              className="hidden sm:inline-flex"
-            >
-              <HelpCircle className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Quick Create Form */}
-        <form onSubmit={handleQuickCreate} className="space-y-3 border rounded-lg p-3 sm:p-6 sm:space-y-4 bg-card">
-          <div className="space-y-4">
-            {/* Title and Add button */}
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Create Snippet</h3>
-              <Button type="submit" disabled={!quickCreateBody.trim()}>
-                Add Snippet
-                <Plus className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
-
-            {/* Body input */}
-            <Textarea
-              ref={quickCreateTextareaRef}
-              placeholder="Type your snippet here... (supports {{placeholder:text}} syntax)"
-              value={quickCreateBody}
-              onChange={e => setQuickCreateBody(e.target.value)}
-              rows={4}
-              className="resize-none"
-            />
-
-            {/* Options toggle */}
+      <div className="flex-1 space-y-3 sm:space-y-6">
+        {/* Search Bar - Prominent at top */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            ref={searchInputRef}
+            placeholder="Search snippets… (content, tags) (/ to focus)"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-10 pr-10"
+            autoComplete="off"
+          />
+          {searchQuery && (
             <button
               type="button"
-              onClick={() => setShowQuickCreateOptions(!showQuickCreateOptions)}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
-              {showQuickCreateOptions ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
-              {showQuickCreateOptions ? 'Hide' : 'Show'} options
+              <X className="h-4 w-4" />
             </button>
-
-            {/* Optional options */}
-            {showQuickCreateOptions && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                {/* Tags */}
-                <div className="space-y-2">
-                  <div className="text-sm font-medium flex items-center gap-2">
-                    <Tags className="h-4 w-4" />
-                    Tags
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {quickCreateTags.map(tag => (
-                      <Badge key={tag} variant="secondary" interactive onClick={() => handleRemoveQuickCreateTag(tag)}>
-                        {tag}
-                        <X className="h-3 w-3 ml-1" />
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Add a tag..."
-                      value={quickCreateTagInput}
-                      onChange={e => setQuickCreateTagInput(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          handleAddQuickCreateTag(e)
-                        }
-                      }}
-                    />
-                    <Button type="button" variant="outline" onClick={() => handleAddQuickCreateTag()}>
-                      Add
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Folder */}
-                {authenticated && folderTree.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium flex items-center gap-2">
-                      <Folder className="h-4 w-4" />
-                      Folder
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start">
-                          {quickCreateFolderId ? (foldersMap.get(quickCreateFolderId)?.name ?? 'Select folder') : 'No folder'}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-48">
-                        <DropdownMenuItem onClick={() => setQuickCreateFolderId(null)}>No folder</DropdownMenuItem>
-                        {folderTree.map(folder => (
-                          <DropdownMenuItem key={folder.id} onClick={() => setQuickCreateFolderId(folder.id)}>
-                            <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: folder.color }} />
-                            {folder.name}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </form>
-
-        {/* Filters */}
-        <div className="space-y-4">
-          <div className="flex gap-2">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                ref={searchInputRef}
-                placeholder="Search snippets… (content, tags) (/ to focus)"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="pl-10 pr-10"
-                autoComplete="off"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  aria-label="Clear search"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Sort
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => setSortBy('updated')}>
-                  {sortBy === 'updated' && <span className="mr-2">✓</span>}
-                  <span>Last Updated</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortBy('created')}>
-                  {sortBy === 'created' && <span className="mr-2">✓</span>}
-                  <span>Date Created</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortBy('body')}>
-                  {sortBy === 'body' && <span className="mr-2">✓</span>}
-                  <span>Content (A-Z)</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}>
-                  <span className="mr-2">{sortOrder === 'desc' ? '↑ ' : '↓ '}</span>
-                  <span>{sortOrder === 'desc' ? 'Ascending' : 'Descending'}</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {(selectedTag || searchQuery) && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-muted-foreground">Active filters:</span>
-              {selectedTag && (
-                <Badge variant="secondary" interactive onClick={() => setSelectedTag(null)}>
-                  Tag: {selectedTag}
-                  <X className="h-3 w-3 ml-1" />
-                </Badge>
-              )}
-              {searchQuery && (
-                <Badge variant="secondary" interactive onClick={() => setSearchQuery('')}>
-                  Search: {searchQuery.slice(0, 20)}
-                  {searchQuery.length > 20 && '…'}
-                  <X className="h-3 w-3 ml-1" />
-                </Badge>
-              )}
-            </div>
           )}
         </div>
+
+        {/* Filters row */}
+        {(selectedTag || selectedFolderId || sortBy !== 'updated' || sortOrder !== 'desc') && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {selectedTag && (
+              <Badge variant="secondary" interactive onClick={() => setSelectedTag(null)} className="gap-1">
+                Tag: {selectedTag}
+                <X className="h-3 w-3" />
+              </Badge>
+            )}
+            {selectedFolderId && foldersMap.has(selectedFolderId) && (
+              <Badge variant="secondary" interactive onClick={() => setSelectedFolderId(null)} className="gap-1">
+                {foldersMap.get(selectedFolderId)?.name}
+                <X className="h-3 w-3" />
+              </Badge>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedTag(null)
+                setSelectedFolderId(null)
+                setSortBy('updated')
+                setSortOrder('desc')
+              }}
+            >
+              Clear filters
+            </Button>
+          </div>
+        )}
 
         {/* Snippets List */}
         {loading ? (
           LOADING_SKELETON
         ) : snippets && snippets.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {snippets.filter(isValidSnippet).map(snippet => (
               <SnippetRow
                 key={snippet.id}
@@ -812,18 +649,71 @@ function Index() {
           </div>
         ) : (
           // Empty state
-          <div className="text-center py-16 px-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-              <FileCode className="h-8 w-8 text-muted-foreground" />
+          <div className="text-center py-8 sm:py-16 px-4">
+            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-muted mb-3 sm:mb-4">
+              <FileCode className="h-6 w-6 sm:h-8 w-6 sm:w-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">{searchQuery || selectedTag ? 'No snippets found' : 'No snippets yet'}</h3>
-            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            <h3 className="text-base sm:text-lg font-semibold mb-2">
+              {searchQuery || selectedTag ? 'No snippets found' : 'No snippets yet'}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4 sm:mb-6 max-w-md mx-auto">
               {searchQuery || selectedTag
                 ? 'Try adjusting your search or filters to find what you are looking for.'
                 : 'Create your first snippet to get started'}
             </p>
           </div>
         )}
+      </div>
+
+      {/* Floating Action Button for mobile */}
+      <button
+        type="button"
+        onClick={() => {
+          const textarea = document.querySelector('textarea[placeholder*="snippet"]') as HTMLTextAreaElement
+          textarea?.focus()
+          textarea?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }}
+        className="lg:hidden fixed bottom-20 right-4 z-20 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+        aria-label="Create snippet"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
+
+      {/* Quick Create Form - collapsible, shown at bottom */}
+      <div className="hidden lg:block w-80 flex-shrink-0">
+        <form onSubmit={handleQuickCreate} className="sticky top-6 space-y-3 border rounded-lg p-3 sm:p-4 bg-card">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">Quick Create</h3>
+            </div>
+
+            <Textarea
+              ref={quickCreateTextareaRef}
+              placeholder="Type your snippet here..."
+              value={quickCreateBody}
+              onChange={e => setQuickCreateBody(e.target.value)}
+              rows={6}
+              className="resize-none text-sm"
+            />
+
+            {/* Always show selected tags */}
+            {quickCreateTags.length > 0 && (
+              <div className="flex gap-1 flex-wrap">
+                {quickCreateTags.map(tag => (
+                  <Badge key={tag} variant="secondary" interactive onClick={() => handleRemoveQuickCreateTag(tag)} className="text-xs">
+                    {tag}
+                    <X className="h-2.5 w-2.5 ml-1" />
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            <Button type="submit" disabled={!quickCreateBody.trim()} className="w-full">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Snippet
+            </Button>
+          </div>
+        </form>
       </div>
 
       {/* Folder Dialog */}
