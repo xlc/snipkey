@@ -95,14 +95,15 @@ export async function authRegisterStart(db: ReturnType<typeof getDb>, env: Cloud
     userName: userId, // Using user ID as username for discoverable passkeys
   })
 
-  // Store challenge with userId for reuse in finish phase
+  // Store challenge with userId in metadata (not in user_id column to avoid FK violation)
+  // user_id is NULL for registration challenges since user doesn't exist yet
   await db
     .insertInto('auth_challenges')
     .values({
       id: challengeId,
-      challenge: options.challenge,
+      challenge: JSON.stringify({ challenge: options.challenge, pendingUserId: userId }),
       type: 'registration',
-      user_id: userId, // Store userId so authRegisterFinish can reuse it
+      user_id: null, // NULL because user doesn't exist yet
       expires_at: nowMs() + config.challengeTTLMs,
       created_at: nowMs(),
     })
@@ -122,15 +123,15 @@ export async function authRegisterFinish(
   const now = nowMs()
 
   // Load challenge
-  const challenge = await db
+  const challengeRecord = await db
     .selectFrom('auth_challenges')
     .where('id', '=', challengeId)
     .where('type', '=', 'registration')
     .where('expires_at', '>', now)
-    .select(['challenge', 'user_id'])
+    .select(['challenge'])
     .executeTakeFirst()
 
-  if (!challenge) {
+  if (!challengeRecord) {
     return err({
       code: 'VALIDATION_ERROR',
       message: 'Invalid or expired challenge',
@@ -138,10 +139,21 @@ export async function authRegisterFinish(
     } satisfies ApiError)
   }
 
+  // Parse challenge metadata (contains both challenge string and pendingUserId)
+  let challengeData: { challenge: string; pendingUserId: string }
+  try {
+    challengeData = JSON.parse(challengeRecord.challenge)
+  } catch {
+    return err({
+      code: 'INTERNAL',
+      message: 'Invalid challenge format',
+    } satisfies ApiError)
+  }
+
   // Verify attestation
   const verification = await verifyRegistrationResponse({
     response: attestation,
-    expectedChallenge: challenge.challenge,
+    expectedChallenge: challengeData.challenge,
     expectedOrigin: config.origin,
     expectedRPID: config.rpID,
   })
@@ -165,7 +177,7 @@ export async function authRegisterFinish(
   }
 
   // Reuse userId from authRegisterStart for consistency
-  const userId = challenge.user_id || newId()
+  const userId = challengeData.pendingUserId
 
   // Create user record FIRST (required by foreign key constraint)
   await db
