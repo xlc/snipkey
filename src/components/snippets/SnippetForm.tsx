@@ -221,16 +221,35 @@ export function SnippetForm({
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
+      {/* Auto-save indicator - sticky on mobile */}
+      {enableAutoSave && mode === 'edit' && (saving || lastSaved) && (
+        <div className="sm:hidden sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b py-2 px-3 rounded-lg">
+          <div className="text-sm font-medium flex items-center justify-center gap-2">
+            {saving ? (
+              <>
+                <Save className="h-4 w-4 animate-pulse text-primary" />
+                <span className="text-primary">Saving…</span>
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 text-green-600 dark:text-green-500" />
+                <span className="text-green-600 dark:text-green-500">Saved {lastSaved?.toLocaleTimeString()}</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <div>
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">{mode === 'create' ? 'New Snippet' : 'Edit Snippet'}</h2>
-            <p className="text-muted-foreground mt-2">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">{mode === 'create' ? 'New Snippet' : 'Edit Snippet'}</h2>
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
               {mode === 'create' ? 'Create a new snippet with placeholders for dynamic values' : 'Update your snippet with placeholders'}
             </p>
           </div>
           {enableAutoSave && mode === 'edit' && (
-            <div className="text-xs text-muted-foreground flex items-center gap-1">
+            <div className="hidden sm:block text-xs text-muted-foreground flex items-center gap-1 shrink-0">
               {saving ? (
                 <>
                   <Save className="h-3 w-3 animate-pulse" />
