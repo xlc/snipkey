@@ -201,30 +201,30 @@ function SnippetDetail() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <Button variant="ghost" size="sm" asChild className="mb-4 touch-manipulation">
-            <Link to="/">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Link>
-          </Button>
-          {snippet.tags.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {snippet.tags.map(tag => (
-                <Badge key={tag} variant="outline" className="hover:bg-accent transition-colors cursor-default">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} className="touch-manipulation">
-            <Trash2 className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Delete</span>
-          </Button>
-        </div>
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" asChild className="touch-manipulation">
+          <Link to="/">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+        {snippet.tags.length > 0 && (
+          <div className="flex gap-1.5 flex-wrap">
+            {snippet.tags.map(tag => (
+              <Badge key={tag} variant="outline" className="hover:bg-accent transition-colors cursor-default text-xs">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+        <div className="flex-1" />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowDeleteDialog(true)}
+          className="touch-manipulation text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Delete confirmation dialog */}
