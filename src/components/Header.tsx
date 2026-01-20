@@ -4,28 +4,31 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '~/components/ui/button'
 import { useMetaState } from '~/lib/hooks/useLocalStorageState'
-import { useAuthSync } from '~/lib/hooks/useStorageListener'
 import { clearLocalSnippets, getDeletedSnippets, getUnsyncedSnippets } from '~/lib/local-storage'
 import { getAuthStatus } from '~/lib/snippet-api'
 import { authLogout } from '~/server/auth'
 
 export function Header() {
-  const [_meta, setMeta] = useMetaState()
-  const [authenticated, setAuthenticated] = useState(false)
+  const [meta, setMeta] = useMetaState()
   const [loading, setLoading] = useState(true)
   const [_animating, setAnimating] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  // Sync authentication state across tabs
-  useAuthSync(userId => {
-    setAuthenticated(userId !== null)
-  })
+  // Derive authenticated state from meta.userId
+  const authenticated = meta.userId !== null
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only run on mount, not when meta changes
   useEffect(() => {
     async function checkAuth() {
       const status = await getAuthStatus()
       setAnimating(true)
-      setAuthenticated(status.authenticated)
+      // Sync meta with server auth status
+      if (status.authenticated && status.userId) {
+        setMeta({ userId: status.userId, mode: 'cloud', lastSyncAt: meta.lastSyncAt })
+      } else if (!status.authenticated && meta.userId !== null) {
+        // Server says not authenticated but we have userId locally - clear it
+        setMeta({ userId: null, mode: 'local', lastSyncAt: null })
+      }
       setTimeout(() => {
         setLoading(false)
         setAnimating(false)
@@ -39,14 +42,18 @@ export function Header() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         getAuthStatus().then(status => {
-          setAuthenticated(status.authenticated)
+          if (status.authenticated && status.userId) {
+            setMeta({ userId: status.userId, mode: 'cloud', lastSyncAt: meta.lastSyncAt })
+          } else if (!status.authenticated && meta.userId !== null) {
+            setMeta({ userId: null, mode: 'local', lastSyncAt: null })
+          }
         })
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [])
+  }, [meta.lastSyncAt, meta.userId, setMeta])
 
   async function handleLogout() {
     // Check for unsynced changes and pending deletions
@@ -79,7 +86,6 @@ export function Header() {
       clearLocalSnippets()
       // setMeta (from useMetaState) updates both React state and localStorage
       setMeta({ userId: null, mode: 'local', lastSyncAt: null })
-      setAuthenticated(false)
       toast.info('Logged out. All local data has been cleared.')
       // Redirect immediately (no need to reset isLoggingOut before page reload)
       window.location.href = '/'
