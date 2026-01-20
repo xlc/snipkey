@@ -16,7 +16,6 @@ import { useDebounce } from '~/lib/hooks/useDebounce'
 import { useKeyboardShortcuts } from '~/lib/hooks/useKeyboardShortcuts'
 import { useMediaQuery } from '~/lib/hooks/useMediaQuery'
 import { useStorageListener } from '~/lib/hooks/useStorageListener'
-import { getUnsyncedSnippets, listLocalSnippets } from '~/lib/local-storage'
 import type { FolderTreeItem } from '~/lib/server/folders'
 import {
   createSnippet,
@@ -25,11 +24,9 @@ import {
   isValidSnippet,
   listSnippets,
   type PartialSnippet,
-  syncToServer,
   type ValidatedSnippet,
 } from '~/lib/snippet-api'
 import { foldersTree } from '~/server/folders'
-import { tagsList } from '~/server/tags'
 
 export const Route = createFileRoute('/')({
   component: Index,
@@ -215,29 +212,30 @@ const SnippetRow = memo(({ snippet, folders, authenticated, onTagClick, formatRe
 SnippetRow.displayName = 'SnippetRow'
 
 function Index() {
-  const _router = useRouter()
-  const searchInputRef = useRef<HTMLInputElement>(null)
-  const quickCreateTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const [snippets, setSnippets] = useState<Array<PartialSnippet> | null>(null)
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [inputValue, setInputValue] = useState('')
+  const [inputMode, setInputMode] = useState<'search' | 'create'>('search')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<'updated' | 'created' | 'body'>('updated')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [_allTags, setAllTags] = useState<string[]>([])
   const [authenticated, setAuthenticated] = useState(false)
-  const [_syncing, setSyncing] = useState(false)
   const [folderTree, setFolderTree] = useState<FolderTreeItem[]>([])
   const [folderTreeLoading, setFolderTreeLoading] = useState(false)
   const [showFolderDialog, setShowFolderDialog] = useState(false)
   const [folderDialogParentId, setFolderDialogParentId] = useState<string | null>(null)
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
-  const [quickCreateBody, setQuickCreateBody] = useState('')
-  const [quickCreateTags, setQuickCreateTags] = useState<string[]>([])
-  const [quickCreateTagInput, setQuickCreateTagInput] = useState('')
-  const [quickCreateFolderId, setQuickCreateFolderId] = useState<string | null>(null)
-  const [_showQuickCreateOptions, setShowQuickCreateOptions] = useState(false)
+  const [createTags, setCreateTags] = useState<string[]>([])
+  const [createTagInput, setCreateTagInput] = useState('')
+  const [createFolderId, setCreateFolderId] = useState<string | null>(null)
+
+  // Derive search query from input when in search mode
+  const searchQuery = inputMode === 'search' ? inputValue : ''
+
+  // Derive create body from input when in create mode
+  const createBody = inputMode === 'create' ? inputValue : ''
 
   // Debounce search input to reduce API calls
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
@@ -278,9 +276,6 @@ function Index() {
       sortOrder,
     })
 
-    // Only fetch tags/folders if authenticated, otherwise resolve immediately
-    const tagsPromise = authenticated ? tagsList({}) : Promise.resolve({ error: null, data: null })
-
     // Load folder tree with loading state
     const loadFolders = async () => {
       if (!authenticated) {
@@ -297,7 +292,7 @@ function Index() {
       }
     }
 
-    const [snippetsResult, tagsResult, foldersResult] = await Promise.all([snippetsPromise, tagsPromise, loadFolders()])
+    const [snippetsResult, foldersResult] = await Promise.all([snippetsPromise, loadFolders()])
 
     if (snippetsResult.error) {
       setLoading(false)
@@ -305,32 +300,6 @@ function Index() {
     }
 
     const items = snippetsResult.data || []
-
-    // Process tags in parallel with snippets fetch
-    if (authenticated && tagsResult?.data) {
-      // Merge server tags with tags from local unsynced snippets
-      const serverTags = new Set(tagsResult.data.tags.map(t => t.tag))
-
-      // Add tags from local unsynced snippets
-      const localUnsynced = getUnsyncedSnippets()
-      for (const local of localUnsynced) {
-        for (const tag of local.tags ?? []) {
-          serverTags.add(tag)
-        }
-      }
-
-      setAllTags(Array.from(serverTags).sort())
-    } else {
-      // Extract tags from all local snippets (not just paginated results)
-      const localSnippets = listLocalSnippets()
-      const tags = new Set<string>()
-      for (const snippet of localSnippets) {
-        for (const tag of snippet.tags ?? []) {
-          tags.add(tag)
-        }
-      }
-      setAllTags(Array.from(tags).sort())
-    }
 
     // Load folder tree
     if (authenticated && foldersResult?.data) {
@@ -363,56 +332,29 @@ function Index() {
     return map
   }, [folderTree])
 
-  const _handleSync = useCallback(async () => {
-    if (!authenticated) {
-      toast.error('Please sign up to sync your snippets')
-      return
-    }
-
-    setSyncing(true)
-    try {
-      const result = await syncToServer()
-      const messages = []
-      if (result.synced > 0) messages.push(`${result.synced} created`)
-      if (result.updated > 0) messages.push(`${result.updated} updated`)
-      if (result.deleted > 0) messages.push(`${result.deleted} deleted`)
-
-      if (messages.length > 0) {
-        await loadSnippets()
-      }
-      if (result.errors > 0) {
-        toast.error(`${result.errors} snippets failed to sync`)
-      }
-    } catch {
-      toast.error('Failed to sync snippets')
-    } finally {
-      setSyncing(false)
-    }
-  }, [authenticated, loadSnippets])
-
-  const handleQuickCreate = useCallback(
+  const handleCreate = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
-      if (!quickCreateBody.trim()) return
+      if (!createBody.trim()) return
 
       // Create optimistic snippet
       const tempId = `temp-${Date.now()}`
       const optimisticSnippet: ValidatedSnippet = {
         id: tempId,
-        body: quickCreateBody.trim(),
-        tags: quickCreateTags,
-        folder_id: quickCreateFolderId,
+        body: createBody.trim(),
+        tags: createTags,
+        folder_id: createFolderId,
         created_at: Date.now(),
         updated_at: Date.now(),
         synced: false,
       }
 
       // Reset form immediately
-      setQuickCreateBody('')
-      setQuickCreateTags([])
-      setQuickCreateTagInput('')
-      setQuickCreateFolderId(null)
-      setShowQuickCreateOptions(false)
+      setInputValue('')
+      setInputMode('search')
+      setCreateTags([])
+      setCreateTagInput('')
+      setCreateFolderId(null)
 
       // Optimistically add to list
       setSnippets(prev => [optimisticSnippet, ...(prev ?? [])])
@@ -429,9 +371,10 @@ function Index() {
           setSnippets(prev => prev?.filter(s => s.id !== tempId) ?? null)
           toast.error(result.error)
           // Restore form
-          setQuickCreateBody(optimisticSnippet.body)
-          setQuickCreateTags(optimisticSnippet.tags)
-          setQuickCreateFolderId(optimisticSnippet.folder_id)
+          setInputValue(optimisticSnippet.body)
+          setInputMode('create')
+          setCreateTags(optimisticSnippet.tags)
+          setCreateFolderId(optimisticSnippet.folder_id)
           return
         }
 
@@ -447,40 +390,69 @@ function Index() {
         setSnippets(prev => prev?.filter(s => s.id !== tempId) ?? null)
         toast.error('Failed to create snippet')
         // Restore form
-        setQuickCreateBody(optimisticSnippet.body)
-        setQuickCreateTags(optimisticSnippet.tags)
-        setQuickCreateFolderId(optimisticSnippet.folder_id)
+        setInputValue(optimisticSnippet.body)
+        setInputMode('create')
+        setCreateTags(optimisticSnippet.tags)
+        setCreateFolderId(optimisticSnippet.folder_id)
       }
     },
-    [quickCreateBody, quickCreateTags, quickCreateFolderId, authenticated],
+    [createBody, createTags, createFolderId, authenticated],
   )
 
-  const _handleAddQuickCreateTag = useCallback(
+  const handleAddCreateTag = useCallback(
     (e?: React.KeyboardEvent) => {
-      const tag = quickCreateTagInput.trim()
+      const tag = createTagInput.trim()
       if (!tag) return
       if (e && e.key !== 'Enter') return
-      if (quickCreateTags.includes(tag)) {
+      if (createTags.includes(tag)) {
         toast.error('Tag already exists')
         return
       }
-      if (quickCreateTags.length >= 10) {
+      if (createTags.length >= 10) {
         toast.error('Maximum 10 tags allowed')
         return
       }
-      setQuickCreateTags(prev => [...prev, tag])
-      setQuickCreateTagInput('')
+      setCreateTags(prev => [...prev, tag])
+      setCreateTagInput('')
     },
-    [quickCreateTagInput, quickCreateTags],
+    [createTagInput, createTags],
   )
 
-  const handleRemoveQuickCreateTag = useCallback((tag: string) => {
-    setQuickCreateTags(prev => prev.filter(t => t !== tag))
+  const handleRemoveCreateTag = useCallback((tag: string) => {
+    setCreateTags(prev => prev.filter(t => t !== tag))
   }, [])
 
   const handleDeleteSnippet = useCallback((id: string) => {
     setSnippets(prev => prev?.filter((s: PartialSnippet) => s.id !== id) ?? null)
   }, [])
+
+  const handleInputKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        // In create mode, Enter submits
+        if (inputMode === 'create') {
+          e.preventDefault()
+          handleCreate(e)
+        }
+      }
+    },
+    [inputMode, handleCreate],
+  )
+
+  const handleClearInput = useCallback(() => {
+    setInputValue('')
+    setInputMode('search')
+  }, [])
+
+  // Toggle between search and create mode
+  const handleToggleMode = useCallback(() => {
+    if (inputMode === 'search') {
+      setInputMode('create')
+    } else {
+      setInputMode('search')
+    }
+    inputRef.current?.focus()
+  }, [inputMode])
 
   // Keyboard shortcuts (disabled on mobile)
   const isMobile = useMediaQuery('(max-width: 768px)')
@@ -492,23 +464,27 @@ function Index() {
             key: 'n',
             ctrlKey: true,
             handler: () => {
-              // Focus the quick create textarea
-              quickCreateTextareaRef.current?.focus()
+              setInputMode('create')
+              inputRef.current?.focus()
             },
-            description: 'Focus snippet input',
+            description: 'Focus create input',
           },
           {
             key: '/',
             handler: () => {
-              searchInputRef.current?.focus()
+              setInputMode('search')
+              inputRef.current?.focus()
             },
-            description: 'Focus search',
+            description: 'Focus search input',
           },
           {
             key: 'Escape',
             handler: () => {
-              if (searchQuery) {
-                setSearchQuery('')
+              if (inputMode === 'create' && createBody) {
+                setInputValue('')
+                setInputMode('search')
+              } else if (searchQuery) {
+                setInputValue('')
               } else if (selectedTag) {
                 setSelectedTag(null)
               }
@@ -522,9 +498,6 @@ function Index() {
   useEffect(() => {
     loadSnippets()
   }, [debouncedSearchQuery, selectedTag, sortBy, sortOrder, authenticated])
-
-  // Calculate unsynced count
-  const _unsyncedCount = snippets?.filter(s => s.synced === false).length || 0
 
   return (
     <div className="flex gap-6">
@@ -579,27 +552,80 @@ function Index() {
 
       {/* Main Content */}
       <div className="flex-1 space-y-3 sm:space-y-6">
-        {/* Search Bar - Prominent at top */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            ref={searchInputRef}
-            placeholder="Search snippets… (content, tags) (/ to focus)"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="pl-10 pr-10"
-            autoComplete="off"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
+        {/* Unified Input - acts as both search and create */}
+        <form onSubmit={handleCreate} className="space-y-3">
+          <div className="relative">
+            {inputMode === 'search' ? (
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            ) : (
+              <Plus className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            )}
+            <Textarea
+              ref={inputRef}
+              placeholder={
+                inputMode === 'search' ? 'Search snippets… (/ to focus)' : 'Type your snippet here… (Ctrl+N to focus, Enter to submit)'
+              }
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              onKeyDown={handleInputKeyDown}
+              rows={inputMode === 'create' ? 4 : 1}
+              className={`resize-none ${inputMode === 'search' ? 'pl-10 pr-20 min-h-[38px]' : 'pl-10 pr-20'}`}
+              autoComplete="off"
+            />
+            <div className="absolute right-2 top-2 flex gap-1">
+              <button
+                type="button"
+                onClick={handleToggleMode}
+                className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
+                title={inputMode === 'search' ? 'Switch to create mode' : 'Switch to search mode'}
+              >
+                {inputMode === 'search' ? 'Create' : 'Search'}
+              </button>
+              {inputValue && (
+                <button type="button" onClick={handleClearInput} className="text-muted-foreground hover:text-foreground p-1" title="Clear">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Create mode options */}
+          {inputMode === 'create' && (
+            <>
+              {/* Tags */}
+              {createTags.length > 0 && (
+                <div className="flex gap-1 flex-wrap">
+                  {createTags.map(tag => (
+                    <Badge key={tag} variant="secondary" interactive onClick={() => handleRemoveCreateTag(tag)} className="text-xs">
+                      {tag}
+                      <X className="h-2.5 w-2.5 ml-1" />
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* Add tag input */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add tag... (press Enter)"
+                  value={createTagInput}
+                  onChange={e => setCreateTagInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleAddCreateTag(e)
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button type="submit" disabled={!createBody.trim()} className="px-4">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add
+                </Button>
+              </div>
+            </>
           )}
-        </div>
+        </form>
 
         {/* Filters row */}
         {(selectedTag || selectedFolderId || sortBy !== 'updated' || sortOrder !== 'desc') && (
@@ -660,59 +686,10 @@ function Index() {
             <p className="text-sm text-muted-foreground mb-4 sm:mb-6 max-w-md mx-auto">
               {searchQuery || selectedTag
                 ? 'Try adjusting your search or filters to find what you are looking for.'
-                : 'Create your first snippet to get started'}
+                : 'Type in the box above to create your first snippet'}
             </p>
           </div>
         )}
-      </div>
-
-      {/* Floating Action Button for mobile - navigates to new snippet page */}
-      <button
-        type="button"
-        onClick={() => {
-          _router.navigate({ to: '/snippets/new' })
-        }}
-        className="lg:hidden fixed bottom-20 right-4 z-20 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
-        aria-label="Create snippet"
-      >
-        <Plus className="h-6 w-6" />
-      </button>
-
-      {/* Quick Create Form - collapsible, shown at bottom */}
-      <div className="hidden lg:block w-80 flex-shrink-0">
-        <form onSubmit={handleQuickCreate} className="sticky top-6 space-y-3 border rounded-lg p-3 sm:p-4 bg-card">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold">Quick Create</h3>
-            </div>
-
-            <Textarea
-              ref={quickCreateTextareaRef}
-              placeholder="Type your snippet here..."
-              value={quickCreateBody}
-              onChange={e => setQuickCreateBody(e.target.value)}
-              rows={6}
-              className="resize-none text-sm"
-            />
-
-            {/* Always show selected tags */}
-            {quickCreateTags.length > 0 && (
-              <div className="flex gap-1 flex-wrap">
-                {quickCreateTags.map(tag => (
-                  <Badge key={tag} variant="secondary" interactive onClick={() => handleRemoveQuickCreateTag(tag)} className="text-xs">
-                    {tag}
-                    <X className="h-2.5 w-2.5 ml-1" />
-                  </Badge>
-                ))}
-              </div>
-            )}
-
-            <Button type="submit" disabled={!quickCreateBody.trim()} className="w-full">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Snippet
-            </Button>
-          </div>
-        </form>
       </div>
 
       {/* Folder Dialog */}
