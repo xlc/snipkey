@@ -151,7 +151,7 @@ const SnippetRow = memo(({ snippet, folders, authenticated, onTagClick, formatRe
         {authenticated && <SyncStatusBadge snippet={snippet} />}
 
         {/* Action buttons - top right */}
-        <div className="absolute top-4 right-4 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-4 right-4 z-10 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} title="Copy">
             <Copy className={`h-4 w-4 ${copying ? 'text-green-500' : ''}`} />
           </Button>
