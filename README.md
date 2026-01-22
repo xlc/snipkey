@@ -1,5 +1,7 @@
 # Snipkey
 
+**Web App**: [snipkey.polka.codes](https://snipkey.polka.codes)
+
 A private snippet manager with placeholder support and inline editing. Built with TanStack Start, Cloudflare Workers, and D1.
 
 ## Features
@@ -20,6 +22,7 @@ A private snippet manager with placeholder support and inline editing. Built wit
 - **Database**: Kysely (type-safe query builder)
 - **Auth**: SimpleWebAuthn (passkey authentication)
 - **Styling**: Tailwind CSS + shadcn/ui components
+- **Optimization**: React Compiler (automatic memoization)
 - **Validation**: Zod schemas
 - **Linting**: Biome (fast linter/formatter)
 - **Runtime**: Bun
@@ -49,15 +52,13 @@ The app will be available at `http://localhost:5173`.
 # Create local D1 database
 wrangler d1 create snipkey-db --local
 
-# Run migrations
-wrangler d1 execute snipkey-db --local --file=./migrations/0001_init.sql
-wrangler d1 execute snipkey-db --local --file=./migrations/0002_add_users.sql
-wrangler d1 execute snipkey-db --local --file=./migrations/0003_snippets_user_id.sql
+# Apply pending migrations
+bun run db:migrate
 ```
 
 ### Environment Variables
 
-Local development uses these defaults (see `wrangler.json`):
+Local development uses these defaults (see `wrangler.jsonc`):
 
 ```bash
 RP_ID=localhost
@@ -107,9 +108,9 @@ bun run build
 wrangler d1 create snipkey-db
 ```
 
-Update `database_id` in `wrangler.json` with the returned ID.
+Update `database_id` in `wrangler.jsonc` with the returned ID.
 
-2. **Update environment variables** in `wrangler.json`:
+2. **Update environment variables** in `wrangler.jsonc`:
 
 ```json
 {
@@ -125,9 +126,7 @@ Update `database_id` in `wrangler.json` with the returned ID.
 3. **Run migrations in production**:
 
 ```bash
-wrangler d1 execute snipkey-db --file=./migrations/0001_init.sql
-wrangler d1 execute snipkey-db --file=./migrations/0002_add_users.sql
-wrangler d1 execute snipkey-db --file=./migrations/0003_snippets_user_id.sql
+wrangler d1 migrations apply snipkey-db --remote
 ```
 
 4. **Deploy**:
@@ -140,25 +139,28 @@ wrangler deploy
 
 ```
 snipkey/
-├── apps/web/
-│   ├── src/
-│   │   ├── components/      # React components
-│   │   ├── lib/
-│   │   │   ├── server/      # Server-side utilities
-│   │   │   └── hooks/       # Custom React hooks
-│   │   ├── routes/          # File-based routing
-│   │   └── server/          # TanStack Start server functions
-│   └── package.json
+├── src/
+│   ├── components/          # React components
+│   │   └── ui/              # shadcn/ui base components
+│   ├── lib/
+│   │   ├── auth/            # Client-side auth utilities
+│   │   ├── constants/       # App constants
+│   │   ├── hooks/           # Custom React hooks
+│   │   └── server/          # Server-side utilities (auth, middleware, db)
+│   ├── routes/              # TanStack Start file-based routes
+│   ├── server/              # TanStack Start server functions
+│   └── styles/              # Global styles
 ├── shared/
 │   └── src/
-│       ├── db/              # Database utilities
-│       ├── template/        # Template parsing & rendering
+│       ├── db/              # Database schema and utilities
+│       ├── template/        # Placeholder parsing and rendering
 │       ├── types/           # Shared TypeScript types
-│       └── validation/      # Zod schemas & limits
+│       ├── utils/           # Shared utilities
+│       └── validation/      # Zod schemas and validation limits
 ├── migrations/              # D1 database migrations
-├── wrangler.json            # Cloudflare Workers config
+├── wrangler.jsonc           # Cloudflare Workers configuration
 ├── biome.json               # Linting/formatting config
-└── package.json             # Root package.json
+└── package.json             # Single package at root
 ```
 
 ## Scripts
@@ -168,15 +170,19 @@ snipkey/
 bun run dev              # Start dev server
 
 # Code Quality
-bun run check            # Run Biome linter/formatter
-bun run test             # Run tests
+bun run check            # Run Biome linter/formatter (auto-fixes issues)
+bun run typecheck        # TypeScript type checking
+bun run lint             # Biome lint only
+bun run format           # Biome format only
 
 # Deployment
 bun run build            # Production build
 wrangler deploy          # Deploy to Workers
 
-# Database (local)
-wrangler d1 execute snipkey-db --local --command="SELECT * FROM snippets"
+# Database
+bun run db:migrate       # Apply pending D1 migrations (local)
+bun run db:migration:create <name>  # Create a new migration
+bun run db:migration:list   # List pending migrations
 ```
 
 ## Limits
@@ -196,13 +202,3 @@ MIT
 ## Contributing
 
 This is a personal project, but feel free to fork and customize for your own use!
-
-## Roadmap
-
-- [ ] Replace MOCK_USER_ID with real session management
-- [ ] Add snippet import/export
-- [ ] Public snippet sharing
-- [ ] Folder organization
-- [ ] Snippet templates
-- [ ] Rich text editing
-- [ ] Version history for snippets
