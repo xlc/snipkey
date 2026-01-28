@@ -7,13 +7,6 @@ import { PlaceholderEditor } from '~/components/PlaceholderEditor'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '~/components/ui/dropdown-menu'
 import { Textarea } from '~/components/ui/textarea'
 import { usePlaceholderStorage } from '~/lib/hooks/usePlaceholderStorage'
 import { deleteSnippet, getSnippet, updateSnippet } from '~/lib/snippet-api'
@@ -148,17 +141,6 @@ function SnippetDetail() {
 
     try {
       await navigator.clipboard.writeText(editingBody)
-    } catch {
-      // Clipboard API failed (user denied permission or browser doesn't support it)
-      toast.error('Failed to copy to clipboard')
-    }
-  }
-
-  async function handleCopyUnrendered() {
-    if (!snippet) return
-
-    try {
-      await navigator.clipboard.writeText(rendered || snippet.body)
     } catch {
       // Clipboard API failed (user denied permission or browser doesn't support it)
       toast.error('Failed to copy to clipboard')
@@ -369,35 +351,23 @@ function SnippetDetail() {
 
       {/* Rendered output */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <h2 className="text-base font-semibold">Rendered Output</h2>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" disabled={renderErrors} className="touch-manipulation">
-                <Copy className="h-4 w-4 mr-2" />
-                Copy
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={handleCopyRendered} disabled={renderErrors} className="touch-manipulation cursor-pointer">
-                <Copy className="h-4 w-4 mr-2" />
-                <span>Copy rendered output</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleCopyRaw} className="touch-manipulation cursor-pointer">
-                <Copy className="h-4 w-4 mr-2" />
-                <span>Copy raw template</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleCopyUnrendered} className="touch-manipulation cursor-pointer">
-                <Copy className="h-4 w-4 mr-2" />
-                <span>Copy unrendered template</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleDownload} className="touch-manipulation cursor-pointer">
-                <Download className="h-4 w-4 mr-2" />
-                <span>Download as file</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleCopyRaw} className="touch-manipulation">
+              <FileCode className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Copy template</span>
+              <span className="sm:hidden">Template</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleCopyRendered} disabled={renderErrors} className="touch-manipulation">
+              <Copy className="h-4 w-4 mr-2" />
+              Copy output
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDownload} className="touch-manipulation">
+              <Download className="h-4 w-4" />
+              <span className="sr-only">Download</span>
+            </Button>
+          </div>
         </div>
         <div className="p-4 bg-muted rounded-lg border">
           <pre className="whitespace-pre-wrap font-mono text-sm break-words">{rendered || editingBody}</pre>
