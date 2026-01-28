@@ -166,13 +166,7 @@ export const authRenewSession = createServerFn({ method: 'POST' })
       })
     }
 
-    const config = {
-      rpID: context.env.RP_ID ?? 'localhost',
-      origin: context.env.ORIGIN ?? 'http://localhost:5173',
-      challengeTTLMs: 5 * 60 * 1000,
-      sessionTTLMs: 7 * 24 * 60 * 60 * 1000,
-    }
-
+    const config = auth.getConfig(context.env)
     const sessionTTLSeconds = Math.floor(config.sessionTTLMs / 1000)
 
     return new Response(JSON.stringify({ success: true, sessionTTLSeconds }), {

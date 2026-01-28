@@ -32,7 +32,7 @@ export interface AuthConfig {
   sessionTTLMs: number
 }
 
-function getConfig(env: CloudflareEnv): AuthConfig {
+export function getConfig(env: CloudflareEnv): AuthConfig {
   return {
     rpID: env.RP_ID ?? 'localhost',
     origin: env.ORIGIN ?? 'http://localhost:5173',
