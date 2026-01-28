@@ -141,3 +141,45 @@ export const authMe = createServerFn({ method: 'GET' })
     // Return authenticated user info
     return { data: { userId: context.user.id } }
   })
+
+// Renew session (extend expiration)
+export const authRenewSession = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .handler(async ctx => {
+    const context = getServerFnContext(ctx)
+
+    // User must be authenticated
+    if (!context.user || !context.sessionId) {
+      return new Response(JSON.stringify({ error: { message: 'Not authenticated' } }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    const db = getDbFromEnv(context.env)
+    const renewed = await auth.renewSession(db, context.sessionId, context.env)
+
+    if (!renewed) {
+      return new Response(JSON.stringify({ error: { message: 'Session not found or revoked' } }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    const config = {
+      rpID: context.env.RP_ID ?? 'localhost',
+      origin: context.env.ORIGIN ?? 'http://localhost:5173',
+      challengeTTLMs: 5 * 60 * 1000,
+      sessionTTLMs: 7 * 24 * 60 * 60 * 1000,
+    }
+
+    const sessionTTLSeconds = Math.floor(config.sessionTTLMs / 1000)
+
+    return new Response(JSON.stringify({ success: true, sessionTTLSeconds }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Set-Cookie': createSessionCookie(context.sessionId, sessionTTLSeconds),
+      },
+    })
+  })

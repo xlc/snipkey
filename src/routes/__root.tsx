@@ -4,6 +4,7 @@ import type * as React from 'react'
 import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary'
 import { Header } from '~/components/Header'
 import { NotFound } from '~/components/NotFound'
+import { SessionRenewal } from '~/components/SessionRenewal'
 import { Toaster } from '~/components/ui/toaster'
 import appCss from '~/styles/globals.css?url'
 
@@ -36,6 +37,7 @@ export const Route = createRootRoute({
   notFoundComponent: () => <NotFound />,
   component: () => (
     <RootDocument>
+      <SessionRenewal />
       <div className="min-h-screen bg-background flex flex-col">
         <Header />
         <main className="container mx-auto px-3 py-3 sm:px-4 sm:py-6 flex-1">
