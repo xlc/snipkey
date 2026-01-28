@@ -331,7 +331,8 @@ export function SnippetForm({ mode, id, initialBody = '', initialTags = [], onSu
               value={tagInput}
               onChange={e => setTagInput(e.target.value)}
               onKeyDown={e => {
-                if (e.key === 'Enter') {
+                // Don't intercept Enter during IME composition (e.g., CJK input methods)
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
                   e.preventDefault() // Prevent form submission
                   handleAddTag()
                 }

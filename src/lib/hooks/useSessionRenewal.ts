@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
+import { setMeta } from '~/lib/local-storage'
 import { authRenewSession } from '~/server/auth'
 
 /**
@@ -23,13 +24,16 @@ export function useSessionRenewal(isAuthenticated: boolean): void {
       // Handle Response object
       if (result instanceof Response) {
         if (!result.ok) {
-          // Session renewal failed - user might need to re-authenticate
-          console.warn('Session renewal failed, user may need to log in again')
+          // Session renewal failed - clear local auth state
+          // This happens when session is truly expired/revoked on server
+          console.warn('Session renewal failed - clearing local auth state')
+          setMeta({ userId: null, mode: 'local', lastSyncAt: null })
+          return
         }
         // Success - session cookie has been renewed via Set-Cookie header
       }
     } catch (error) {
-      // Silently fail - don't bother the user with renewal errors
+      // Network error or other failure - don't clear state, might be transient
       // The next authenticated request will fail if the session is truly expired
       console.warn('Session renewal error:', error)
     }
