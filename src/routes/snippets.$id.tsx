@@ -358,7 +358,7 @@ function SnippetDetail() {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleCopyRendered} disabled={renderErrors} className="touch-manipulation">
               <Copy className="h-4 w-4 mr-2" />
-              Copy output
+              Copy
             </Button>
             <Button variant="outline" size="sm" onClick={handleDownload} className="touch-manipulation">
               <Download className="h-4 w-4" />
@@ -383,7 +383,7 @@ function SnippetDetail() {
           <h2 className="text-base font-semibold">Template</h2>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleCopyRaw} className="touch-manipulation">
-              <FileCode className="h-4 w-4 mr-2" />
+              <Copy className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Copy template</span>
               <span className="sm:hidden">Template</span>
             </Button>
