@@ -130,6 +130,7 @@ function SnippetDetail() {
 
     try {
       await navigator.clipboard.writeText(rendered)
+      toast.success('Output copied to clipboard')
     } catch {
       // Clipboard API failed (user denied permission or browser doesn't support it)
       toast.error('Failed to copy to clipboard')
@@ -141,6 +142,7 @@ function SnippetDetail() {
 
     try {
       await navigator.clipboard.writeText(editingBody)
+      toast.success('Template copied to clipboard')
     } catch {
       // Clipboard API failed (user denied permission or browser doesn't support it)
       toast.error('Failed to copy to clipboard')
@@ -354,11 +356,6 @@ function SnippetDetail() {
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-base font-semibold">Rendered Output</h2>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleCopyRaw} className="touch-manipulation">
-              <FileCode className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Copy template</span>
-              <span className="sm:hidden">Template</span>
-            </Button>
             <Button variant="outline" size="sm" onClick={handleCopyRendered} disabled={renderErrors} className="touch-manipulation">
               <Copy className="h-4 w-4 mr-2" />
               Copy output
@@ -382,30 +379,35 @@ function SnippetDetail() {
 
       {/* Inline editor */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold">Template</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base font-semibold">Template</h2>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleCopyRaw} className="touch-manipulation">
+              <FileCode className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Copy template</span>
+              <span className="sm:hidden">Template</span>
+            </Button>
+            {(isSaving || lastSaved || hasUnsavedChanges) && (
+              <div className="text-xs text-muted-foreground flex items-center gap-1 tabular-nums">
+                {isSaving ? (
+                  <>
+                    <Save className="h-3 w-3 animate-pulse" />
+                    Saving…
+                  </>
+                ) : hasUnsavedChanges ? (
+                  <>
+                    <span className="inline-block w-2 h-2 rounded-full bg-orange-500" />
+                    Unsaved changes
+                  </>
+                ) : lastSaved ? (
+                  <>
+                    <Save className="h-3 w-3" />
+                    Saved {lastSaved.toLocaleTimeString()}
+                  </>
+                ) : null}
+              </div>
+            )}
           </div>
-          {(isSaving || lastSaved || hasUnsavedChanges) && (
-            <div className="text-xs text-muted-foreground flex items-center gap-1 tabular-nums">
-              {isSaving ? (
-                <>
-                  <Save className="h-3 w-3 animate-pulse" />
-                  Saving…
-                </>
-              ) : hasUnsavedChanges ? (
-                <>
-                  <span className="inline-block w-2 h-2 rounded-full bg-orange-500" />
-                  Unsaved changes
-                </>
-              ) : lastSaved ? (
-                <>
-                  <Save className="h-3 w-3" />
-                  Saved {lastSaved.toLocaleTimeString()}
-                </>
-              ) : null}
-            </div>
-          )}
         </div>
         <Textarea
           ref={textareaRef}
