@@ -384,8 +384,7 @@ function SnippetDetail() {
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleCopyRaw} className="touch-manipulation">
               <Copy className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Copy template</span>
-              <span className="sm:hidden">Template</span>
+              Copy
             </Button>
             {(isSaving || lastSaved || hasUnsavedChanges) && (
               <div className="text-xs text-muted-foreground flex items-center gap-1 tabular-nums">
