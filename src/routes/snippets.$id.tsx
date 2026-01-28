@@ -459,7 +459,7 @@ function SnippetDetail() {
                 <code className="bg-background px-1.5 py-0.5 rounded">{'{{name:text}}'}</code> - Text with type
               </li>
               <li>
-                <code className="bg-background px-1.5 py-0.5 rounded">{'{{name}}'}</code> - Text with default value
+                <code className="bg-background px-1.5 py-0.5 rounded">{'{{name:text=default}}'}</code> - Text with default value
               </li>
               <li>
                 <code className="bg-background px-1.5 py-0.5 rounded">{'{{name:number}}'}</code> - Number input

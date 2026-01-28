@@ -325,7 +325,19 @@ export function SnippetForm({ mode, id, initialBody = '', initialTags = [], onSu
             Tags (optional)
           </label>
           <div className="flex gap-2">
-            <Input id="tags" placeholder="Add a tag..." value={tagInput} onChange={e => setTagInput(e.target.value)} autoComplete="off" />
+            <Input
+              id="tags"
+              placeholder="Add a tag..."
+              value={tagInput}
+              onChange={e => setTagInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault() // Prevent form submission
+                  handleAddTag()
+                }
+              }}
+              autoComplete="off"
+            />
             <Button type="button" variant="outline" onClick={handleAddTag} className="h-11 px-6 sm:h-9 sm:px-4">
               Add
             </Button>

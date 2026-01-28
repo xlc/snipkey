@@ -1,4 +1,5 @@
 export { useDebounce } from './useDebounce'
+export { useMetaState } from './useLocalStorageState'
 export { useMediaQuery } from './useMediaQuery'
 export { usePlaceholderStorage } from './usePlaceholderStorage'
 export { useSessionRenewal } from './useSessionRenewal'

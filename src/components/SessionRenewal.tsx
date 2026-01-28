@@ -1,5 +1,4 @@
-import { useSessionRenewal } from '~/lib/hooks'
-import { isAuthenticated } from '~/lib/local-storage'
+import { useMetaState, useSessionRenewal } from '~/lib/hooks'
 
 /**
  * SessionRenewal component
@@ -16,7 +15,8 @@ import { isAuthenticated } from '~/lib/local-storage'
  * fail and the user will be prompted to log in again.
  */
 export function SessionRenewal(): null {
-  useSessionRenewal(isAuthenticated())
+  const [meta] = useMetaState()
+  useSessionRenewal(!!meta.userId)
 
   // This component doesn't render anything
   return null

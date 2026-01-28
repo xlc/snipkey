@@ -109,52 +109,6 @@ export async function renewSession(db: ReturnType<typeof getDb>, sessionId: stri
   return result.numUpdatedRows > 0
 }
 
-// Validate session and auto-renew if it's getting close to expiration
-// Returns user ID if valid, null if invalid
-// Optionally returns new session cookie if renewed
-export async function validateSessionWithRenewal(
-  db: ReturnType<typeof getDb>,
-  sessionId: string,
-  env: CloudflareEnv,
-): Promise<{ userId: string; renewed: boolean; sessionTTLSeconds: number } | null> {
-  const config = getConfig(env)
-  const now = nowMs()
-  const renewalThreshold = config.sessionTTLMs / 2 // Renew when less than half time remains
-
-  const session = await db
-    .selectFrom('sessions')
-    .where('id', '=', sessionId)
-    .where('expires_at', '>', now)
-    .where('revoked_at', 'is', null)
-    .select(['user_id', 'expires_at'])
-    .executeTakeFirst()
-
-  if (!session) {
-    return null
-  }
-
-  // Check if session should be renewed (less than half time remaining)
-  const timeRemaining = session.expires_at - now
-  const shouldRenew = timeRemaining < renewalThreshold
-
-  if (shouldRenew) {
-    const renewed = await renewSession(db, sessionId, env)
-    if (renewed) {
-      return {
-        userId: session.user_id,
-        renewed: true,
-        sessionTTLSeconds: Math.floor(config.sessionTTLMs / 1000),
-      }
-    }
-  }
-
-  return {
-    userId: session.user_id,
-    renewed: false,
-    sessionTTLSeconds: Math.floor(timeRemaining / 1000),
-  }
-}
-
 // Revoke a session
 export async function revokeSession(db: ReturnType<typeof getDb>, sessionId: string): Promise<void> {
   await db.updateTable('sessions').set({ revoked_at: nowMs() }).where('id', '=', sessionId).execute()
