@@ -30,8 +30,8 @@ export const authRegisterFinish = createServerFn({ method: 'POST' })
     z.object({
       // Cast to proper WebAuthn type - validation happens in SimpleWebAuthn
       attestation: z.any() as z.ZodType<RegistrationResponseJSON>,
-      challengeId: z.string(),
-    }),
+      challengeId: z.string().min(1, 'Challenge ID is required'),
+    }).parse,
   )
   .handler(async ({ data: { attestation, challengeId }, context }) => {
     const ctx = getServerFnContext({ context })
@@ -80,8 +80,8 @@ export const authLoginFinish = createServerFn({ method: 'POST' })
     z.object({
       // Cast to proper WebAuthn type - validation happens in SimpleWebAuthn
       assertion: z.any() as z.ZodType<AuthenticationResponseJSON>,
-      challengeId: z.string(),
-    }),
+      challengeId: z.string().min(1, 'Challenge ID is required'),
+    }).parse,
   )
   .handler(async ({ data: { assertion, challengeId }, context }) => {
     const ctx = getServerFnContext({ context })

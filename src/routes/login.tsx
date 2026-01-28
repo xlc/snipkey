@@ -162,7 +162,23 @@ function Login() {
       // If it does, show an error instead of silently navigating
       toast.error('Login failed: Unexpected response from server')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Login failed')
+      if (error instanceof Error) {
+        // Try to parse Zod validation errors from the message
+        try {
+          const issues = JSON.parse(error.message)
+          if (Array.isArray(issues)) {
+            const messages = issues.map(issue => `${issue.path?.join('.') || 'field'}: ${issue.message}`).join(', ')
+            toast.error(`Validation failed: ${messages}`)
+          } else {
+            toast.error(error.message)
+          }
+        } catch {
+          // Not JSON, just show the error message
+          toast.error(error.message)
+        }
+      } else {
+        toast.error('Login failed')
+      }
     } finally {
       setIsLoading(false)
       setAction(null)
